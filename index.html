@@ -174,7 +174,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = '13 · 1 nov 2026';
+const APP_VERSION = '14 · 1 nov 2026';
 const SUPABASE_URL = 'https://akzopqnsrpcwuxaaqkfc.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrem9wcW5zcnBjd3V4YWFxa2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1MzExNjMsImV4cCI6MjEwOTEwNzE2M30.597llIN7plBgQBbueLQOJMKLVDXnzM9ytOg0UEO6DAc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -783,8 +783,10 @@ function openKitContents(kid){
     const us = S.units.filter(u => u.model_id === m.id && !inKit.has(u.id)); if (!us.length) return '';
     return `<div class="group" style="margin:14px 0 2px">${esc(m.name)}</div>` + us.map(u => `<label class="chkrow"><input type="checkbox" data-u="${u.id}">${u.serial_number?esc(u.serial_number):'<span class="sub">Sin nº de serie</span>'} <span class="code sub">${esc(u.code)}</span></label>`).join('');
   }).join('');
-  const bulkHtml = S.models.filter(m => m.is_bulk).map(m => `<div class="row" style="padding-left:0;padding-right:0;border:0"><div class="grow"><b>${esc(m.name)}</b></div>
-      <input type="number" min="0" value="0" data-b="${m.id}" style="width:80px" inputmode="numeric" aria-label="Cantidad de ${esc(m.name)}"></div>`).join('');
+  const bulkHtml = S.models.filter(m => m.is_bulk).map(m => { const av = kitBulkAvail(m), inK = kitBulkUsed(m.id);
+    return `<div class="row" style="padding-left:0;padding-right:0;border:0"><div class="grow"><b>${colorDot(m)}${esc(m.name)}</b>
+      <div class="sub">Disponibles para kits: ${av} de ${m.bulk_stock || 0}${inK ? ` (${inK} ya en kits)` : ''}</div></div>
+      <input type="number" min="0" max="${av}" value="0" ${av ? '' : 'disabled'} data-b="${m.id}" oninput="clampQty(this)" style="width:80px" inputmode="numeric" aria-label="Cantidad de ${esc(m.name)}"></div>`; }).join('');
   openModal(`<h2>Añadir al kit</h2><div class="sub">Solo aparecen equipos que no están en otro kit.</div>
     ${serHtml || '<div class="empty" style="margin:20px 0">No quedan equipos con número de serie libres.</div>'}
     ${bulkHtml ? `<div class="group" style="margin:18px 0 4px">Material por cantidad</div>${bulkHtml}` : ''}
@@ -796,6 +798,10 @@ async function saveKitContents(kid){
   const bulk = [];
   document.querySelectorAll('#sheet input[data-b]').forEach(i => { const n = parseInt(i.value)||0; if (n > 0) bulk.push({model_id:i.dataset.b, n}); });
   if (!rows.length && !bulk.length) return toast('Elige qué añadir al kit', true);
+  for (const b of bulk){      // nunca más de lo que hay en stock
+    const m = modelById(b.model_id), av = kitBulkAvail(m);
+    if (b.n > av) return toast(`No hay tantos «${m.name}»: quedan ${av} disponibles para kits (stock ${m.bulk_stock || 0}).`, true);
+  }
   if (rows.length) await db(sb.from('kit_items').insert(rows));
   for (const b of bulk){
     const ex = S.kitItems.find(i => i.kit_id === kid && i.model_id === b.model_id);
@@ -958,7 +964,7 @@ function openAddMaterial(pid){
     const free = m.is_bulk ? bulkFree(p, m.id) : freeUnits(p, m.id).length;
     const total = m.is_bulk ? m.bulk_stock : S.units.filter(u => u.model_id === m.id).length;
     return `<div class="row" data-s="${esc((m.name+' '+(m.brand||'')).toLowerCase())}"><div class="grow"><b>${colorDot(m)}${esc(m.name)}</b>${m.color?`<div class="sub">${esc(colorText(m))}</div>`:''}<div class="sub">Libres ${free} de ${total}${m.is_bulk?' · por cantidad':''}</div></div>
-      <input type="number" min="0" max="${free}" value="0" ${free?'':'disabled'} data-m="${m.id}" data-bulk="${m.is_bulk?1:0}" style="width:76px" inputmode="numeric" aria-label="Cantidad de ${esc(m.name)}"></div>`;
+      <input type="number" min="0" max="${free}" value="0" ${free?'':'disabled'}  data-m="${m.id}" data-bulk="${m.is_bulk?1:0}" oninput="clampQty(this)" style="width:76px" inputmode="numeric" aria-label="Cantidad de ${esc(m.name)}"></div>`;
   }).join('');
   openModal(`<h2>Añadir material</h2><div class="sub">Solo se cuentan las unidades libres en las fechas de este show.</div>
     <div class="search" style="margin:10px 0"><input type="search" placeholder="Buscar" oninput="filterRows(this.value)"></div>
@@ -972,6 +978,12 @@ async function saveMaterial(pid){
     if (inp.dataset.bulk === '1') bulk.push({model_id:inp.dataset.m, n});
     else freeUnits(p, inp.dataset.m).slice(0, n).forEach(u => uRows.push({project_id:pid, unit_id:u.id, state:'planned'}));
   });
+  // comprobar TODO antes de guardar nada: si algo no cabe, no se añade nada
+  for (const inp of document.querySelectorAll('#sheet input[data-m]')){
+    const n = parseInt(inp.value) || 0; if (n <= 0) continue;
+    const m = modelById(inp.dataset.m), free = m.is_bulk ? bulkFree(p, m.id) : freeUnits(p, m.id).length;
+    if (n > free) return toast(`No hay tantos «${m.name}»: quedan ${free} libres en las fechas de este show.`, true);
+  }
   if (!uRows.length && !bulk.length) return toast('Indica cuántas unidades quieres añadir', true);
   if (uRows.length) await db(sb.from('reservations').insert(uRows));
   for (const b of bulk){
@@ -2347,6 +2359,18 @@ async function importClientsFromShows(){
   const byKey = {}; S.clients.concat(made).forEach(c => byKey[norm(c.name)] = c.id);
   for (const [k, g] of groups) if (byKey[k]) await db(sb.from('projects').update({client_id:byKey[k]}).in('id', g.ids));
   await loadAll(); toast('Clientes creados');
+}
+
+/* ============ LÍMITES DE CANTIDAD ============ */
+// Material por cantidad que ya está metido en kits (los kits son piezas físicas: cada una solo puede estar en un kit)
+const kitBulkUsed = modelId => S.kitItems.filter(i => i.model_id === modelId).reduce((s, i) => s + (i.qty || 0), 0);
+const kitBulkAvail = m => Math.max(0, (m.bulk_stock || 0) - kitBulkUsed(m.id));
+// Si se escribe más del máximo permitido, se queda en el máximo
+function clampQty(el){
+  const max = parseInt(el.max); let v = parseInt(el.value);
+  if (isNaN(v)) return;
+  if (v < 0) el.value = 0;
+  else if (!isNaN(max) && v > max) el.value = max;
 }
 
 /* ============ Arranque ============ */
