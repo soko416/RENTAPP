@@ -1,0 +1,2219 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1B1F27">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Mi material</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E6E9EE; --panel:#FFFFFF; --ink:#1B1F27; --muted:#657084; --line:#D3D8E0;
+  --accent:#2457F5; --accent-ink:#FFFFFF;
+  --ok:#1B7F46; --okbg:#DDF1E5; --warn:#9A6200; --warnbg:#FBEBCB; --bad:#B8321F; --badbg:#F8DCD7;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#14181F; --panel:#1E242E; --ink:#E8ECF2; --muted:#9AA5B8; --line:#2E3644;
+    --accent:#6C8DFF; --accent-ink:#0E1320;
+    --ok:#5ED08C; --okbg:#173525; --warn:#F0B84A; --warnbg:#3A2E10; --bad:#FF8A78; --badbg:#3E1D18;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;min-height:100%}
+body{font-family:'Archivo',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.4;-webkit-tap-highlight-color:transparent}
+#app{max-width:760px;margin:0 auto;min-height:100vh;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+h1{font-size:22px;font-weight:700;font-stretch:88%;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+h2{font-size:15px;font-weight:700;margin:0}
+header.bar{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;align-items:center;gap:8px;padding:calc(12px + env(safe-area-inset-top)) 16px 10px;border-bottom:1px solid var(--line)}
+.pad{padding:0 16px}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:10px 14px;border-radius:var(--r);font:inherit;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--bad)}
+.btn.small{padding:6px 10px;font-size:14px}
+.btn.block{width:100%;margin-top:14px}
+.btn[disabled]{opacity:.45;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.list{margin:12px 16px;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--panel)}
+.row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row.tap{cursor:pointer}
+.row.tap:active{background:var(--bg)}
+.row.head{background:var(--bg)}
+.grow{flex:1;min-width:0}
+.grow b{display:block;overflow:hidden;text-overflow:ellipsis}
+.sub{font-size:14px;color:var(--muted)}
+.sub.bad{color:var(--bad)}
+.group{margin:22px 16px 0;font-weight:700;font-size:14px;color:var(--muted)}
+.count{font-weight:700;font-size:18px;font-stretch:88%;min-width:28px;text-align:right}
+.badge{display:inline-block;font-size:12.5px;font-weight:600;padding:2px 9px;border-radius:99px;background:var(--line);color:var(--muted);white-space:nowrap}
+.badge.ok{background:var(--okbg);color:var(--ok)}
+.badge.warn{background:var(--warnbg);color:var(--warn)}
+.badge.bad{background:var(--badbg);color:var(--bad)}
+.empty{margin:40px 24px;text-align:center;color:var(--muted)}
+.search{margin:12px 16px 0}
+label{display:block;font-size:14px;color:var(--muted);margin:12px 0 4px}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px}
+input[type=checkbox]{width:22px;height:22px;padding:0;flex:none;accent-color:var(--accent)}
+textarea{min-height:84px;resize:vertical}
+.chkrow{display:flex;align-items:center;gap:12px;margin:0;padding:9px 0;font-size:16px;color:var(--ink);cursor:pointer}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.info{margin:12px 16px 0;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 16px 0}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--panel);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs button{flex:1 1 0;min-width:0;border:0;background:none;color:var(--muted);font:inherit;font-size:14px;font-weight:600;padding:14px 0 13px;border-top:3px solid transparent;cursor:pointer;white-space:nowrap}
+nav.tabs button.on{color:var(--ink);border-top-color:var(--accent)}
+.modal-back{position:fixed;inset:0;background:rgba(10,14,22,.55);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.modal-back.open{display:flex}
+.sheet{background:var(--panel);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+.sheet h2{font-size:19px;font-stretch:88%;margin-bottom:4px}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(100px + env(safe-area-inset-bottom));z-index:30;max-width:560px;margin:0 auto;background:var(--ink);color:var(--bg);padding:12px 14px;border-radius:var(--r);font-weight:600;display:none}
+.toast.bad{background:var(--bad);color:#fff}
+.toast.show{display:block}
+.login{padding:calc(64px + env(safe-area-inset-top)) 24px 24px;max-width:420px;margin:0 auto}
+.login h1{font-size:30px;margin-bottom:6px}
+.seg{display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.seg button{flex:1;padding:12px;border:0;background:var(--panel);color:var(--muted);font:inherit;font-weight:600;cursor:pointer}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.cam{position:relative;margin-top:12px;background:#0b0e14;border-radius:var(--r);overflow:hidden;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;color:#9AA5B8}
+.cam video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cam .frame{position:absolute;inset:18% 18%;border:3px solid rgba(255,255,255,.85);border-radius:14px;pointer-events:none}
+.msg{margin-top:12px;padding:12px 14px;border-radius:var(--r);background:var(--panel);border:1px solid var(--line);font-weight:600;min-height:48px}
+.msg.ok{background:var(--okbg);color:var(--ok);border-color:transparent}
+.msg.warn{background:var(--warnbg);color:var(--warn);border-color:transparent}
+.msg.bad{background:var(--badbg);color:var(--bad);border-color:transparent}
+.qrbox{width:150px;height:150px;margin:10px auto;background:#fff;padding:8px;border-radius:8px}
+.qrbox svg{width:100%;height:100%;display:block}
+.code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px}
+.sum{margin-top:12px;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.sum .row{padding:9px 12px;font-size:15px}
+.sum .tot{font-weight:700;font-size:18px;font-stretch:88%;background:var(--bg)}
+.linkbox{display:flex;gap:8px;margin-top:8px}
+.linkbox input{font-size:13px}
+.thumb{width:44px;height:44px;border-radius:8px;object-fit:cover;background:var(--bg);flex:none}
+.hero{display:block;width:100%;max-height:220px;object-fit:cover;border-radius:var(--r);margin-bottom:10px}
+.cal{margin:12px 16px 0}
+.cal-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.cal-head h2{flex:1;text-align:center;font-size:17px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-dow{text-align:center;font-size:12.5px;color:var(--muted);font-weight:600;padding:2px 0}
+.cal-day{min-height:56px;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:4px 2px;font:inherit;color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;overflow:hidden}
+.cal-day.off{opacity:.4}
+.cal-day.today{border:2px solid var(--accent)}
+.cal-day.sel{outline:2px solid var(--ink);outline-offset:1px}
+.cal-day .n{font-size:14px;font-weight:600}
+.cal-day .dots{display:flex;gap:3px;flex-wrap:wrap;justify-content:center}
+.cal-day .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.cal-day .dot.draft{background:transparent;border:1.5px solid var(--muted)}
+.cal-day .dot.done{background:var(--ok);border-radius:2px}
+.cal-day .pc{font-size:11px;color:var(--ink);opacity:.7}
+.logo-prev{max-width:180px;max-height:80px;display:block;margin:8px 0;background:#fff;padding:4px;border-radius:6px}
+.prog{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:6px}
+.prog i{display:block;height:100%;background:var(--accent)}
+.sw{display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid rgba(128,128,128,.55);vertical-align:-2px;margin-right:6px;flex:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin:8px 16px 0}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid var(--line);border-radius:99px;background:var(--panel);font-size:14px}
+.chip .sw{margin:0}
+button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
+.chip.sel{outline:2px solid var(--accent);outline-offset:1px;font-weight:700}
+.lg-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.lg-row input[type=color]{width:46px;height:42px;padding:2px;flex:none}
+.swbtn{width:46px;height:42px;border-radius:8px;border:2px solid var(--line);flex:none;cursor:pointer;padding:0}
+.swbtn.open{border-color:var(--accent)}
+.pal{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0 2px;padding:10px;background:var(--bg);border-radius:var(--r)}
+.pal label{display:inline-flex;align-items:center;gap:6px;margin:0;font-size:14px;color:var(--ink)}
+.pal input[type=color]{width:40px;height:34px}
+.offbar{position:fixed;bottom:calc(64px + env(safe-area-inset-bottom));left:12px;z-index:9;background:var(--warnbg);color:var(--warn);border:1px solid var(--warn);padding:4px 14px;border-radius:99px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;max-width:94vw;overflow:hidden;text-overflow:ellipsis}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+#print{display:none}
+@media print{
+  body>*:not(#print){display:none!important}
+  body{background:#fff!important}
+  #print.labels{display:grid!important;grid-template-columns:repeat(3,1fr);gap:4mm;padding:6mm}
+  .label{display:flex;align-items:center;gap:3mm;border:0.3mm solid #000;padding:2.5mm;break-inside:avoid;color:#000;background:#fff}
+  .label .qr{width:22mm;height:22mm;flex:none}
+  .label .qr svg{width:100%;height:100%}
+  .label .lt{display:flex;flex-direction:column;font-size:8pt;line-height:1.25;min-width:0}
+  .label .lt b{font-size:9pt}
+  #print.doc{display:block!important;padding:12mm;color:#000;background:#fff;font-size:11pt;line-height:1.35;font-family:Arial,Helvetica,sans-serif}
+  .doc h1{font-size:20pt;margin:0 0 2mm;white-space:normal;font-stretch:100%}
+  .doc h2{font-size:13pt;margin:6mm 0 2mm;border-bottom:.3mm solid #000;padding-bottom:1mm}
+  .doc p{margin:0 0 1mm}
+  .doc table{width:100%;border-collapse:collapse}
+  .doc th,.doc td{padding:1.6mm 2mm;border-bottom:.2mm solid #999;text-align:left;vertical-align:top}
+  .doc .r{text-align:right}
+  .doc tr{break-inside:avoid}
+  .doc .box{display:inline-block;width:4.2mm;height:4.2mm;border:.35mm solid #000;vertical-align:-.7mm}
+  .doc .tot td{font-weight:700;border-bottom:0}
+  .doc .small{font-size:9pt;color:#444}
+  .doc .nw{white-space:nowrap}
+  .doc .sw{border:.3mm solid #000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .doc .head{display:flex;justify-content:space-between;align-items:flex-start;gap:8mm;margin-bottom:6mm}
+  .doc .head img{max-height:20mm;max-width:55mm;display:block}
+}
+@media (prefers-reduced-motion:no-preference){ .sheet{animation:up .18s ease-out} @keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}} }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal" class="modal-back" onclick="if(event.target===this)closeModal()"><div class="sheet" id="sheet"></div></div>
+<div id="toast" class="toast" role="status"></div>
+<div id="print"></div>
+<div id="offbar" class="offbar" role="status" hidden onclick="openPending()"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+/* ============ Conexión con tu base de datos ============ */
+const SUPABASE_URL = 'https://akzopqnsrpcwuxaaqkfc.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrem9wcW5zcnBjd3V4YWFxa2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1MzExNjMsImV4cCI6MjEwOTEwNzE2M30.597llIN7plBgQBbueLQOJMKLVDXnzM9ytOg0UEO6DAc';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ============ Utilidades ============ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtDT = iso => new Date(iso).toLocaleString('es-ES', {weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
+const fmtD = iso => new Date(iso).toLocaleDateString('es-ES', {day:'numeric', month:'short'});
+const fmtFull = iso => new Date(iso).toLocaleString('es-ES', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+const eur = n => new Intl.NumberFormat('es-ES', {style:'currency', currency:'EUR'}).format(n || 0);
+const toLocalInput = iso => { const d = new Date(iso); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,16); };
+const fromLocalInput = v => new Date(v).toISOString();
+const opts = (list, sel) => list.map(([v,t]) => `<option value="${esc(v)}" ${v===sel?'selected':''}>${esc(t)}</option>`).join('');
+
+const UNIT_STATUS = {ok:'Operativa', repair:'En reparación', lost:'Perdida', retired:'De baja'};
+const UNIT_CLASS = {ok:'ok', repair:'warn', lost:'bad', retired:'bad'};
+const PROJ_STATUS = {draft:'Borrador', confirmed:'Confirmado', done:'Hecho', cancelled:'Cancelado'};
+const RES_STATE = {planned:'Pendiente', out:'Fuera', returned:'Devuelto', mixed:'Parcial'};
+const RES_CLASS = {planned:'', out:'warn', returned:'ok', mixed:'warn'};
+
+let toastTimer;
+function toast(msg, bad=false){
+  const t = $('#toast'); t.textContent = msg; t.className = 'toast show' + (bad?' bad':'');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.className='toast', bad?6000:2500);
+}
+function errMsg(e){
+  if (!e) return 'Error desconocido';
+  if (e.code === '23P01') return 'Esa unidad ya está reservada en otro show que se solapa en fechas.';
+  if (e.code === '23505') return 'Ya existe un elemento con ese valor (nombre o código repetido).';
+  if (e.code === '23514') return e.message;
+  if (e.code === 'PGRST205' || e.code === 'PGRST204' || /schema cache/i.test(e.message||'')) return 'Falta ejecutar un script nuevo en Supabase: esquema_v2, v3 y v4 (SQL Editor).';
+  if (/fetch|network/i.test(e.message||'')) return 'Sin conexión. Comprueba tu internet.';
+  return e.message || 'Error';
+}
+async function db(promise){
+  const r = await promise;
+  if (r.error){ toast(errMsg(r.error), true); throw r.error; }
+  return r.data;
+}
+function openModal(html){ $('#sheet').innerHTML = html; $('#modal').classList.add('open'); }
+function closeModal(){
+  $('#modal').classList.remove('open'); $('#sheet').innerHTML='';
+  if (condResolve){ const r = condResolve; condResolve = null; r(null); }
+}
+function qrSvg(text){
+  const q = qrcode(0, 'M'); q.addData(text); q.make();
+  return q.createSvgTag({cellSize:4, margin:0, scalable:true});
+}
+function download(blob, name){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+/* ============ Estado ============ */
+const S = {
+  session:null, tab:'material', view:null, matMode:'equipos', nagged:false,
+  categories:[], models:[], units:[], projects:[], reservations:[], techs:[], assigns:[],
+  kits:[], kitItems:[], bulkRes:[], maint:[], settings:{},
+  showsMode:'lista', calMonth:null, calDay:null,
+  count:{seen:new Set()}, queue:[], failed:[],
+  scan:{project:'', mode:'out', log:[]}
+};
+const modelById = id => S.models.find(m => m.id === id);
+const unitById = id => S.units.find(u => u.id === id);
+const projById = id => S.projects.find(p => p.id === id);
+const techById = id => S.techs.find(t => t.id === id);
+const kitById = id => S.kits.find(k => k.id === id);
+const unitLabel = u => { const m = modelById(u.model_id); return (m ? m.name : '') + (u.serial_number ? ' · ' + u.serial_number : ''); };
+
+// Supabase devuelve como mucho 1000 filas por consulta: se pide por páginas para no perder datos
+async function fetchAll(table){
+  const out = [];
+  for (let from = 0; ; from += 1000){
+    const r = await sb.from(table).select('*').order('id').range(from, from + 999);
+    if (r.error) return {error:r.error};
+    out.push(...r.data);
+    if (r.data.length < 1000) break;
+  }
+  return {data:out};
+}
+const byName = (a,b) => String(a.name||'').localeCompare(String(b.name||''), 'es', {numeric:true});
+const SNAP_KEY = 'mm_snapshot_v1', QUEUE_KEY = 'mm_queue_v1', FAIL_KEY = 'mm_failed_v1', WAS_KEY = 'mm_was_in';
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e){ return false; } };
+const isNetErr = e => !navigator.onLine || /fetch|network|load failed|timeout|offline/i.test((e && e.message) || '');
+const SNAP_FIELDS = ['categories','models','units','projects','reservations','techs','assigns','kits','kitItems','bulkRes','maint','settings'];
+function saveSnapshot(){ const o = {at:Date.now()}; SNAP_FIELDS.forEach(f => o[f] = S[f]); lsSet(SNAP_KEY, o); }
+function loadSnapshot(){
+  const s = lsGet(SNAP_KEY, null); if (!s) return false;
+  SNAP_FIELDS.forEach(f => { if (s[f] !== undefined) S[f] = s[f]; });
+  return true;
+}
+async function loadAll(draw=true){
+  const tables = ['categories','equipment_models','units','projects','reservations','technicians','crew_assignments','kits','kit_items','bulk_reservations','maintenance_logs'];
+  let rs, st;
+  try { [rs, st] = await Promise.all([Promise.all(tables.map(t => fetchAll(t))), sb.from('settings').select('*').eq('id', 1).maybeSingle()]); }
+  catch(e){ rs = [{error:e}]; st = {}; }
+  const bad = rs.find(r => r.error) || (st.error ? st : null);
+  if (bad){
+    if (isNetErr(bad.error) && loadSnapshot()){
+      S.queue.forEach(applyLocal);
+      if (draw) render();
+      updateOffBar(); toast('Sin conexión: trabajas con los datos guardados en este dispositivo.');
+      return;
+    }
+    if (bad.error && (bad.error.code === 'PGRST301' || /jwt/i.test(bad.error.message || ''))){
+      S.session = null; lsSet(WAS_KEY, false); render(); return toast('La sesión ha caducado. Vuelve a entrar.', true);
+    }
+    toast(errMsg(bad.error), true); return;
+  }
+  [S.categories, S.models, S.units, S.projects, S.reservations, S.techs, S.assigns, S.kits, S.kitItems, S.bulkRes, S.maint] = rs.map(r => r.data);
+  S.categories.sort(byName); S.models.sort(byName); S.techs.sort(byName); S.kits.sort(byName);
+  S.units.sort((a,b) => String(a.created_at).localeCompare(String(b.created_at)));
+  S.projects.sort((a,b) => new Date(a.starts_at) - new Date(b.starts_at));
+  S.settings = st.data || {};
+  S.queue.forEach(applyLocal);          // lo que aún no se ha enviado sigue viéndose reflejado
+  saveSnapshot(); updateOffBar();
+  if (draw) render();
+  if (!S.nagged){ S.nagged = true; backupNag(); setTimeout(flushQueue, 300); }
+}
+
+/* ============ Sesión ============ */
+function loginHTML(){
+  return `<div class="login">
+    <h1>Mi material</h1>
+    <p class="sub">Entra con el usuario que creaste en Supabase.</p>
+    <label for="l-email">Email</label>
+    <input id="l-email" type="email" autocomplete="username" autocapitalize="off">
+    <label for="l-pass">Contraseña</label>
+    <input id="l-pass" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()">
+    <button class="btn primary block" onclick="login()">Entrar</button>
+  </div>`;
+}
+async function login(){
+  const email = $('#l-email').value.trim(), password = $('#l-pass').value;
+  const {error} = await sb.auth.signInWithPassword({email, password});
+  if (error) return toast('Email o contraseña incorrectos', true);
+}
+async function logout(){ lsSet(WAS_KEY, false); await sb.auth.signOut(); }
+
+/* ============ Navegación ============ */
+function go(tab){ S.tab = tab; S.view = null; render(); window.scrollTo(0,0); }
+function goBack(){ S.view = null; render(); window.scrollTo(0,0); }
+function openView(name, id){ S.view = {name, id}; render(); window.scrollTo(0,0); }
+function setMat(m){ S.matMode = m; render(); window.scrollTo(0,0); }
+
+function bar(title, {back=false, actions=''} = {}){
+  return `<header class="bar">${back?`<button class="btn small" onclick="goBack()">‹ Volver</button>`:''}<h1>${esc(title)}</h1>${actions}</header>`;
+}
+function navHTML(){
+  const t = [['material','Material'],['shows','Shows'],['scan','Escanear'],['techs','Técnicos'],['more','Más']];
+  return `<nav class="tabs">${t.map(([k,l]) => `<button class="${S.tab===k?'on':''}" onclick="go('${k}')">${l}</button>`).join('')}</nav>`;
+}
+
+let lastKey = '';
+function render(){
+  if (!S.session){ stopCam(); $('#app').innerHTML = loginHTML(); return; }
+  if (S.tab !== 'scan') stopCam();
+  const key = S.tab + '/' + (S.view ? S.view.name + S.view.id : '') + S.matMode;
+  const y = key === lastKey ? window.scrollY : 0;
+  let body = '';
+  const v = S.view && S.view.name;
+  if (S.tab === 'material') body = v === 'model' ? modelView(S.view.id) : v === 'kit' ? kitView(S.view.id) : materialList();
+  else if (S.tab === 'shows') body = v === 'project' ? projectView(S.view.id) : showsList();
+  else if (S.tab === 'scan') body = scanView();
+  else if (S.tab === 'techs') body = v === 'tech' ? techView(S.view.id) : techsList();
+  else if (S.tab === 'more') body = moreView();
+  $('#app').innerHTML = body + navHTML();
+  lastKey = key;
+  if (y) window.scrollTo(0, y);
+  if (S.tab === 'scan') afterScanRender();
+}
+
+/* ============ Cálculos compartidos ============ */
+// Unidades ocupadas por OTROS shows que se solapan con las fechas de p
+function busyUnits(p){
+  const busy = new Set(), s = new Date(p.starts_at), e = new Date(p.ends_at);
+  S.reservations.forEach(r => {
+    if (r.state === 'returned' || r.project_id === p.id) return;
+    const q = projById(r.project_id);
+    if (q && new Date(q.starts_at) < e && new Date(q.ends_at) > s) busy.add(r.unit_id);
+  });
+  return busy;
+}
+function freeUnits(p, modelId){
+  const busy = busyUnits(p);
+  const mine = new Set(S.reservations.filter(r => r.project_id === p.id && r.state !== 'returned').map(r => r.unit_id));
+  return S.units.filter(u => u.model_id === modelId && u.status === 'ok' && !busy.has(u.id) && !mine.has(u.id));
+}
+// Material por cantidad: stock menos lo reservado en shows que se solapan (incluido este)
+function bulkUsed(p, modelId, excludeId){
+  let used = 0; const s = new Date(p.starts_at), e = new Date(p.ends_at);
+  S.bulkRes.forEach(b => {
+    if (b.model_id !== modelId || b.state === 'returned' || b.id === excludeId) return;
+    const q = projById(b.project_id);
+    if (q && q.status !== 'cancelled' && new Date(q.starts_at) < e && new Date(q.ends_at) > s) used += b.qty;
+  });
+  return used;
+}
+const bulkFree = (p, modelId) => { const m = modelById(modelId); return Math.max(0, (m ? m.bulk_stock : 0) - bulkUsed(p, modelId)); };
+
+const pieces = p => S.reservations.filter(r => r.project_id === p.id).length + S.bulkRes.filter(b => b.project_id === p.id).reduce((s,b) => s + b.qty, 0);
+
+function aggState(arr){
+  if (!arr.length) return 'planned';
+  if (arr.every(x => x.state === 'returned')) return 'returned';
+  if (arr.every(x => x.state === 'planned')) return 'planned';
+  if (arr.every(x => x.state === 'out')) return 'out';
+  return 'mixed';
+}
+
+// Presupuesto
+function projectQty(p){
+  const m = new Map();
+  S.reservations.filter(r => r.project_id === p.id).forEach(r => { const u = unitById(r.unit_id); if (u) m.set(u.model_id, (m.get(u.model_id)||0) + 1); });
+  S.bulkRes.filter(b => b.project_id === p.id).forEach(b => m.set(b.model_id, (m.get(b.model_id)||0) + b.qty));
+  return m;
+}
+function rentalDays(p, override){
+  const d = override != null ? override : p.rental_days;
+  return d > 0 ? d : Math.max(1, Math.ceil((new Date(p.ends_at) - new Date(p.starts_at)) / 86400000));
+}
+function quoteCalc(p, opt={}){
+  const days = rentalDays(p, opt.days);
+  const disc = opt.disc != null ? opt.disc : Number(p.discount_pct || 0);
+  const vat = opt.vat != null ? opt.vat : Number(p.vat_pct != null ? p.vat_pct : 21);
+  const lines = [...projectQty(p)].map(([mid, qty]) => {
+    const m = modelById(mid), rate = Number(m && m.day_rate || 0);
+    return {m, qty, rate, sub: qty * rate * days};
+  }).sort((a,b) => ((a.m&&a.m.name)||'').localeCompare((b.m&&b.m.name)||'', 'es'));
+  const subtotal = lines.reduce((s,l) => s + l.sub, 0), dAmt = subtotal * disc / 100;
+  const base = subtotal - dAmt, vatAmt = base * vat / 100;
+  return {lines, days, disc, vat, subtotal, dAmt, base, vatAmt, total: base + vatAmt};
+}
+function modelStats(m){
+  let shows = 0, income = 0; const now = Date.now();
+  S.projects.forEach(p => {
+    if (p.status === 'cancelled' || p.status === 'draft' || new Date(p.ends_at) > now) return;
+    const qty = projectQty(p).get(m.id); if (!qty) return;
+    shows++; income += qty * Number(m.day_rate || 0) * rentalDays(p) * (1 - Number(p.discount_pct || 0) / 100);
+  });
+  return {shows, income};
+}
+
+/* ============ MATERIAL: equipos ============ */
+function filterRows(v){
+  v = v.toLowerCase();
+  document.querySelectorAll('[data-s]').forEach(el => el.hidden = !el.dataset.s.includes(v));
+}
+function matSeg(){
+  return `<div class="pad" style="margin-top:12px"><div class="seg"><button class="${S.matMode==='equipos'?'on':''}" onclick="setMat('equipos')">Equipos</button><button class="${S.matMode==='kits'?'on':''}" onclick="setMat('kits')">Kits</button></div></div>`;
+}
+function materialList(){
+  if (S.matMode === 'kits') return kitsList();
+  const groups = {};
+  S.models.forEach(m => {
+    const c = S.categories.find(c => c.id === m.category_id);
+    const name = c ? c.name : 'Sin categoría';
+    (groups[name] = groups[name] || []).push(m);
+  });
+  const names = Object.keys(groups).sort((a,b) => a==='Sin categoría' ? 1 : b==='Sin categoría' ? -1 : a.localeCompare(b,'es'));
+  const body = names.map(n => `<div class="group">${esc(n)}</div>${/cabl/i.test(n) ? legendChips() : ''}<div class="list">${groups[n].map(m => {
+    const us = S.units.filter(u => u.model_id === m.id);
+    const rep = us.filter(u => u.status !== 'ok').length;
+    return `<div class="row tap" data-s="${esc((m.name+' '+(m.brand||'')+' '+n+' '+us.map(u=>u.serial_number||'').join(' ')).toLowerCase())}" onclick="openView('model','${m.id}')">
+      ${m.photo_url?`<img class="thumb" loading="lazy" src="${esc(m.photo_url)}" alt="">`:''}
+      <div class="grow"><b>${colorDot(m)}${esc(m.name)}</b><div class="sub">${esc([m.brand, colorText(m)].filter(Boolean).join(' · '))}</div></div>
+      ${m.is_bulk?'<span class="badge">Por cantidad</span>':''}
+      ${rep?`<span class="badge warn">${rep} fuera de servicio</span>`:''}
+      <div class="count">${m.is_bulk ? m.bulk_stock : us.length}</div></div>`;
+  }).join('')}</div>`).join('');
+  return bar('Material', {actions: `<button class="btn small" onclick="printLabels(S.units.map(u=>u.id))">Etiquetas</button><button class="btn primary small" onclick="openModelForm()">+ Modelo</button>`})
+    + matSeg()
+    + (S.models.length ? `<div class="search"><input type="search" placeholder="Buscar por nombre, marca o nº de serie" oninput="filterRows(this.value)"></div>` : '')
+    + `<div class="actions" style="margin-top:10px"><button class="btn small" onclick="openCategories()">Gestionar categorías</button><button class="btn small" onclick="openLegend()">Leyenda de colores</button>${maintAlerts().length?`<button class="btn small" onclick="openAlerts()" style="color:var(--warn)">Avisos de mantenimiento (${maintAlerts().length})</button>`:''}</div>`
+    + (S.models.length ? body : `<div class="empty">Aún no hay material.<br>Pulsa «+ Modelo» para añadir el primer equipo.</div>`);
+}
+
+/* ---- Categorías ---- */
+function openCategories(){
+  const rows = S.categories.map(c => {
+    const n = S.models.filter(m => m.category_id === c.id).length;
+    return `<div class="row"><div class="grow"><b>${esc(c.name)}</b><div class="sub">${n} modelo${n===1?'':'s'}</div></div>
+      <button class="btn small" onclick="renameCategory('${c.id}')">Renombrar</button>
+      <button class="btn small danger" onclick="deleteCategory('${c.id}')">Borrar</button></div>`;
+  }).join('');
+  openModal(`<h2>Categorías</h2>
+    ${S.categories.length ? `<div class="list" style="margin:10px 0">${rows}</div>` : `<div class="empty" style="margin:20px 0">Aún no hay categorías.</div>`}
+    <button class="btn primary block" onclick="newCategory()">+ Nueva categoría</button>`);
+}
+async function newCategory(){
+  const n = prompt('Nombre de la nueva categoría'); if (!n || !n.trim()) return;
+  await db(sb.from('categories').insert({name:n.trim()}));
+  await loadAll(); openCategories(); toast('Categoría creada');
+}
+async function renameCategory(id){
+  const c = S.categories.find(x => x.id === id);
+  const n = prompt('Nuevo nombre de la categoría', c.name); if (n === null) return;
+  const name = n.trim(); if (!name || name === c.name) return;
+  await db(sb.from('categories').update({name}).eq('id', id));
+  await loadAll(); openCategories(); toast('Categoría renombrada');
+}
+async function deleteCategory(id){
+  const c = S.categories.find(x => x.id === id);
+  const n = S.models.filter(m => m.category_id === id).length;
+  const aviso = n ? `Los ${n} modelo${n===1?'':'s'} de «${c.name}» pasarán a «Sin categoría». No se borra ningún equipo.` : 'Esta categoría no tiene modelos.';
+  if (!confirm(`¿Borrar la categoría «${c.name}»?\n${aviso}`)) return;
+  await db(sb.from('categories').delete().eq('id', id));
+  await loadAll(); openCategories(); toast('Categoría borrada');
+}
+
+/* ---- Ficha de modelo ---- */
+function unitWhere(u){
+  const rs = S.reservations.filter(r => r.unit_id === u.id && r.state !== 'returned');
+  const out = rs.find(r => r.state === 'out');
+  if (out){ const p = projById(out.project_id); return {t:'Fuera · ' + (p?p.name:''), k:'warn'}; }
+  const next = rs.map(r => projById(r.project_id)).filter(Boolean).sort((a,b) => new Date(a.starts_at) - new Date(b.starts_at))[0];
+  if (next) return {t:'Reservada · ' + next.name + ' (' + fmtD(next.starts_at) + ')', k:''};
+  return null;
+}
+function unitKit(u){ const it = S.kitItems.find(i => i.unit_id === u.id); return it ? kitById(it.kit_id) : null; }
+
+function modelView(id){
+  const m = modelById(id);
+  if (!m) return bar('Material', {back:true});
+  const cat = S.categories.find(c => c.id === m.category_id);
+  const st = modelStats(m);
+  const statTxt = m.day_rate > 0
+    ? `${st.shows} show${st.shows===1?'':'s'} pasado${st.shows===1?'':'s'} · ingresos ${eur(st.income)}`
+    : 'Pon una tarifa por día (Editar) para ver cuánto factura este equipo.';
+  const head = bar(m.name, {back:true})
+    + `<div class="info">${m.photo_url?`<img class="hero" src="${esc(m.photo_url)}" alt="">`:''}<div class="sub">${esc([m.brand, cat?cat.name:''].filter(Boolean).join(' · '))}</div>
+       ${m.color?`<div style="margin-top:6px">${colorDot(m)}<b>${esc(colorName(m.color))}</b>${colorLabel(m)?' · '+esc(colorLabel(m)):''}</div>`:''}
+       ${m.day_rate>0?`<div style="margin-top:6px"><b>${eur(m.day_rate)}</b> <span class="sub">por día y unidad</span></div>`:''}
+       ${m.notes?`<div style="margin-top:6px">${esc(m.notes)}</div>`:''}
+       ${specsLine(m)}<div class="sub" style="margin-top:8px">${esc(statTxt)}</div></div>`;
+  if (m.is_bulk){
+    const lines = S.bulkRes.filter(b => b.model_id === id).map(b => ({b, p:projById(b.project_id)})).filter(x => x.p && x.b.state !== 'returned')
+      .sort((x,y) => new Date(x.p.starts_at) - new Date(y.p.starts_at));
+    return head + `<div class="info"><b>${m.bulk_stock}</b> en stock · <span class="sub">por cantidad, sin número de serie</span></div>
+      <div class="actions"><button class="btn" onclick="openModelForm('${id}')">Editar</button><button class="btn danger" onclick="deleteModel('${id}')">Eliminar</button></div>
+      <div class="group">Reservado en shows</div>
+      ${lines.length ? `<div class="list">${lines.map(({b,p}) => `<div class="row tap" onclick="go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))}</div></div>
+        <span class="badge ${RES_CLASS[b.state]}">${RES_STATE[b.state]}</span><div class="count">×${b.qty}</div></div>`).join('')}</div>`
+        : `<div class="empty" style="margin:20px 24px">No está reservado en ningún show.</div>`}`;
+  }
+  const us = S.units.filter(u => u.model_id === id);
+  return head
+    + `<div class="actions">
+      <button class="btn" onclick="openModelForm('${id}')">Editar</button>
+      <button class="btn" onclick="printLabels(S.units.filter(u=>u.model_id==='${id}').map(u=>u.id))">Etiquetas QR</button>
+      <button class="btn danger" onclick="deleteModel('${id}')">Eliminar</button>
+    </div>
+    <div class="group">Unidades (${us.length})</div>
+    ${us.length ? `<div class="list">${us.map(u => { const w = unitWhere(u), k = unitKit(u); return `<div class="row tap" onclick="openUnit('${u.id}')">
+      <div class="grow"><b>${u.serial_number ? esc(u.serial_number) : '<span class="sub">Sin nº de serie</span>'}</b>
+      <div class="sub"><span class="code">${esc(u.code)}</span>${k?` · Kit ${esc(k.name)}`:''}${w?` · ${esc(w.t)}`:''}${u.missing_note?` · <span style="color:var(--warn);font-weight:600">Incompleto: ${esc(u.missing_note)}</span>`:''}</div></div>
+      <span class="badge ${UNIT_CLASS[u.status]}">${UNIT_STATUS[u.status]}</span></div>`; }).join('')}</div>`
+      : `<div class="empty">Este modelo aún no tiene unidades.</div>`}
+    <div class="actions"><button class="btn primary" onclick="openAddUnits('${id}')">+ Añadir unidades</button></div>`;
+}
+function toggleType(){
+  const bulk = $('#f-type').value === 'bulk';
+  $('#blk-ser').hidden = bulk; $('#blk-bulk').hidden = !bulk;
+}
+let pendingPhoto = null;
+function resizeImage(file, max, type, q){
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      const x = c.getContext('2d');
+      if (type === 'image/jpeg'){ x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); }
+      x.drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      c.toBlob(b => b ? res(b) : rej(new Error('blob')), type, q);
+    };
+    img.onerror = () => rej(new Error('img')); img.src = url;
+  });
+}
+async function pickPhoto(input){
+  const f = input.files && input.files[0]; if (!f) return;
+  try {
+    pendingPhoto = await resizeImage(f, 900, 'image/jpeg', 0.82);
+    const im = $('#f-prev'); im.src = URL.createObjectURL(pendingPhoto); im.hidden = false; $('#f-nophoto').hidden = true;
+  } catch(e){ pendingPhoto = null; toast('No se pudo leer la imagen', true); }
+}
+function openModelForm(id){
+  const m = id ? modelById(id) : {is_bulk:false};
+  pendingPhoto = null;
+  openModal(`<h2>${id?'Editar modelo':'Nuevo modelo'}</h2>
+    <label for="f-name">Nombre</label><input id="f-name" value="${esc(m.name||'')}" placeholder="Ej. Robin 300">
+    <label for="f-brand">Marca</label><input id="f-brand" value="${esc(m.brand||'')}" placeholder="Ej. Robe">
+    <label for="f-cat">Categoría</label>
+    <select id="f-cat"><option value="">Sin categoría</option>${opts(S.categories.map(c=>[c.id,c.name]), m.category_id)}<option value="__new">+ Nueva categoría…</option></select>
+    <label for="f-color">Color de la leyenda (para cables)</label>
+    <input type="hidden" id="f-color" value="${esc(m.color||'')}">
+    <div class="legend" style="margin:6px 0 0" id="f-colors">${colorPicker(m.color)}</div>
+    <label for="f-photo">Foto</label>
+    <div style="display:flex;gap:12px;align-items:center">
+      <img id="f-prev" class="thumb" style="width:72px;height:72px" ${m.photo_url?`src="${esc(m.photo_url)}"`:'hidden'} alt="">
+      <span id="f-nophoto" class="sub" ${m.photo_url?'hidden':''}>Sin foto</span>
+      <div class="grow"><input id="f-photo" type="file" accept="image/*" onchange="pickPhoto(this)"></div></div>
+    ${m.photo_url?`<label class="chkrow"><input type="checkbox" id="f-rmphoto">Quitar la foto actual</label>`:''}
+    <label for="f-type">Tipo de material</label>
+    <select id="f-type" onchange="toggleType()" ${id?'disabled':''}>
+      <option value="ser" ${m.is_bulk?'':'selected'}>Con número de serie (una ficha por aparato)</option>
+      <option value="bulk" ${m.is_bulk?'selected':''}>Por cantidad (cables, consumibles…)</option></select>
+    <div id="blk-ser" ${m.is_bulk?'hidden':''}>${id?'':`<label for="f-n">Unidades que tienes ahora (los números de serie los pones después)</label><input id="f-n" type="number" min="0" value="1" inputmode="numeric">`}
+      <label for="f-lamp">Vida útil de la lámpara en horas (opcional, para avisos)</label><input id="f-lamp" type="number" min="0" value="${m.lamp_life_hours||''}" inputmode="numeric"></div>
+    <div id="blk-bulk" ${m.is_bulk?'':'hidden'}><label for="f-stock">Cantidad en stock</label><input id="f-stock" type="number" min="0" value="${m.bulk_stock||0}" inputmode="numeric"></div>
+    <label for="f-rate">Tarifa por día y unidad (€, opcional)</label><input id="f-rate" type="number" min="0" step="0.01" value="${m.day_rate!=null?m.day_rate:''}" inputmode="decimal">
+    <div class="two"><div><label for="f-wt">Peso (kg)</label><input id="f-wt" type="number" min="0" step="0.01" value="${m.weight_kg!=null?m.weight_kg:''}" inputmode="decimal"></div>
+    <div><label for="f-pw">Potencia (W)</label><input id="f-pw" type="number" min="0" step="1" value="${m.power_w!=null?m.power_w:''}" inputmode="numeric"></div></div>
+    <label for="f-dw">Medidas en cm (ancho · alto · fondo)</label>
+    <div class="three"><input id="f-dw" type="number" min="0" step="0.1" placeholder="ancho" value="${m.width_cm!=null?m.width_cm:''}" inputmode="decimal" aria-label="Ancho en cm">
+      <input id="f-dh" type="number" min="0" step="0.1" placeholder="alto" value="${m.height_cm!=null?m.height_cm:''}" inputmode="decimal" aria-label="Alto en cm">
+      <input id="f-dd" type="number" min="0" step="0.1" placeholder="fondo" value="${m.depth_cm!=null?m.depth_cm:''}" inputmode="decimal" aria-label="Fondo en cm"></div>
+    <label for="f-notes">Notas</label><textarea id="f-notes">${esc(m.notes||'')}</textarea>
+    <button class="btn primary block" onclick="saveModel('${id||''}')">Guardar</button>`);
+}
+async function uploadModelPhoto(modelId, blob){
+  const path = `modelos/${modelId}-${Date.now()}.jpg`;
+  const r = await sb.storage.from('fotos').upload(path, blob, {contentType:'image/jpeg', upsert:true});
+  if (r.error){ toast('No se pudo subir la foto: ' + r.error.message + ' (¿ejecutaste esquema_v3.sql?)', true); throw r.error; }
+  return sb.storage.from('fotos').getPublicUrl(path).data.publicUrl;
+}
+function removeOldPhoto(url){
+  const i = url ? url.indexOf('/fotos/') : -1;
+  if (i >= 0) sb.storage.from('fotos').remove([decodeURIComponent(url.slice(i + 7).split('?')[0])]).catch(()=>{});
+}
+async function saveModel(id){
+  const name = $('#f-name').value.trim();
+  if (!name) return toast('Escribe un nombre', true);
+  let cat = $('#f-cat').value;
+  if (cat === '__new'){
+    const n = prompt('Nombre de la categoría'); if (!n || !n.trim()) return;
+    const row = await db(sb.from('categories').insert({name:n.trim()}).select().single());
+    cat = row.id;
+  }
+  const bulk = id ? !!modelById(id).is_bulk : $('#f-type').value === 'bulk';
+  const rate = parseFloat($('#f-rate').value), lamp = parseInt($('#f-lamp') ? $('#f-lamp').value : '');
+  const payload = {name, brand:$('#f-brand').value.trim()||null, category_id:cat||null, notes:$('#f-notes').value.trim()||null,
+    is_bulk:bulk, bulk_stock: bulk ? (parseInt($('#f-stock').value)||0) : 0, day_rate: isNaN(rate) ? null : rate,
+    lamp_life_hours: (!bulk && lamp > 0) ? lamp : null, color: $('#f-color').value || null,
+    weight_kg:nf('#f-wt'), power_w:nf('#f-pw') == null ? null : Math.round(nf('#f-pw')), width_cm:nf('#f-dw'), height_cm:nf('#f-dh'), depth_cm:nf('#f-dd')};
+  const oldPhoto = id ? modelById(id).photo_url : null;
+  let mid = id;
+  if (id){ await db(sb.from('equipment_models').update(payload).eq('id', id)); }
+  else {
+    const row = await db(sb.from('equipment_models').insert(payload).select().single());
+    mid = row.id;
+    const n = bulk ? 0 : (parseInt($('#f-n').value) || 0);
+    if (n > 0) await db(sb.from('units').insert(Array.from({length:n}, () => ({model_id:row.id}))));
+  }
+  if (pendingPhoto){
+    const url = await uploadModelPhoto(mid, pendingPhoto);
+    await db(sb.from('equipment_models').update({photo_url:url}).eq('id', mid));
+    removeOldPhoto(oldPhoto);
+  } else if (id && $('#f-rmphoto') && $('#f-rmphoto').checked){
+    await db(sb.from('equipment_models').update({photo_url:null}).eq('id', id));
+    removeOldPhoto(oldPhoto);
+  }
+  pendingPhoto = null;
+  closeModal(); await loadAll(); toast('Guardado');
+}
+async function deleteModel(id){
+  const n = S.units.filter(u => u.model_id === id).length;
+  if (!confirm(`¿Eliminar este modelo${n?` y sus ${n} unidades`:''}? También se quitará de los shows y los kits.`)) return;
+  await db(sb.from('equipment_models').delete().eq('id', id));
+  S.view = null; await loadAll(); toast('Eliminado');
+}
+function openAddUnits(modelId){
+  openModal(`<h2>Añadir unidades</h2>
+    <label for="u-serials">Números de serie (uno por línea)</label>
+    <textarea id="u-serials" placeholder="Pega aquí los números de serie, uno por línea. Déjalo vacío si no los tienes."></textarea>
+    <label for="u-qty">Si no pones números de serie, ¿cuántas unidades creo?</label>
+    <input id="u-qty" type="number" min="1" value="1" inputmode="numeric">
+    <button class="btn primary block" onclick="saveUnits('${modelId}')">Añadir</button>`);
+}
+async function saveUnits(modelId){
+  const serials = $('#u-serials').value.split('\n').map(s => s.trim()).filter(Boolean);
+  const rows = serials.length ? serials.map(s => ({model_id:modelId, serial_number:s}))
+    : Array.from({length: Math.max(1, parseInt($('#u-qty').value)||1)}, () => ({model_id:modelId}));
+  await db(sb.from('units').insert(rows));
+  closeModal(); await loadAll(); toast(rows.length + ' unidad' + (rows.length>1?'es añadidas':' añadida'));
+}
+function openUnit(id){
+  const u = unitById(id), m = modelById(u.model_id);
+  openModal(`<h2>${esc(m.name)}</h2>
+    <div class="qrbox">${qrSvg(u.code)}</div>
+    <div class="sub" style="text-align:center">Código <span class="code">${esc(u.code)}</span></div>
+    <label for="u-serial">Número de serie</label><input id="u-serial" value="${esc(u.serial_number||'')}">
+    <label for="u-status">Estado</label><select id="u-status">${opts(Object.entries(UNIT_STATUS), u.status)}</select>
+    <label for="u-missing">Si está incompleto, qué falta (vacío = completo)</label><input id="u-missing" value="${esc(u.missing_note||'')}">
+    <div class="two"><div><label for="u-buy">Fecha de compra</label><input id="u-buy" type="date" value="${u.purchase_date||''}"></div>
+    <div><label for="u-next">Próxima revisión</label><input id="u-next" type="date" value="${u.next_service||''}"></div></div>
+    ${m.lamp_life_hours>0?`<label for="u-lamp">Horas de lámpara (vida útil ${m.lamp_life_hours} h)</label><input id="u-lamp" type="number" min="0" step="0.5" value="${u.lamp_hours||0}" inputmode="decimal">`:''}
+    <label for="u-notes">Notas</label><textarea id="u-notes">${esc(u.notes||'')}</textarea>
+    <button class="btn primary block" onclick="saveUnit('${id}')">Guardar</button>
+    <div class="actions" style="margin:10px 0 0"><button class="btn" onclick="openUnitHistory('${id}')">Historial</button><button class="btn" onclick="openMaintenance('${id}')">Registrar mantenimiento</button></div>
+    <div class="actions" style="margin:10px 0 0"><button class="btn" onclick="closeModal();printLabels(['${id}'])">Imprimir etiqueta</button><button class="btn danger" onclick="deleteUnit('${id}')">Eliminar</button></div>`);
+}
+async function saveUnit(id){
+  const payload = {serial_number:$('#u-serial').value.trim()||null, status:$('#u-status').value, notes:$('#u-notes').value.trim()||null,
+    purchase_date:$('#u-buy').value||null, next_service:$('#u-next').value||null, missing_note:$('#u-missing').value.trim()||null};
+  if ($('#u-lamp')) payload.lamp_hours = parseFloat($('#u-lamp').value) || 0;
+  await db(sb.from('units').update(payload).eq('id', id));
+  closeModal(); await loadAll(); toast('Guardado');
+}
+async function deleteUnit(id){
+  if (!confirm('¿Eliminar esta unidad? También se quitará de los shows y los kits.')) return;
+  await db(sb.from('units').delete().eq('id', id));
+  closeModal(); await loadAll(); toast('Eliminada');
+}
+
+/* ---- Impresión ---- */
+function printDoc(cls, html){
+  const el = $('#print'); el.className = cls; el.innerHTML = html;
+  setTimeout(() => window.print(), 150);
+}
+function printLabels(ids){
+  if (!ids.length) return toast('No hay unidades para etiquetar', true);
+  printDoc('labels', ids.map(id => {
+    const u = unitById(id), m = modelById(u.model_id);
+    return `<div class="label"><div class="qr">${qrSvg(u.code)}</div><div class="lt"><b>${esc(m.name)}</b><span>${esc(u.serial_number||'')}</span><span class="code">${esc(u.code)}</span></div></div>`;
+  }).join(''));
+}
+function printKitLabel(id){
+  const k = kitById(id);
+  printDoc('labels', `<div class="label"><div class="qr">${qrSvg(k.code)}</div><div class="lt"><b>${esc(k.name)}</b><span>KIT</span><span class="code">${esc(k.code)}</span></div></div>`);
+}
+
+/* ============ MATERIAL: kits y flight cases ============ */
+const kitUnits = k => S.kitItems.filter(i => i.kit_id === k.id && i.unit_id).map(i => unitById(i.unit_id)).filter(Boolean);
+const kitBulk = k => S.kitItems.filter(i => i.kit_id === k.id && i.model_id).map(i => ({item:i, model:modelById(i.model_id), qty:i.qty})).filter(x => x.model);
+
+function kitsList(){
+  return bar('Material', {actions:`<button class="btn primary small" onclick="openKitForm()">+ Kit</button>`}) + matSeg()
+    + (S.kits.length ? `<div class="list">${S.kits.map(k => `<div class="row tap" onclick="openView('kit','${k.id}')">
+        <div class="grow"><b>${esc(k.name)}</b><div class="sub">${kitUnits(k).length} equipos · ${kitBulk(k).length} líneas por cantidad</div></div>
+        <span class="code sub">${esc(k.code)}</span></div>`).join('')}</div>`
+      : `<div class="empty">Aún no hay kits.<br>Un kit es un flight case o un pack que reservas y escaneas de una vez.<br>Pulsa «+ Kit» para crear el primero.</div>`);
+}
+function kitView(id){
+  const k = kitById(id);
+  if (!k) return bar('Kits', {back:true});
+  const us = kitUnits(k), bs = kitBulk(k);
+  const unitRows = S.kitItems.filter(i => i.kit_id === id && i.unit_id).map(i => { const u = unitById(i.unit_id); if (!u) return '';
+    return `<div class="row"><div class="grow"><b>${esc(modelById(u.model_id).name)}</b><div class="sub">${u.serial_number?esc(u.serial_number)+' · ':''}<span class="code">${esc(u.code)}</span></div></div>
+      <button class="btn small" aria-label="Quitar del kit" onclick="removeKitItem('${i.id}')">✕</button></div>`; }).join('');
+  const bulkRows = bs.map(({item, model, qty}) => `<div class="row"><div class="grow"><b>${esc(model.name)}</b></div><div class="count">×${qty}</div>
+      <button class="btn small" aria-label="Quitar del kit" onclick="removeKitItem('${item.id}')">✕</button></div>`).join('');
+  return bar(k.name, {back:true})
+    + `<div class="info" style="text-align:center"><div class="qrbox">${qrSvg(k.code)}</div><div class="sub">Código del kit <span class="code">${esc(k.code)}</span></div>
+       ${k.notes?`<div style="margin-top:8px;text-align:left">${esc(k.notes)}</div>`:''}${kitSpecs(k)}</div>
+    <div class="actions"><button class="btn" onclick="openKitForm('${id}')">Editar</button><button class="btn" onclick="printKitLabel('${id}')">Imprimir etiqueta</button><button class="btn danger" onclick="deleteKit('${id}')">Eliminar</button></div>
+    <div class="group">Equipos (${us.length})</div>
+    ${us.length ? `<div class="list">${unitRows}</div>` : `<div class="empty" style="margin:20px 24px">Sin equipos con número de serie.</div>`}
+    <div class="group">Por cantidad (${bs.length})</div>
+    ${bs.length ? `<div class="list">${bulkRows}</div>` : `<div class="empty" style="margin:20px 24px">Sin material por cantidad.</div>`}
+    <div class="actions"><button class="btn primary" onclick="openKitContents('${id}')">+ Añadir contenido</button></div>`;
+}
+function openKitForm(id){
+  const k = id ? kitById(id) : {};
+  openModal(`<h2>${id?'Editar kit':'Nuevo kit'}</h2>
+    <label for="k-name">Nombre</label><input id="k-name" value="${esc(k.name||'')}" placeholder="Ej. Flight case 4 Robins">
+    <label for="k-notes">Notas</label><textarea id="k-notes">${esc(k.notes||'')}</textarea>
+    <label for="k-wt">Flight case vacío: peso (kg)</label><input id="k-wt" type="number" min="0" step="0.01" value="${k.weight_kg!=null?k.weight_kg:''}" inputmode="decimal">
+    <label for="k-dw">Flight case: medidas en cm (ancho · alto · fondo)</label>
+    <div class="three"><input id="k-dw" type="number" min="0" step="0.1" placeholder="ancho" value="${k.width_cm!=null?k.width_cm:''}" inputmode="decimal" aria-label="Ancho en cm">
+      <input id="k-dh" type="number" min="0" step="0.1" placeholder="alto" value="${k.height_cm!=null?k.height_cm:''}" inputmode="decimal" aria-label="Alto en cm">
+      <input id="k-dd" type="number" min="0" step="0.1" placeholder="fondo" value="${k.depth_cm!=null?k.depth_cm:''}" inputmode="decimal" aria-label="Fondo en cm"></div>
+    <button class="btn primary block" onclick="saveKit('${id||''}')">Guardar</button>`);
+}
+async function saveKit(id){
+  const name = $('#k-name').value.trim(); if (!name) return toast('Escribe un nombre', true);
+  const payload = {name, notes:$('#k-notes').value.trim()||null, weight_kg:nf('#k-wt'), width_cm:nf('#k-dw'), height_cm:nf('#k-dh'), depth_cm:nf('#k-dd')};
+  if (id){ await db(sb.from('kits').update(payload).eq('id', id)); closeModal(); await loadAll(); toast('Guardado'); }
+  else { const row = await db(sb.from('kits').insert(payload).select().single()); closeModal(); await loadAll(); openView('kit', row.id); }
+}
+async function deleteKit(id){
+  if (!confirm('¿Eliminar este kit? Los equipos no se borran: solo dejan de estar agrupados.')) return;
+  await db(sb.from('kits').delete().eq('id', id));
+  S.view = null; await loadAll(); toast('Kit eliminado');
+}
+async function removeKitItem(id){
+  await db(sb.from('kit_items').delete().eq('id', id));
+  await loadAll(); toast('Quitado del kit');
+}
+function openKitContents(kid){
+  const inKit = new Set(S.kitItems.filter(i => i.unit_id).map(i => i.unit_id));
+  const serHtml = S.models.filter(m => !m.is_bulk).map(m => {
+    const us = S.units.filter(u => u.model_id === m.id && !inKit.has(u.id)); if (!us.length) return '';
+    return `<div class="group" style="margin:14px 0 2px">${esc(m.name)}</div>` + us.map(u => `<label class="chkrow"><input type="checkbox" data-u="${u.id}">${u.serial_number?esc(u.serial_number):'<span class="sub">Sin nº de serie</span>'} <span class="code sub">${esc(u.code)}</span></label>`).join('');
+  }).join('');
+  const bulkHtml = S.models.filter(m => m.is_bulk).map(m => `<div class="row" style="padding-left:0;padding-right:0;border:0"><div class="grow"><b>${esc(m.name)}</b></div>
+      <input type="number" min="0" value="0" data-b="${m.id}" style="width:80px" inputmode="numeric" aria-label="Cantidad de ${esc(m.name)}"></div>`).join('');
+  openModal(`<h2>Añadir al kit</h2><div class="sub">Solo aparecen equipos que no están en otro kit.</div>
+    ${serHtml || '<div class="empty" style="margin:20px 0">No quedan equipos con número de serie libres.</div>'}
+    ${bulkHtml ? `<div class="group" style="margin:18px 0 4px">Material por cantidad</div>${bulkHtml}` : ''}
+    <button class="btn primary block" onclick="saveKitContents('${kid}')">Añadir al kit</button>`);
+}
+async function saveKitContents(kid){
+  const rows = [];
+  document.querySelectorAll('#sheet input[data-u]:checked').forEach(c => rows.push({kit_id:kid, unit_id:c.dataset.u, qty:1}));
+  const bulk = [];
+  document.querySelectorAll('#sheet input[data-b]').forEach(i => { const n = parseInt(i.value)||0; if (n > 0) bulk.push({model_id:i.dataset.b, n}); });
+  if (!rows.length && !bulk.length) return toast('Elige qué añadir al kit', true);
+  if (rows.length) await db(sb.from('kit_items').insert(rows));
+  for (const b of bulk){
+    const ex = S.kitItems.find(i => i.kit_id === kid && i.model_id === b.model_id);
+    if (ex) await db(sb.from('kit_items').update({qty: ex.qty + b.n}).eq('id', ex.id));
+    else await db(sb.from('kit_items').insert({kit_id:kid, model_id:b.model_id, qty:b.n}));
+  }
+  closeModal(); await loadAll(); toast('Kit actualizado');
+}
+// ¿Se puede reservar el kit en este show? Devuelve la lista de problemas
+function kitProblem(p, kit){
+  const probs = [], busy = busyUnits(p);
+  const mine = new Set(S.reservations.filter(r => r.project_id === p.id && r.state !== 'returned').map(r => r.unit_id));
+  const us = kitUnits(kit), bs = kitBulk(kit);
+  if (!us.length && !bs.length) return ['el kit está vacío'];
+  us.forEach(u => {
+    if (u.status !== 'ok') probs.push(`${unitLabel(u)} está ${UNIT_STATUS[u.status].toLowerCase()}`);
+    else if (busy.has(u.id)) probs.push(`${unitLabel(u)} está en otro show`);
+    else if (mine.has(u.id)) probs.push(`${unitLabel(u)} ya está en este show`);
+  });
+  bs.forEach(b => { const f = bulkFree(p, b.model.id); if (f < b.qty) probs.push(`faltan ${b.model.name}: quedan ${f}, el kit lleva ${b.qty}`); });
+  return probs;
+}
+async function reserveKit(pid, kid){
+  const kit = kitById(kid);
+  const uRows = kitUnits(kit).map(u => ({project_id:pid, unit_id:u.id, state:'planned', kit_id:kid}));
+  const bRows = kitBulk(kit).map(b => ({project_id:pid, model_id:b.model.id, qty:b.qty, state:'planned', kit_id:kid}));
+  if (uRows.length) await db(sb.from('reservations').insert(uRows));
+  if (bRows.length){
+    const r = await sb.from('bulk_reservations').insert(bRows);
+    if (r.error){
+      await sb.from('reservations').delete().eq('project_id', pid).eq('kit_id', kid);
+      toast(errMsg(r.error), true); throw r.error;
+    }
+  }
+}
+
+/* ============ SHOWS ============ */
+function showsList(){
+  if (S.showsMode === 'calendario') return calendarView();
+  const now = Date.now();
+  const up = S.projects.filter(p => new Date(p.ends_at) >= now).sort((a,b) => new Date(a.starts_at) - new Date(b.starts_at));
+  const past = S.projects.filter(p => new Date(p.ends_at) < now).sort((a,b) => new Date(b.starts_at) - new Date(a.starts_at));
+  const rowH = p => `<div class="row tap" onclick="openView('project','${p.id}')">
+      <div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))}${p.venue?' · '+esc(p.venue):''}</div></div>
+      ${p.status!=='confirmed'?`<span class="badge ${p.status==='cancelled'?'bad':p.status==='done'?'ok':''}">${PROJ_STATUS[p.status]}</span>`:''}${p.payment_status==='invoiced'?'<span class="badge warn">Facturado</span>':p.payment_status==='paid'?'<span class="badge ok">Cobrado</span>':''}
+      <div class="count" title="Piezas reservadas">${pieces(p)}</div></div>`;
+  return bar('Shows', {actions:`<button class="btn primary small" onclick="openProjectForm()">+ Show</button>`}) + showsSeg()
+    + (S.projects.length ? `${up.length?`<div class="group">Próximos</div><div class="list">${up.map(rowH).join('')}</div>`:''}
+       ${past.length?`<div class="group">Pasados</div><div class="list">${past.map(rowH).join('')}</div>`:''}`
+      : `<div class="empty">Aún no hay shows.<br>Pulsa «+ Show» para crear el primero.</div>`);
+}
+function openProjectForm(id){
+  let p = id ? projById(id) : null;
+  if (!p){
+    const d = new Date(); d.setDate(d.getDate()+1); d.setHours(10,0,0,0);
+    const e = new Date(d.getTime() + 14*3600*1000);
+    p = {name:'', client:'', venue:'', status:'confirmed', starts_at:d.toISOString(), ends_at:e.toISOString(), notes:''};
+  }
+  openModal(`<h2>${id?'Editar show':'Nuevo show'}</h2>
+    <label for="p-name">Nombre</label><input id="p-name" value="${esc(p.name)}" placeholder="Ej. SOKO 2026">
+    <div class="two"><div><label for="p-client">Cliente</label><input id="p-client" value="${esc(p.client||'')}"></div>
+    <div><label for="p-venue">Lugar</label><input id="p-venue" value="${esc(p.venue||'')}"></div></div>
+    <label for="p-start">Material reservado desde (carga)</label><input id="p-start" type="datetime-local" value="${toLocalInput(p.starts_at)}">
+    <label for="p-end">Hasta (devolución al almacén)</label><input id="p-end" type="datetime-local" value="${toLocalInput(p.ends_at)}">
+    <label for="p-status">Estado</label><select id="p-status">${opts(Object.entries(PROJ_STATUS), p.status)}</select>
+    <label for="p-notes">Notas</label><textarea id="p-notes">${esc(p.notes||'')}</textarea>
+    <label for="p-rider">Necesidades para la sala (salen en el rider técnico)</label><textarea id="p-rider" placeholder="Ej. 2 líneas de 16 A en escenario, punto de rigging a 6 m, acceso de carga por el lateral…">${esc(p.rider_notes||'')}</textarea>
+    <button class="btn primary block" onclick="saveProject('${id||''}')">Guardar</button>`);
+}
+async function saveProject(id){
+  const name = $('#p-name').value.trim();
+  if (!name) return toast('Escribe un nombre', true);
+  const s = $('#p-start').value, e = $('#p-end').value;
+  if (!s || !e) return toast('Indica las dos fechas', true);
+  if (new Date(e) <= new Date(s)) return toast('La fecha final debe ser posterior a la inicial', true);
+  const payload = {name, client:$('#p-client').value.trim()||null, venue:$('#p-venue').value.trim()||null,
+    status:$('#p-status').value, starts_at:fromLocalInput(s), ends_at:fromLocalInput(e), notes:$('#p-notes').value.trim()||null, rider_notes:$('#p-rider').value.trim()||null};
+  let pid = id;
+  if (id){
+    try { await db(sb.from('projects').update(payload).eq('id', id)); }
+    catch(err){ if (err.code === '23P01') toast('No se pueden mover las fechas: alguna unidad ya está reservada en otro show en ese periodo.', true); return; }
+  } else {
+    const row = await db(sb.from('projects').insert(payload).select().single());
+    pid = row.id;
+  }
+  if (payload.status === 'cancelled'){
+    await db(sb.from('reservations').delete().eq('project_id', pid).neq('state','returned'));
+    await db(sb.from('bulk_reservations').delete().eq('project_id', pid).neq('state','returned'));
+  }
+  closeModal(); await loadAll(); toast('Guardado');
+  if (!id) openView('project', pid);
+}
+async function deleteProject(id){
+  if (!confirm('¿Eliminar este show y sus reservas?')) return;
+  await db(sb.from('projects').delete().eq('id', id));
+  S.view = null; await loadAll(); toast('Eliminado');
+}
+function projectView(id){
+  const p = projById(id);
+  if (!p) return bar('Shows', {back:true});
+  const rs = S.reservations.filter(r => r.project_id === id), bs = S.bulkRes.filter(b => b.project_id === id);
+  const kitIds = [...new Set([...rs, ...bs].map(x => x.kit_id).filter(Boolean))];
+  const looseR = rs.filter(r => !r.kit_id), looseB = bs.filter(b => !b.kit_id);
+
+  const kitsH = kitIds.map(kid => {
+    const k = kitById(kid), kr = rs.filter(r => r.kit_id === kid), kb = bs.filter(b => b.kit_id === kid), st = aggState([...kr, ...kb]);
+    return `<div class="row"><div class="grow"><b>${esc(k ? k.name : 'Kit')}</b><div class="sub">${kr.length} equipos${kb.length?` · ${kb.length} línea${kb.length===1?'':'s'} por cantidad`:''}</div></div>
+      <span class="badge ${RES_CLASS[st]}">${RES_STATE[st]}</span>
+      ${st==='planned'?`<button class="btn small" aria-label="Quitar kit" onclick="removeKitFromShow('${id}','${kid}')">✕</button>`:''}</div>`;
+  }).join('');
+
+  const byModel = {};
+  looseR.forEach(r => { const u = unitById(r.unit_id); if (!u) return; (byModel[u.model_id] = byModel[u.model_id] || []).push({r,u}); });
+  const unitsH = Object.keys(byModel).map(mid => {
+    const m = modelById(mid), items = byModel[mid];
+    return `<div class="row head"><div class="grow"><b>${colorDot(m)}${esc(m?m.name:'')}</b>${m&&m.color?`<div class="sub">${esc(colorText(m))}</div>`:''}</div><div class="count">×${items.length}</div></div>`
+      + items.map(({r,u}) => `<div class="row"><div class="grow"><span class="code">${esc(u.code)}</span>${u.serial_number?` <span class="sub">· ${esc(u.serial_number)}</span>`:''}${u.missing_note?`<div class="sub" style="color:var(--warn)">Incompleto: falta ${esc(u.missing_note)}</div>`:''}</div>
+        <span class="badge ${RES_CLASS[r.state]}">${RES_STATE[r.state]}</span>
+        ${r.state==='planned'?`<button class="btn small" aria-label="Quitar" onclick="removeReservation('${r.id}')">✕</button>`:''}</div>`).join('');
+  }).join('');
+
+  const bulkH = looseB.map(b => { const m = modelById(b.model_id);
+    return `<div class="row tap" onclick="openBulkLine('${b.id}')"><div class="grow"><b>${colorDot(m)}${esc(m?m.name:'')}</b>${m&&m.color?`<div class="sub">${esc(colorText(m))}</div>`:''}</div>
+      <span class="badge ${RES_CLASS[b.state]}">${RES_STATE[b.state]}</span><div class="count">×${b.qty}</div></div>`; }).join('');
+
+  const as = S.assigns.filter(a => a.project_id === id);
+  const total = pieces(p);
+  return bar(p.name, {back:true})
+    + `<div class="info"><div>${esc(fmtDT(p.starts_at))} → ${esc(fmtDT(p.ends_at))}</div>
+       <div class="sub">${esc([p.client, p.venue].filter(Boolean).join(' · '))}</div>
+       <div style="margin-top:6px"><span class="badge ${p.status==='cancelled'?'bad':p.status==='done'?'ok':''}">${PROJ_STATUS[p.status]}</span></div>
+       ${p.notes?`<div style="margin-top:8px">${esc(p.notes)}</div>`:''}</div>
+    <div class="actions"><button class="btn" onclick="openProjectForm('${id}')">Editar</button>
+      <button class="btn" onclick="printPackingList('${id}')">Lista de carga</button>
+      <button class="btn" onclick="openQuote('${id}')">Presupuesto</button>
+      <button class="btn" onclick="openDuplicate('${id}')">Duplicar</button>
+      <button class="btn danger" onclick="deleteProject('${id}')">Eliminar</button></div>
+    <div class="actions"><a class="btn" style="text-decoration:none" target="_blank" rel="noopener" href="${esc(gcalUrl(p))}">Añadir a Google Calendar</a><button class="btn" onclick="printRider('${id}')">Rider técnico</button></div>
+    ${paymentCard(p)}${loadCard(p)}
+    <div class="group">Material (${total} piezas)</div>
+    ${kitIds.length?`<div class="list">${kitsH}</div>`:''}
+    ${looseR.length?`<div class="list">${unitsH}</div>`:''}
+    ${looseB.length?`<div class="list">${bulkH}</div>`:''}
+    ${total?'':`<div class="empty" style="margin:20px 24px">Aún no hay material en este show.</div>`}
+    <div class="actions"><button class="btn primary" onclick="openAddMaterial('${id}')">+ Añadir material</button><button class="btn primary" onclick="openAddKit('${id}')">+ Añadir kit</button></div>
+    <div class="group">Técnicos (${as.length})</div>
+    ${as.length?`<div class="list">${as.map(a => { const t = techById(a.technician_id); if(!t) return '';
+      return `<div class="row"><div class="grow"><b>${esc(t.name)}</b><div class="sub">${esc([a.role, a.call_time?'Llamada '+fmtDT(a.call_time):''].filter(Boolean).join(' · '))}</div></div>
+      ${t.phone?`<a class="btn small" style="text-decoration:none" target="_blank" rel="noopener" href="${waLink(t, a, p)}">WhatsApp</a>`:''}
+      <button class="btn small" aria-label="Quitar" onclick="removeAssign('${a.id}')">✕</button></div>`; }).join('')}</div>`:`<div class="empty" style="margin:20px 24px">Aún no hay técnicos asignados.</div>`}
+    <div class="actions"><button class="btn primary" onclick="openAddAssign('${id}')">+ Añadir técnico</button></div>`;
+}
+function openAddMaterial(pid){
+  const p = projById(pid);
+  const rows = S.models.map(m => {
+    const free = m.is_bulk ? bulkFree(p, m.id) : freeUnits(p, m.id).length;
+    const total = m.is_bulk ? m.bulk_stock : S.units.filter(u => u.model_id === m.id).length;
+    return `<div class="row" data-s="${esc((m.name+' '+(m.brand||'')).toLowerCase())}"><div class="grow"><b>${colorDot(m)}${esc(m.name)}</b>${m.color?`<div class="sub">${esc(colorText(m))}</div>`:''}<div class="sub">Libres ${free} de ${total}${m.is_bulk?' · por cantidad':''}</div></div>
+      <input type="number" min="0" max="${free}" value="0" ${free?'':'disabled'} data-m="${m.id}" data-bulk="${m.is_bulk?1:0}" style="width:76px" inputmode="numeric" aria-label="Cantidad de ${esc(m.name)}"></div>`;
+  }).join('');
+  openModal(`<h2>Añadir material</h2><div class="sub">Solo se cuentan las unidades libres en las fechas de este show.</div>
+    <div class="search" style="margin:10px 0"><input type="search" placeholder="Buscar" oninput="filterRows(this.value)"></div>
+    ${S.models.length?`<div class="list" style="margin:0">${rows}</div>`:`<div class="empty">Primero añade material en la pestaña Material.</div>`}
+    <button class="btn primary block" onclick="saveMaterial('${pid}')">Añadir al show</button>`);
+}
+async function saveMaterial(pid){
+  const p = projById(pid), uRows = [], bulk = [];
+  document.querySelectorAll('#sheet input[data-m]').forEach(inp => {
+    const n = parseInt(inp.value) || 0; if (n <= 0) return;
+    if (inp.dataset.bulk === '1') bulk.push({model_id:inp.dataset.m, n});
+    else freeUnits(p, inp.dataset.m).slice(0, n).forEach(u => uRows.push({project_id:pid, unit_id:u.id, state:'planned'}));
+  });
+  if (!uRows.length && !bulk.length) return toast('Indica cuántas unidades quieres añadir', true);
+  if (uRows.length) await db(sb.from('reservations').insert(uRows));
+  for (const b of bulk){
+    const ex = S.bulkRes.find(x => x.project_id === pid && x.model_id === b.model_id && !x.kit_id && x.state === 'planned');
+    if (ex) await db(sb.from('bulk_reservations').update({qty: ex.qty + b.n}).eq('id', ex.id));
+    else await db(sb.from('bulk_reservations').insert({project_id:pid, model_id:b.model_id, qty:b.n, state:'planned'}));
+  }
+  closeModal(); await loadAll(); toast('Material añadido');
+}
+async function removeReservation(id){
+  await db(sb.from('reservations').delete().eq('id', id));
+  await loadAll(); toast('Quitada del show');
+}
+function openBulkLine(id){
+  const b = S.bulkRes.find(x => x.id === id), m = modelById(b.model_id);
+  openModal(`<h2>${esc(m.name)}</h2><div class="sub">Material por cantidad: se marca a mano, no se escanea.</div>
+    <label for="b-qty">Cantidad</label><input id="b-qty" type="number" min="1" value="${b.qty}" inputmode="numeric">
+    <label for="b-state">Estado</label><select id="b-state">${opts([['planned','Pendiente'],['out','Fuera'],['returned','Devuelto']], b.state)}</select>
+    <button class="btn primary block" onclick="saveBulkLine('${id}')">Guardar</button>
+    <div class="actions" style="margin:10px 0 0"><button class="btn danger" onclick="deleteBulkLine('${id}')">Quitar del show</button></div>`);
+}
+async function saveBulkLine(id){
+  const qty = parseInt($('#b-qty').value) || 0; if (qty < 1) return toast('La cantidad debe ser al menos 1', true);
+  await db(sb.from('bulk_reservations').update({qty, state:$('#b-state').value}).eq('id', id));
+  closeModal(); await loadAll(); toast('Guardado');
+}
+async function deleteBulkLine(id){
+  await db(sb.from('bulk_reservations').delete().eq('id', id));
+  closeModal(); await loadAll(); toast('Quitado del show');
+}
+function openAddKit(pid){
+  const p = projById(pid);
+  const inShow = new Set([...S.reservations, ...S.bulkRes].filter(x => x.project_id === pid && x.kit_id).map(x => x.kit_id));
+  const rows = S.kits.filter(k => !inShow.has(k.id)).map(k => {
+    const probs = kitProblem(p, k);
+    return `<div class="row"><div class="grow"><b>${esc(k.name)}</b>
+      <div class="sub ${probs.length?'bad':''}">${probs.length ? esc(probs.slice(0,2).join('; ') + (probs.length>2?` y ${probs.length-2} más`:'')) : `${kitUnits(k).length} equipos · ${kitBulk(k).length} líneas por cantidad · libre`}</div></div>
+      <button class="btn small primary" ${probs.length?'disabled':''} onclick="saveKitToShow('${pid}','${k.id}')">Añadir</button></div>`;
+  }).join('');
+  openModal(`<h2>Añadir kit</h2><div class="sub">Se reservan todos sus equipos de una vez.</div>
+    ${rows ? `<div class="list" style="margin:12px 0 0">${rows}</div>` : `<div class="empty" style="margin:24px 0">${S.kits.length?'Todos los kits ya están en este show.':'Aún no hay kits. Créalos en Material > Kits.'}</div>`}`);
+}
+async function saveKitToShow(pid, kid){
+  await reserveKit(pid, kid);
+  closeModal(); await loadAll(); toast('Kit añadido al show');
+}
+async function removeKitFromShow(pid, kid){
+  await db(sb.from('reservations').delete().eq('project_id', pid).eq('kit_id', kid));
+  await db(sb.from('bulk_reservations').delete().eq('project_id', pid).eq('kit_id', kid));
+  await loadAll(); toast('Kit quitado del show');
+}
+function openAddAssign(pid){
+  const p = projById(pid), taken = new Set(S.assigns.filter(a => a.project_id === pid).map(a => a.technician_id));
+  const avail = S.techs.filter(t => !taken.has(t.id));
+  if (!avail.length) return toast(S.techs.length ? 'Todos los técnicos ya están en este show' : 'Primero añade técnicos en la pestaña Técnicos', true);
+  openModal(`<h2>Añadir técnico</h2>
+    <label for="a-tech">Técnico</label><select id="a-tech">${opts(avail.map(t=>[t.id,t.name]))}</select>
+    <label for="a-role">Función</label><input id="a-role" placeholder="Ej. Operador de luces">
+    <label for="a-call">Hora de llamada</label><input id="a-call" type="datetime-local" value="${toLocalInput(p.starts_at)}">
+    <button class="btn primary block" onclick="saveAssign('${pid}')">Añadir</button>`);
+}
+async function saveAssign(pid){
+  const call = $('#a-call').value;
+  await db(sb.from('crew_assignments').insert({project_id:pid, technician_id:$('#a-tech').value, role:$('#a-role').value.trim()||null, call_time:call?fromLocalInput(call):null}));
+  closeModal(); await loadAll(); toast('Técnico añadido');
+}
+async function removeAssign(id){
+  await db(sb.from('crew_assignments').delete().eq('id', id));
+  await loadAll(); toast('Quitado del show');
+}
+// Enlace que abre Google Calendar con el evento ya rellenado (solo hay que pulsar Guardar)
+function gcalUrl(p, opt = {}){
+  const f = d => new Date(d).toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+  const start = opt.start || p.starts_at;
+  const details = [opt.role ? 'Función: ' + opt.role : '', p.client ? 'Cliente: ' + p.client : '', p.notes || ''].filter(Boolean).join('\n');
+  const q = new URLSearchParams({action:'TEMPLATE', text:p.name + (opt.role ? ' (' + opt.role + ')' : ''), dates:f(start) + '/' + f(p.ends_at), details, location:p.venue || ''});
+  return 'https://calendar.google.com/calendar/render?' + q.toString();
+}
+function waLink(t, a, p){
+  let ph = (t.phone||'').replace(/\D/g,'');
+  if (ph.length === 9) ph = '34' + ph;
+  const txt = [`Show: ${p.name}`, p.venue?`Lugar: ${p.venue}`:'', a.call_time?`Llamada: ${fmtDT(a.call_time)}`:`Inicio: ${fmtDT(p.starts_at)}`, a.role?`Función: ${a.role}`:'', 'Añadir a tu calendario: ' + gcalUrl(p, {start:a.call_time, role:a.role})].filter(Boolean).join('\n');
+  return `https://wa.me/${ph}?text=${encodeURIComponent(txt)}`;
+}
+
+/* ---- Lista de carga imprimible ---- */
+function printPackingList(pid){
+  const p = projById(pid);
+  const rs = S.reservations.filter(r => r.project_id === pid), bs = S.bulkRes.filter(b => b.project_id === pid);
+  if (!rs.length && !bs.length) return toast('Este show aún no tiene material', true);
+  const box = '<span class="box"></span>';
+  const row = txt => `<tr><td style="width:12mm">${box}</td><td style="width:12mm">${box}</td><td>${txt}</td></tr>`;
+  const head = `<tr><th>Sale</th><th>Vuelve</th><th>Material</th></tr>`;
+  const kitIds = [...new Set([...rs, ...bs].map(x => x.kit_id).filter(Boolean))];
+  let html = bizHeader() + `<h1>Lista de carga · ${esc(p.name)}</h1>
+    <p>${esc(fmtFull(p.starts_at))} → ${esc(fmtFull(p.ends_at))}</p>
+    <p>${esc([p.client, p.venue].filter(Boolean).join(' · '))}</p>`;
+  if (kitIds.length){
+    html += `<h2>Kits</h2><table>${head}` + kitIds.map(kid => {
+      const k = kitById(kid);
+      const inner = rs.filter(r => r.kit_id === kid).map(r => { const u = unitById(r.unit_id); return u ? esc(unitLabel(u)) + ' <span class="nw">' + esc(u.code) + '</span>' : ''; })
+        .concat(bs.filter(b => b.kit_id === kid).map(b => { const m = modelById(b.model_id); return esc(m ? m.name : '') + ' ×' + b.qty; }));
+      return row(`<b>${esc(k ? k.name : 'Kit')}</b>${k?` <span class="small nw">${esc(k.code)}</span>`:''}<br><span class="small">${inner.join(' · ')}</span>`);
+    }).join('') + `</table>`;
+  }
+  const looseR = rs.filter(r => !r.kit_id), looseB = bs.filter(b => !b.kit_id);
+  if (looseR.length){
+    const byModel = {};
+    looseR.forEach(r => { const u = unitById(r.unit_id); if (u) (byModel[u.model_id] = byModel[u.model_id] || []).push(u); });
+    html += `<h2>Equipos</h2><table>${head}` + Object.keys(byModel).sort((a,b) => modelById(a).name.localeCompare(modelById(b).name,'es')).map(mid =>
+      byModel[mid].map((u,i) => row(`${colorDot(modelById(mid))}<b>${esc(modelById(mid).name)}</b>${colorText(modelById(mid))?' <span class="small">· '+esc(colorText(modelById(mid)))+'</span>':''}${u.serial_number?' · '+esc(u.serial_number):''} <span class="small nw">${esc(u.code)}</span>`)).join('')).join('') + `</table>`;
+  }
+  if (looseB.length){
+    html += `<h2>Material por cantidad</h2><table>${head}` + looseB.map(b => { const m = modelById(b.model_id); return row(`${colorDot(m)}<b>${esc(m?m.name:'')}</b> ×${b.qty}${colorText(m)?' <span class="small">· '+esc(colorText(m))+'</span>':''}`); }).join('') + `</table>`;
+  }
+  const as = S.assigns.filter(a => a.project_id === pid);
+  if (as.length) html += `<h2>Equipo técnico</h2><table>` + as.map(a => { const t = techById(a.technician_id); return t ? `<tr><td>${esc(t.name)}</td><td>${esc(a.role||'')}</td><td>${a.call_time?esc(fmtDT(a.call_time)):''}</td><td>${esc(t.phone||'')}</td></tr>` : ''; }).join('') + `</table>`;
+  const usedHex = new Set([...rs.map(r => (modelById((unitById(r.unit_id)||{}).model_id)||{}).color), ...bs.map(b => (modelById(b.model_id)||{}).color)].filter(Boolean));
+  const leg = legendList().filter(e => usedHex.has(e.hex));
+  if (leg.length) html += `<h2>Leyenda de colores</h2><p>${leg.map(e => `<span class="nw"><span class="sw" style="background:${esc(e.hex)}"></span>${esc(entryText(e))}</span>`).join(' &nbsp; ')}</p>`;
+  printDoc('doc', html);
+}
+
+/* ---- Presupuesto ---- */
+function readQuoteInputs(){
+  const v = parseFloat($('#q-vat').value);
+  return {days: parseInt($('#q-days').value) || 0, disc: parseFloat($('#q-disc').value) || 0, vat: isNaN(v) ? 21 : v};
+}
+function quoteSummary(q){
+  const warn = q.lines.filter(l => !(l.rate > 0)).length;
+  return `<div class="sum">
+    ${q.lines.map(l => `<div class="row"><div class="grow">${esc(l.m?l.m.name:'')} <span class="sub">×${l.qty}${l.rate>0?` · ${eur(l.rate)}/día`:' · sin tarifa'}</span></div><div>${eur(l.sub)}</div></div>`).join('') || '<div class="row sub">No hay material en este show.</div>'}
+    <div class="row"><div class="grow sub">Subtotal (${q.days} día${q.days===1?'':'s'})</div><div>${eur(q.subtotal)}</div></div>
+    ${q.disc>0?`<div class="row"><div class="grow sub">Descuento ${q.disc}%</div><div>−${eur(q.dAmt)}</div></div>`:''}
+    <div class="row"><div class="grow sub">IVA ${q.vat}%</div><div>${eur(q.vatAmt)}</div></div>
+    <div class="row tot"><div class="grow">Total</div><div>${eur(q.total)}</div></div></div>
+    ${warn?`<div class="sub bad" style="margin-top:8px">${warn} equipo${warn===1?'':'s'} sin tarifa. Ponla en Material > Editar.</div>`:''}`;
+}
+function openQuote(pid){
+  const p = projById(pid);
+  openModal(`<h2>Presupuesto</h2><div class="sub">${esc(p.name)}${p.client?' · '+esc(p.client):''}</div>
+    <div class="two"><div><label for="q-days">Días de alquiler</label><input id="q-days" type="number" min="1" inputmode="numeric" value="${p.rental_days||''}" placeholder="${rentalDays(p)} (auto)" oninput="refreshQuote('${pid}')"></div>
+    <div><label for="q-disc">Descuento %</label><input id="q-disc" type="number" min="0" max="100" step="0.5" inputmode="decimal" value="${p.discount_pct||0}" oninput="refreshQuote('${pid}')"></div></div>
+    <label for="q-vat">IVA %</label><input id="q-vat" type="number" min="0" step="0.5" inputmode="decimal" value="${p.vat_pct != null ? p.vat_pct : 21}" oninput="refreshQuote('${pid}')">
+    <div id="q-sum"></div>
+    <button class="btn primary block" onclick="printQuote('${pid}')">Guardar e imprimir / PDF</button>
+    <button class="btn block" onclick="saveQuote('${pid}')">Solo guardar ajustes</button>`);
+  refreshQuote(pid);
+}
+function refreshQuote(pid){ $('#q-sum').innerHTML = quoteSummary(quoteCalc(projById(pid), readQuoteInputs())); }
+async function saveQuote(pid, close=true){
+  const i = readQuoteInputs();
+  await db(sb.from('projects').update({rental_days: i.days || null, discount_pct: i.disc, vat_pct: i.vat}).eq('id', pid));
+  if (close) closeModal();
+  await loadAll(); if (close) toast('Ajustes guardados');
+}
+async function printQuote(pid){
+  await saveQuote(pid, false); closeModal();
+  if ((projById(pid).payment_status || 'none') === 'none'){ await sb.from('projects').update({payment_status:'quoted'}).eq('id', pid); await loadAll(false); }
+  const p = projById(pid), q = quoteCalc(p);
+  const b = S.settings || {}, validity = b.quote_validity_days || 30;
+  const html = bizHeader() + `<h1>Presupuesto</h1>
+    <p><b>${esc(p.name)}</b>${p.client?' · '+esc(p.client):''}</p>
+    <p>${esc(fmtFull(p.starts_at))} → ${esc(fmtFull(p.ends_at))}${p.venue?' · '+esc(p.venue):''}</p>
+    <p class="small">Fecha: ${esc(new Date().toLocaleDateString('es-ES'))}</p>
+    <h2>Detalle</h2>
+    <table><tr><th>Equipo</th><th class="r">Cant.</th><th class="r">€/día</th><th class="r">Días</th><th class="r">Importe</th></tr>
+    ${q.lines.map(l => `<tr><td>${esc(l.m?l.m.name:'')}</td><td class="r">${l.qty}</td><td class="r">${eur(l.rate)}</td><td class="r">${q.days}</td><td class="r">${eur(l.sub)}</td></tr>`).join('')}
+    <tr><td colspan="4" class="r">Subtotal</td><td class="r">${eur(q.subtotal)}</td></tr>
+    ${q.disc>0?`<tr><td colspan="4" class="r">Descuento ${q.disc}%</td><td class="r">−${eur(q.dAmt)}</td></tr>`:''}
+    <tr><td colspan="4" class="r">Base imponible</td><td class="r">${eur(q.base)}</td></tr>
+    <tr><td colspan="4" class="r">IVA ${q.vat}%</td><td class="r">${eur(q.vatAmt)}</td></tr>
+    <tr class="tot"><td colspan="4" class="r">Total</td><td class="r">${eur(q.total)}</td></tr></table>
+    <p class="small" style="margin-top:6mm">Importe = cantidad × tarifa por día × días de alquiler.</p>
+    ${b.quote_notes ? `<p style="margin-top:5mm">${esc(b.quote_notes).replace(/\n/g, '<br>')}</p>` : ''}
+    ${b.payment_terms ? `<h2>Condiciones de pago</h2><p>${esc(b.payment_terms).replace(/\n/g, '<br>')}</p>` : ''}
+    <p class="small" style="margin-top:5mm">Presupuesto válido durante ${validity} días desde la fecha indicada.</p>`;
+  printDoc('doc', html);
+}
+
+/* ============ TÉCNICOS ============ */
+function techsList(){
+  const now = Date.now();
+  return bar('Técnicos', {actions:`<button class="btn primary small" onclick="openTechForm()">+ Técnico</button>`})
+    + (S.techs.length ? `<div class="list">${S.techs.map(t => {
+        const n = S.assigns.filter(a => a.technician_id === t.id).filter(a => { const p = projById(a.project_id); return p && new Date(p.ends_at) >= now && p.status !== 'cancelled'; }).length;
+        return `<div class="row tap" onclick="openView('tech','${t.id}')"><div class="grow"><b>${esc(t.name)}</b><div class="sub">${esc([t.phone, t.email].filter(Boolean).join(' · '))}</div></div>
+          <span class="sub">${n} próximo${n===1?'':'s'}</span></div>`; }).join('')}</div>`
+      : `<div class="empty">Aún no hay técnicos.<br>Pulsa «+ Técnico» para añadir al primero.</div>`);
+}
+function openTechForm(id){
+  const t = id ? techById(id) : {};
+  openModal(`<h2>${id?'Editar técnico':'Nuevo técnico'}</h2>
+    <label for="t-name">Nombre</label><input id="t-name" value="${esc(t.name||'')}">
+    <label for="t-phone">Teléfono (para WhatsApp)</label><input id="t-phone" type="tel" value="${esc(t.phone||'')}">
+    <label for="t-email">Email</label><input id="t-email" type="email" value="${esc(t.email||'')}">
+    <button class="btn primary block" onclick="saveTech('${id||''}')">Guardar</button>`);
+}
+async function saveTech(id){
+  const name = $('#t-name').value.trim();
+  if (!name) return toast('Escribe un nombre', true);
+  const payload = {name, phone:$('#t-phone').value.trim()||null, email:$('#t-email').value.trim()||null};
+  if (id) await db(sb.from('technicians').update(payload).eq('id', id));
+  else await db(sb.from('technicians').insert(payload));
+  closeModal(); await loadAll(); toast('Guardado');
+}
+async function deleteTech(id){
+  if (!confirm('¿Eliminar este técnico y sus asignaciones?')) return;
+  await db(sb.from('technicians').delete().eq('id', id));
+  S.view = null; await loadAll(); toast('Eliminado');
+}
+const calUrl = t => `${SUPABASE_URL}/functions/v1/calendario?token=${t.calendar_token}`;
+function techView(id){
+  const t = techById(id);
+  if (!t) return bar('Técnicos', {back:true});
+  const as = S.assigns.filter(a => a.technician_id === id).map(a => ({a, p:projById(a.project_id)})).filter(x => x.p)
+    .sort((x,y) => new Date(x.p.starts_at) - new Date(y.p.starts_at));
+  return bar(t.name, {back:true})
+    + `<div class="info"><div>${esc(t.phone||'Sin teléfono')}</div><div class="sub">${esc(t.email||'Sin email')}</div></div>
+    <div class="actions"><button class="btn" onclick="openTechForm('${id}')">Editar</button><button class="btn danger" onclick="deleteTech('${id}')">Eliminar</button></div>
+    <div class="group">Shows asignados (${as.length})</div>
+    ${as.length?`<div class="list">${as.map(({a,p}) => `<div class="row tap" onclick="go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b>
+      <div class="sub">${esc(fmtDT(a.call_time||p.starts_at))}${a.role?' · '+esc(a.role):''}</div></div>
+      ${p.status==='cancelled'?'<span class="badge bad">Cancelado</span>':`<a class="btn small" style="text-decoration:none" target="_blank" rel="noopener" onclick="event.stopPropagation()" href="${esc(gcalUrl(p, {start:a.call_time, role:a.role}))}">Google Calendar</a>`}</div>`).join('')}</div>`:`<div class="empty">Sin shows asignados.</div>`}
+    <div class="group">Calendario del técnico</div>
+    <div class="info"><div class="sub">Enlace que se actualiza solo. Envíaselo una vez y que lo suscriba en su calendario.</div>
+      <div class="linkbox"><input readonly id="cal-url" value="${esc(calUrl(t))}" onclick="this.select()" aria-label="Enlace del calendario"><button class="btn" onclick="copyCal()">Copiar</button></div>
+      <div class="sub" style="margin-top:8px">Google Calendar: Otros calendarios > Desde URL. iPhone y Mac: Archivo > Nueva suscripción de calendario. Google puede tardar horas en reflejar un cambio.</div></div>
+    <div class="actions"><button class="btn" onclick="downloadIcs('${id}')">Descargar archivo .ics (copia fija)</button></div>`;
+}
+async function copyCal(){
+  const el = $('#cal-url');
+  try { await navigator.clipboard.writeText(el.value); toast('Enlace copiado'); }
+  catch(e){ el.select(); toast('Selecciona y copia el enlace'); }
+}
+function downloadIcs(id){
+  const t = techById(id);
+  const stamp = d => new Date(d).toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');
+  const esc2 = s => String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+  const ev = S.assigns.filter(a => a.technician_id === id).map(a => ({a, p:projById(a.project_id)})).filter(x => x.p && x.p.status !== 'cancelled');
+  if (!ev.length) return toast('Este técnico no tiene shows asignados', true);
+  const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Mi material//ES','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+  ev.forEach(({a,p}) => {
+    lines.push('BEGIN:VEVENT', 'UID:' + a.id + '@mi-material', 'DTSTAMP:' + stamp(Date.now()),
+      'DTSTART:' + stamp(a.call_time || p.starts_at), 'DTEND:' + stamp(p.ends_at),
+      'SUMMARY:' + esc2(p.name + (a.role ? ' (' + a.role + ')' : '')));
+    if (p.venue) lines.push('LOCATION:' + esc2(p.venue));
+    if (p.notes) lines.push('DESCRIPTION:' + esc2(p.notes));
+    lines.push('END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  download(new Blob([lines.join('\r\n')], {type:'text/calendar'}), 'calendario-' + t.name.toLowerCase().replace(/[^a-z0-9]+/g,'-') + '.ics');
+}
+
+/* ============ MÁS: copia de seguridad ============ */
+const lastBackup = () => { try { return localStorage.getItem('lastBackup'); } catch(e){ return null; } };
+function markBackup(){ try { localStorage.setItem('lastBackup', new Date().toISOString()); } catch(e){} }
+function backupNag(){
+  const l = lastBackup();
+  if (!l || Date.now() - new Date(l).getTime() > 30 * 86400000)
+    toast('Hace tiempo que no haces copia de seguridad. Ve a Más.');
+}
+function moreView(){
+  const l = lastBackup(), al = maintAlerts();
+  return bar('Más')
+    + (al.length ? `<div class="group">Avisos</div><div class="actions"><button class="btn" style="color:var(--warn)" onclick="openAlerts()">Mantenimiento: ${al.length} aviso${al.length===1?'':'s'}</button></div>` : '')
+    + `<div class="group">Cobros</div><div class="actions"><button class="btn" onclick="openPayments()">${esc(payHeadline())}</button></div>`
+    + pendingBtn()
+    + `<div class="group">Negocio</div>
+    <div class="actions"><button class="btn" onclick="openBusiness()">Datos del negocio y presupuesto</button></div>
+    <div class="group">Inventario</div>
+    <div class="actions"><button class="btn" onclick="openImport()">Importar desde Excel o CSV</button><button class="btn" onclick="openLegend()">Leyenda de colores</button></div>
+    <div class="group">Copia de seguridad</div>
+    <div class="info"><div>Última copia en este dispositivo: <b>${l ? esc(fmtFull(l)) : 'nunca'}</b></div>
+      <div class="sub" style="margin-top:6px">Descarga tus datos por si algún día pierdes el acceso a Supabase. Guarda el archivo en tu ordenador o en tu nube.</div></div>
+    <div class="actions"><button class="btn primary" onclick="exportExcel()">Descargar Excel</button><button class="btn" onclick="exportJson()">Copia completa (.json)</button><button class="btn" onclick="openRestore()">Restaurar copia</button></div>
+    <div class="group">Cuenta</div>
+    <div class="actions"><button class="btn" onclick="logout()">Cerrar sesión</button></div>`;
+}
+const stampName = () => new Date().toISOString().slice(0,10);
+async function exportJson(){
+  toast('Preparando la copia…');
+  const ev = await fetchAll('scan_events');
+  if (ev.error) return toast(errMsg(ev.error), true);
+  const data = {exportado: new Date().toISOString(), categories:S.categories, equipment_models:S.models, units:S.units, kits:S.kits, kit_items:S.kitItems,
+    projects:S.projects, reservations:S.reservations, bulk_reservations:S.bulkRes, technicians:S.techs, crew_assignments:S.assigns,
+    maintenance_logs:S.maint, scan_events:ev.data, settings:S.settings};
+  download(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}), `copia-material-${stampName()}.json`);
+  markBackup(); render(); toast('Copia descargada');
+}
+function exportExcel(){
+  if (typeof XLSX === 'undefined') return toast('No se pudo cargar el generador de Excel. Comprueba tu conexión.', true);
+  const cat = id => (S.categories.find(c => c.id === id) || {}).name || '';
+  const wb = XLSX.utils.book_new();
+  const add = (name, rows) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{'(vacío)':''}]), name);
+  add('Modelos', S.models.map(m => ({Modelo:m.name, Marca:m.brand||'', Categoría:cat(m.category_id), Tipo:m.is_bulk?'Por cantidad':'Con nº de serie',
+    Cantidad: m.is_bulk ? m.bulk_stock : S.units.filter(u => u.model_id === m.id).length, 'Tarifa por día':m.day_rate != null ? Number(m.day_rate) : '', Color:colorText(m) || (m.color ? colorName(m.color) : ''), 'Peso kg':m.weight_kg != null ? Number(m.weight_kg) : '', 'Potencia W':m.power_w != null ? m.power_w : '', Notas:m.notes||''})));
+  add('Unidades', S.units.map(u => { const m = modelById(u.model_id) || {}, k = unitKit(u);
+    return {Modelo:m.name||'', 'Nº de serie':u.serial_number||'', Código:u.code, Estado:UNIT_STATUS[u.status], Kit:k?k.name:'', Notas:u.notes||''}; }));
+  add('Kits', S.kitItems.map(i => { const k = kitById(i.kit_id) || {}, u = i.unit_id ? unitById(i.unit_id) : null, m = modelById(u ? u.model_id : i.model_id) || {};
+    return {Kit:k.name||'', Código:k.code||'', Modelo:m.name||'', 'Nº de serie':u?(u.serial_number||''):'', Cantidad:u?1:i.qty}; }));
+  add('Shows', S.projects.map(p => ({Show:p.name, Cliente:p.client||'', Lugar:p.venue||'', Estado:PROJ_STATUS[p.status], Desde:fmtFull(p.starts_at), Hasta:fmtFull(p.ends_at),
+    'Días':p.rental_days||'', 'Descuento %':Number(p.discount_pct||0), 'IVA %':Number(p.vat_pct!=null?p.vat_pct:21), Cobro:PAY_STATUS[p.payment_status||'none'], Factura:p.invoice_number||'', Importe:Math.round(projectTotal(p)*100)/100, Notas:p.notes||''})));
+  add('Reservas', S.reservations.map(r => { const p = projById(r.project_id) || {}, u = unitById(r.unit_id) || {}, m = modelById(u.model_id) || {}, k = r.kit_id ? kitById(r.kit_id) : null;
+    return {Show:p.name||'', Modelo:m.name||'', 'Nº de serie':u.serial_number||'', Código:u.code||'', Estado:RES_STATE[r.state], Kit:k?k.name:''}; }));
+  add('Reservas por cantidad', S.bulkRes.map(b => { const p = projById(b.project_id) || {}, m = modelById(b.model_id) || {}, k = b.kit_id ? kitById(b.kit_id) : null;
+    return {Show:p.name||'', Modelo:m.name||'', Cantidad:b.qty, Estado:RES_STATE[b.state], Kit:k?k.name:''}; }));
+  add('Técnicos', S.techs.map(t => ({Nombre:t.name, Teléfono:t.phone||'', Email:t.email||''})));
+  add('Asignaciones', S.assigns.map(a => { const p = projById(a.project_id) || {}, t = techById(a.technician_id) || {};
+    return {Show:p.name||'', Técnico:t.name||'', Función:a.role||'', Llamada:a.call_time?fmtFull(a.call_time):''}; }));
+  add('Mantenimiento', S.maint.map(l => { const u = unitById(l.unit_id) || {}; return {Equipo:unitLabel(u), Tipo:MAINT_KIND[l.kind], Fecha:l.done_on, Horas:l.hours != null ? Number(l.hours) : '', Coste:l.cost != null ? Number(l.cost) : '', Descripción:l.description||''}; }));
+  XLSX.writeFile(wb, `copia-material-${stampName()}.xlsx`);
+  markBackup(); render(); toast('Excel descargado');
+}
+
+/* ============ ESCANEAR ============ */
+let stream = null, camTimer = null, detector = null, lastCode = '', lastAt = 0, scanBusy = false;
+function scanProjects(){
+  const limit = Date.now() - 7*86400000;
+  return S.projects.filter(p => p.status === 'confirmed' && new Date(p.ends_at) > limit).sort((a,b) => new Date(a.starts_at) - new Date(b.starts_at));
+}
+function scanView(){
+  const ps = scanProjects();
+  if (!ps.find(p => p.id === S.scan.project)) S.scan.project = (ps.find(p => new Date(p.ends_at) >= Date.now()) || ps[0] || {}).id || '';
+  return bar('Escanear')
+    + `<div class="pad" style="margin-top:12px">
+      <div class="seg"><button id="m-out" onclick="setMode('out')">Salida</button><button id="m-in" onclick="setMode('in')">Devolución</button><button id="m-count" onclick="setMode('count')">Recuento</button></div>
+      <div id="proj-wrap"><label for="scan-proj">Show al que sale el material</label>
+        <select id="scan-proj" onchange="S.scan.project=this.value;updateProgress()">${ps.length?opts(ps.map(p=>[p.id,p.name+' · '+fmtD(p.starts_at)]), S.scan.project):'<option value="">No hay shows confirmados</option>'}</select></div>
+      <div class="cam"><video id="cam" playsinline muted></video><div class="frame" id="frame" hidden></div><span id="cam-off">Cámara apagada</span></div>
+      <button class="btn primary block" id="cam-btn" onclick="toggleCam()">Abrir cámara</button>
+      <div id="scan-msg" class="msg">Escanea la etiqueta QR de un equipo o de un kit.</div>
+      <div id="progress" class="sub" style="margin-top:8px"></div>
+      <div id="count-actions" class="actions" style="margin:10px 0 0" hidden><button class="btn primary" onclick="openCountResult()">Ver resultado</button><button class="btn" onclick="resetCount()">Reiniciar recuento</button></div>
+      <label class="chkrow" id="quick-wrap" hidden><input type="checkbox" id="quick" onchange="setQuick(this.checked)">Devolución rápida: marcar todo como completo sin preguntar</label>
+      <label for="manual">O escribe el código a mano</label>
+      <div style="display:flex;gap:8px"><input id="manual" placeholder="U-XXXXXXXX o K-XXXXXXXX" autocapitalize="characters" onkeydown="if(event.key==='Enter')manualCode()"><button class="btn" onclick="manualCode()">Aceptar</button></div>
+      <div class="group" style="margin:20px 0 6px">Últimos escaneos</div><div class="list" style="margin:0" id="scan-log"></div>
+    </div>`;
+}
+function afterScanRender(){
+  setMode(S.scan.mode, true); renderLog(); updateProgress();
+  if (stream){ const v = $('#cam'); v.srcObject = stream; v.play(); $('#cam-off').hidden = true; $('#frame').hidden = false; $('#cam-btn').textContent = 'Cerrar cámara'; }
+}
+function setMode(m, silent){
+  S.scan.mode = m;
+  ['out','in','count'].forEach(k => $('#m-' + k).classList.toggle('on', m === k));
+  $('#proj-wrap').hidden = m !== 'out';
+  $('#count-actions').hidden = m !== 'count';
+  $('#quick-wrap').hidden = m !== 'in'; $('#quick').checked = quickReturn();
+  if (m === 'count') scanMsgIdle('Recuento: escanea todo lo que haya en el almacén. No se modifica ningún dato.');
+  if (!silent) updateProgress();
+}
+function scanMsgIdle(t){ const el = $('#scan-msg'); if (el && !S.scan.log.length){ el.textContent = t; el.className = 'msg'; } }
+function expectedUnits(){
+  const out = new Set(S.reservations.filter(r => r.state === 'out').map(r => r.unit_id));
+  return S.units.filter(u => u.status !== 'lost' && u.status !== 'retired' && !out.has(u.id));
+}
+function updateProgress(){
+  const el = $('#progress'); if (!el) return;
+  if (S.scan.mode === 'count'){
+    const exp = expectedUnits(), seen = exp.filter(u => S.count.seen.has(u.id)).length;
+    el.innerHTML = `${seen} de ${exp.length} equipos del almacén contados` + `<div class="prog"><i style="width:${exp.length ? Math.round(100 * seen / exp.length) : 0}%"></i></div>`;
+    return;
+  }
+  if (S.scan.mode !== 'out' || !S.scan.project){ el.textContent = ''; return; }
+  const rs = S.reservations.filter(r => r.project_id === S.scan.project);
+  const out = rs.filter(r => r.state === 'out').length, ret = rs.filter(r => r.state === 'returned').length;
+  el.textContent = rs.length ? `${out} de ${rs.length} equipos fuera del almacén${ret?` · ${ret} devueltos`:''}` : 'Este show aún no tiene equipos reservados.';
+}
+function scanMsg(text, kind){
+  const m = $('#scan-msg'); if (m){ m.textContent = text; m.className = 'msg ' + kind; }
+  if (navigator.vibrate) navigator.vibrate(kind === 'ok' ? 60 : [80,60,80]);
+  S.scan.log.unshift({text, kind, at:new Date()}); S.scan.log = S.scan.log.slice(0, 15); renderLog();
+}
+function renderLog(){
+  const el = $('#scan-log'); if (!el) return;
+  el.innerHTML = S.scan.log.length ? S.scan.log.map(l => `<div class="row"><div class="grow">${esc(l.text)}</div><span class="badge ${l.kind}">${l.at.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</span></div>`).join('')
+    : `<div class="row"><span class="sub">Todavía no has escaneado nada.</span></div>`;
+}
+async function toggleCam(){ stream ? stopCam() : await startCam(); }
+async function startCam(){
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}, audio:false});
+  } catch(e){ stream = null; return toast('No se pudo abrir la cámara. Revisa los permisos del navegador.', true); }
+  const v = $('#cam'); v.srcObject = stream; await v.play();
+  $('#cam-off').hidden = true; $('#frame').hidden = false; $('#cam-btn').textContent = 'Cerrar cámara';
+  detector = ('BarcodeDetector' in window) ? new BarcodeDetector({formats:['qr_code']}) : null;
+  loopScan();
+}
+function stopCam(){
+  clearTimeout(camTimer);
+  if (stream){ stream.getTracks().forEach(t => t.stop()); stream = null; }
+  const v = $('#cam'); if (v) v.srcObject = null;
+  const off = $('#cam-off'); if (off) off.hidden = false;
+  const fr = $('#frame'); if (fr) fr.hidden = true;
+  const b = $('#cam-btn'); if (b) b.textContent = 'Abrir cámara';
+}
+async function loopScan(){
+  if (!stream) return;
+  const v = $('#cam');
+  if (v && v.readyState >= 2 && !scanBusy){
+    let code = '';
+    try {
+      if (detector){ const r = await detector.detect(v); if (r.length) code = r[0].rawValue; }
+      else {
+        const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
+        const x = c.getContext('2d', {willReadFrequently:true}); x.drawImage(v, 0, 0);
+        const img = x.getImageData(0, 0, c.width, c.height);
+        const r = jsQR(img.data, c.width, c.height); if (r) code = r.data;
+      }
+    } catch(e){}
+    if (code && !(code === lastCode && Date.now() - lastAt < 2500)){
+      lastCode = code; lastAt = Date.now();
+      try { await handleCode(code); } catch(e){}
+    }
+  }
+  camTimer = setTimeout(loopScan, 220);
+}
+function manualCode(){ const i = $('#manual'); if (i.value.trim()){ const c = i.value; i.value = ''; handleCode(c).catch(()=>{}); } }
+
+async function handleCode(raw){
+  if (scanBusy) return; scanBusy = true;
+  try {
+    const code = raw.trim().toUpperCase();
+    if (S.scan.mode === 'count') return await handleCount(code);
+    if (code.startsWith('K-')) return await handleKit(code);
+    const u = S.units.find(x => x.code === code);
+    if (!u) return scanMsg('Código no reconocido: ' + raw.trim(), 'bad');
+    const label = unitLabel(u), off = !navigator.onLine, pend = off ? ' (pendiente de enviar)' : '';
+    if (S.scan.mode === 'out'){
+      const pid = S.scan.project;
+      if (!pid) return scanMsg('Elige primero el show', 'bad');
+      const res = S.reservations.find(r => r.unit_id === u.id && r.project_id === pid && r.state !== 'returned');
+      if (res && res.state === 'out') return scanMsg('Ya estaba marcada como fuera: ' + label, 'warn');
+      if (u.status !== 'ok') return scanMsg(label + ' está ' + UNIT_STATUS[u.status].toLowerCase() + '. No se puede sacar.', 'bad');
+      if (!res){
+        if (off) return scanMsg(label + ' no está reservada en este show y sin conexión no se puede añadir.', 'bad');
+        if (!confirm(label + ' no está reservada en este show. ¿Añadirla ahora?')) return;
+        const r = await sb.from('reservations').insert({project_id:pid, unit_id:u.id, state:'planned'}).select().single();
+        if (r.error) return scanMsg(errMsg(r.error), 'bad');
+        S.reservations.push(r.data);
+      }
+      enqueue({t:'out', unit_id:u.id, project_id:pid});
+      updateProgress();
+      scanMsg('Salida: ' + label + (u.missing_note ? ' · OJO, está incompleta: falta ' + u.missing_note : '') + pend, u.missing_note ? 'warn' : 'ok');
+    } else {
+      const res = S.reservations.find(r => r.unit_id === u.id && r.state === 'out');
+      if (!res) return scanMsg(label + ' no consta como fuera del almacén.', 'warn');
+      let c = {cond:'ok', note:''};
+      if (!quickReturn()){
+        const r = await askCondition([u], label);
+        if (!r) return scanMsg('Devolución cancelada: ' + label, 'warn');
+        c = r[0];
+      }
+      enqueue({t:'in', unit_id:u.id, cond:c.cond, note:c.note.trim(), clear:c.cond === 'ok' && !!u.missing_note});
+      scanMsg('Devuelta: ' + label + (c.cond !== 'ok' ? ' · ' + COND[c.cond] + (c.note.trim() ? ': ' + c.note.trim() : '') : '') + pend, c.cond === 'ok' ? 'ok' : 'warn');
+    }
+  } finally { scanBusy = false; }
+}
+// Escaneo de un kit: mueve todo su contenido de una vez
+async function handleKit(code){
+  const kit = S.kits.find(k => k.code === code);
+  if (!kit) return scanMsg('Kit no reconocido: ' + code, 'bad');
+  const off = !navigator.onLine, pend = off ? ' (pendiente de enviar)' : '';
+  if (S.scan.mode === 'out'){
+    const pid = S.scan.project;
+    if (!pid) return scanMsg('Elige primero el show', 'bad');
+    const mine = () => ({rs:S.reservations.filter(r => r.project_id === pid && r.kit_id === kit.id), bs:S.bulkRes.filter(b => b.project_id === pid && b.kit_id === kit.id)});
+    let {rs, bs} = mine();
+    if (!rs.length && !bs.length){
+      if (off) return scanMsg(`El kit «${kit.name}» no está reservado en este show y sin conexión no se puede añadir.`, 'bad');
+      const probs = kitProblem(projById(pid), kit);
+      if (probs.length) return scanMsg(`No se puede añadir el kit «${kit.name}»: ${probs[0]}.`, 'bad');
+      if (!confirm(`El kit «${kit.name}» no está reservado en este show. ¿Añadirlo ahora?`)) return;
+      await reserveKit(pid, kit.id); await loadAll(false); ({rs, bs} = mine());
+    }
+    const pendR = rs.filter(r => r.state === 'planned'), pendB = bs.filter(b => b.state === 'planned');
+    if (!pendR.length && !pendB.length) return scanMsg(`El kit «${kit.name}» ya estaba fuera.`, 'warn');
+    const bad = pendR.map(r => unitById(r.unit_id)).find(u => u && u.status !== 'ok');
+    if (bad) return scanMsg(`${unitLabel(bad)} está ${UNIT_STATUS[bad.status].toLowerCase()}. No se puede sacar el kit.`, 'bad');
+    const inc = pendR.map(r => unitById(r.unit_id)).filter(u => u && u.missing_note);
+    enqueue({t:'kout', kit_id:kit.id, project_id:pid});
+    updateProgress();
+    scanMsg(`Salida del kit «${kit.name}»: ${pendR.length} equipos${pendB.length ? ` y ${pendB.length} línea${pendB.length===1?'':'s'} por cantidad` : ''}${inc.length ? ` · OJO: ${inc.length} incompleto${inc.length===1?'':'s'} (${inc.map(u => unitLabel(u) + ': falta ' + u.missing_note).join('; ')})` : ''}${pend}`, inc.length ? 'warn' : 'ok');
+  } else {
+    const rs = S.reservations.filter(r => r.kit_id === kit.id && r.state === 'out'), bs = S.bulkRes.filter(b => b.kit_id === kit.id && b.state === 'out');
+    if (!rs.length && !bs.length) return scanMsg(`El kit «${kit.name}» no consta como fuera del almacén.`, 'warn');
+    let items = rs.map(r => ({unit_id:r.unit_id, cond:'ok', note:'', clear:false}));
+    if (rs.length && !quickReturn()){
+      const r = await askCondition(rs.map(x => unitById(x.unit_id)).filter(Boolean), 'Kit «' + kit.name + '»');
+      if (!r) return scanMsg(`Devolución del kit «${kit.name}» cancelada.`, 'warn');
+      items = r.map(x => ({unit_id:x.unit_id, cond:x.cond, note:x.note.trim(), clear:x.cond === 'ok' && !!(unitById(x.unit_id) || {}).missing_note}));
+    }
+    enqueue({t:'kin', kit_id:kit.id, items});
+    const inc = items.filter(i => i.cond !== 'ok').length;
+    scanMsg(`Devuelto el kit «${kit.name}»: ${rs.length} equipos${bs.length ? ` y ${bs.length} línea${bs.length===1?'':'s'} por cantidad` : ''}${inc ? ` · ${inc} con incidencia` : ''}${pend}`, inc ? 'warn' : 'ok');
+  }
+}
+
+/* ============ MANTENIMIENTO, HISTORIAL Y AVISOS ============ */
+const pad2 = n => String(n).padStart(2, '0');
+const todayStr = () => toLocalInput(new Date().toISOString()).slice(0, 10);
+const fmtDay = s => new Date(s + 'T12:00:00').toLocaleDateString('es-ES', {day:'numeric', month:'short', year:'numeric'});
+const MAINT_KIND = {repair:'Reparación', service:'Revisión', lamp:'Lámpara', note:'Nota', missing:'Incompleto'};
+
+function maintAlerts(){
+  const out = [], limit = Date.now() + 30 * 86400000;
+  S.units.forEach(u => {
+    if (u.status === 'retired' || u.status === 'lost') return;
+    const m = modelById(u.model_id); if (!m) return;
+    if (u.missing_note) out.push({u, text:'Incompleto: falta ' + u.missing_note});
+    if (u.next_service){
+      const d = new Date(u.next_service + 'T12:00:00');
+      if (d.getTime() <= limit) out.push({u, text: d < new Date() ? 'Revisión vencida desde el ' + fmtDay(u.next_service) : 'Revisión el ' + fmtDay(u.next_service)});
+    }
+    if (m.lamp_life_hours > 0 && Number(u.lamp_hours) >= 0.9 * m.lamp_life_hours)
+      out.push({u, text:`Lámpara al ${Math.round(100 * Number(u.lamp_hours) / m.lamp_life_hours)}% (${u.lamp_hours} de ${m.lamp_life_hours} h)`});
+  });
+  return out;
+}
+function openAlerts(){
+  const al = maintAlerts();
+  openModal(`<h2>Avisos de mantenimiento</h2><div class="sub">Equipos incompletos, revisiones en los próximos 30 días y lámparas al 90% o más de su vida útil.</div>
+    ${al.length ? `<div class="list" style="margin:12px 0 0">${al.map(a => `<div class="row tap" onclick="openUnit('${a.u.id}')"><div class="grow"><b>${esc(unitLabel(a.u))}</b><div class="sub">${esc(a.text)}</div></div></div>`).join('')}</div>`
+      : `<div class="empty" style="margin:24px 0">Todo al día.</div>`}`);
+}
+async function openUnitHistory(id){
+  const u = unitById(id);
+  openModal(`<h2>Historial</h2><div class="sub">${esc(unitLabel(u))}</div><div class="empty" style="margin:30px 0">Cargando…</div>`);
+  const ev = await sb.from('scan_events').select('*').eq('unit_id', id).order('at', {ascending:false}).limit(100);
+  if (ev.error){ toast(errMsg(ev.error), true); return; }
+  const res = S.reservations.filter(r => r.unit_id === id).map(r => ({r, p:projById(r.project_id)})).filter(x => x.p)
+    .sort((a,b) => new Date(b.p.starts_at) - new Date(a.p.starts_at));
+  const logs = S.maint.filter(l => l.unit_id === id).sort((a,b) => String(b.done_on).localeCompare(String(a.done_on)));
+  const cost = logs.reduce((s,l) => s + Number(l.cost || 0), 0);
+  const sec = (title, rows, empty) => `<div class="group" style="margin:16px 0 6px">${title}</div>` + (rows ? `<div class="list" style="margin:0">${rows}</div>` : `<div class="sub">${empty}</div>`);
+  openModal(`<h2>Historial</h2><div class="sub">${esc(unitLabel(u))} · <span class="code">${esc(u.code)}</span></div>
+    ${u.purchase_date ? `<div class="sub">Comprada el ${esc(fmtDay(u.purchase_date))}</div>` : ''}
+    ${sec('Mantenimiento' + (cost > 0 ? ' · ' + eur(cost) + ' en total' : ''), logs.map(l => `<div class="row"><div class="grow"><b>${esc(MAINT_KIND[l.kind])}</b>
+      <div class="sub">${esc(fmtDay(l.done_on))}${l.hours != null ? ' · ' + l.hours + ' h' : ''}${l.cost > 0 ? ' · ' + eur(l.cost) : ''}</div>${l.description ? `<div>${esc(l.description)}</div>` : ''}</div></div>`).join(''), 'Sin registros todavía.')}
+    ${sec(`Shows (${res.length})`, res.map(({r,p}) => `<div class="row"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtD(p.starts_at))} → ${esc(fmtD(p.ends_at))}</div></div><span class="badge ${RES_CLASS[r.state]}">${RES_STATE[r.state]}</span></div>`).join(''), 'Todavía no ha estado en ningún show.')}
+    ${sec('Salidas y entradas', ev.data.map(e => { const p = projById(e.project_id); return `<div class="row"><div class="grow"><b>${e.action === 'out' ? 'Salida' : 'Entrada'}</b><div class="sub">${esc(fmtFull(e.at))}${p ? ' · ' + esc(p.name) : ''}</div>${e.condition && e.condition !== 'ok' ? `<div class="sub" style="color:var(--warn)">${esc(COND[e.condition])}${e.note ? ': ' + esc(e.note) : ''}</div>` : ''}</div></div>`; }).join(''), 'Sin escaneos registrados.')}
+    <div class="actions" style="margin:16px 0 0"><button class="btn" onclick="openUnit('${id}')">‹ Volver a la ficha</button><button class="btn primary" onclick="openMaintenance('${id}')">+ Mantenimiento</button></div>`);
+}
+function openMaintenance(id){
+  const u = unitById(id), m = modelById(u.model_id);
+  openModal(`<h2>Registrar mantenimiento</h2><div class="sub">${esc(unitLabel(u))}</div>
+    <label for="mt-kind">Tipo</label><select id="mt-kind" onchange="maintKind()">${opts(Object.entries(MAINT_KIND).filter(([k]) => k !== 'lamp' || m.lamp_life_hours > 0), 'repair')}</select>
+    <label for="mt-date">Fecha</label><input id="mt-date" type="date" value="${todayStr()}">
+    <div id="mt-lamp" hidden><label for="mt-hours">Horas de lámpara tras este registro (0 si la has cambiado)</label><input id="mt-hours" type="number" min="0" step="0.5" value="${u.lamp_hours||0}" inputmode="decimal"></div>
+    <div id="mt-next" hidden><label for="mt-nextdate">Próxima revisión (opcional)</label><input id="mt-nextdate" type="date"></div>
+    <label for="mt-desc">Qué se hizo</label><textarea id="mt-desc"></textarea>
+    <label for="mt-cost">Coste (€, opcional)</label><input id="mt-cost" type="number" min="0" step="0.01" inputmode="decimal">
+    <button class="btn primary block" onclick="saveMaintenance('${id}')">Guardar registro</button>`);
+}
+function maintKind(){ const k = $('#mt-kind').value; $('#mt-lamp').hidden = k !== 'lamp'; $('#mt-next').hidden = k !== 'service'; }
+async function saveMaintenance(id){
+  const kind = $('#mt-kind').value, cost = parseFloat($('#mt-cost').value), hours = kind === 'lamp' ? (parseFloat($('#mt-hours').value) || 0) : null;
+  await db(sb.from('maintenance_logs').insert({unit_id:id, kind, done_on:$('#mt-date').value || todayStr(), hours, description:$('#mt-desc').value.trim() || null, cost:isNaN(cost) ? null : cost}));
+  const up = {};
+  if (kind === 'lamp') up.lamp_hours = hours;
+  if (kind === 'service' && $('#mt-nextdate').value) up.next_service = $('#mt-nextdate').value;
+  if (Object.keys(up).length) await db(sb.from('units').update(up).eq('id', id));
+  await loadAll(); openUnitHistory(id); toast('Registro guardado');
+}
+
+/* ============ Recuento de inventario ============ */
+async function handleCount(code){
+  if (code.startsWith('K-')){
+    const k = S.kits.find(x => x.code === code); if (!k) return scanMsg('Kit no reconocido: ' + code, 'bad');
+    const us = kitUnits(k); us.forEach(u => S.count.seen.add(u.id)); updateProgress();
+    return scanMsg(`Kit «${k.name}»: ${us.length} equipos contados`, 'ok');
+  }
+  const u = S.units.find(x => x.code === code);
+  if (!u) return scanMsg('Código no reconocido: ' + code, 'bad');
+  if (S.count.seen.has(u.id)) return scanMsg('Ya contada: ' + unitLabel(u), 'warn');
+  S.count.seen.add(u.id); updateProgress();
+  const out = S.reservations.some(r => r.unit_id === u.id && r.state === 'out');
+  scanMsg(out ? unitLabel(u) + ' consta como FUERA, pero está aquí' : 'Contada: ' + unitLabel(u), out ? 'warn' : 'ok');
+}
+function resetCount(){
+  if (S.count.seen.size && !confirm('¿Empezar el recuento de nuevo? Se olvidan los equipos ya escaneados.')) return;
+  S.count.seen = new Set(); S.scan.log = []; renderLog(); updateProgress(); toast('Recuento reiniciado');
+}
+function openCountResult(){
+  const exp = expectedUnits(), missing = exp.filter(u => !S.count.seen.has(u.id));
+  const outButHere = S.units.filter(u => S.count.seen.has(u.id) && S.reservations.some(r => r.unit_id === u.id && r.state === 'out'));
+  const counted = exp.length - missing.length;
+  const byModel = {};
+  missing.forEach(u => (byModel[u.model_id] = byModel[u.model_id] || []).push(u));
+  const miss = Object.keys(byModel).sort((a,b) => modelById(a).name.localeCompare(modelById(b).name, 'es')).map(mid =>
+    `<div class="row head"><div class="grow"><b>${esc(modelById(mid).name)}</b></div><div class="count">${byModel[mid].length}</div></div>` +
+    byModel[mid].map(u => `<div class="row"><div class="grow">${u.serial_number ? esc(u.serial_number) : '<span class="sub">Sin nº de serie</span>'} <span class="code sub">${esc(u.code)}</span></div></div>`).join('')).join('');
+  openModal(`<h2>Resultado del recuento</h2>
+    <div class="info" style="margin:10px 0 0"><b>${counted}</b> de <b>${exp.length}</b> equipos contados${missing.length ? ` · <span style="color:var(--bad);font-weight:600">faltan ${missing.length}</span>` : ' · <span style="color:var(--ok);font-weight:600">no falta ninguno</span>'}
+      <div class="sub" style="margin-top:4px">El material por cantidad no se cuenta aquí. Los equipos que están fuera en un show no se esperan en el almacén.</div></div>
+    ${missing.length ? `<div class="group" style="margin:16px 0 6px">Faltan</div><div class="list" style="margin:0">${miss}</div>` : ''}
+    ${outButHere.length ? `<div class="group" style="margin:16px 0 6px">Constaban fuera, pero están aquí</div><div class="list" style="margin:0">${outButHere.map(u => `<div class="row"><div class="grow">${esc(unitLabel(u))}</div></div>`).join('')}
+      </div><div class="sub" style="margin-top:6px">Si ya volvieron, escanéalos en modo Devolución para actualizar su estado.</div>` : ''}`);
+}
+
+/* ============ SHOWS: calendario mensual y duplicar ============ */
+function showsSeg(){
+  return `<div class="pad" style="margin-top:12px"><div class="seg"><button class="${S.showsMode==='lista'?'on':''}" onclick="setShowsMode('lista')">Lista</button><button class="${S.showsMode==='calendario'?'on':''}" onclick="setShowsMode('calendario')">Calendario</button></div></div>`;
+}
+function setShowsMode(m){ S.showsMode = m; render(); window.scrollTo(0,0); }
+const ymd = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+function calNav(n){ S.calMonth = new Date(S.calMonth.getFullYear(), S.calMonth.getMonth() + n, 1); S.calDay = null; render(); }
+function calToday(){ const n = new Date(); S.calMonth = new Date(n.getFullYear(), n.getMonth(), 1); S.calDay = ymd(n); render(); }
+function selDay(k){ S.calDay = S.calDay === k ? null : k; render(); }
+function calendarView(){
+  if (!S.calMonth){ const n = new Date(); S.calMonth = new Date(n.getFullYear(), n.getMonth(), 1); S.calDay = ymd(n); }
+  const first = S.calMonth, mo = first.getMonth(), offset = (first.getDay() + 6) % 7;
+  const all = Array.from({length:42}, (_, i) => new Date(first.getFullYear(), mo, 1 - offset + i));
+  const days = all.slice(35).every(d => d.getMonth() !== mo) ? all.slice(0, 35) : all;
+  const act = S.projects.filter(p => p.status !== 'cancelled');
+  const projsOn = d => { const s = d.getTime(), e = s + 86400000; return act.filter(p => new Date(p.starts_at).getTime() < e && new Date(p.ends_at).getTime() >= s); };
+  const info = days.map(d => { const ps = projsOn(d); return {d, ps, pc: ps.reduce((a, p) => a + pieces(p), 0)}; });
+  const max = Math.max(1, ...info.map(x => x.pc)), todayK = ymd(new Date());
+  const cells = info.map(({d, ps, pc}) => {
+    const k = ymd(d);
+    return `<button class="cal-day ${d.getMonth()!==mo?'off':''} ${k===todayK?'today':''} ${k===S.calDay?'sel':''}" onclick="selDay('${k}')"
+      style="${pc?`background:color-mix(in srgb, var(--accent) ${Math.round(pc/max*38)}%, var(--panel))`:''}" aria-label="${d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}: ${ps.length} show${ps.length===1?'':'s'}">
+      <span class="n">${d.getDate()}</span>
+      <span class="dots">${ps.slice(0,3).map(p => `<i class="dot ${p.status==='draft'?'draft':p.status==='done'?'done':''}"></i>`).join('')}</span>
+      ${pc?`<span class="pc">${pc}</span>`:''}</button>`;
+  }).join('');
+  let detail = '';
+  if (S.calDay){
+    const d = new Date(S.calDay + 'T00:00:00'), x = info.find(i => ymd(i.d) === S.calDay) || {ps:projsOn(d), pc:0};
+    detail = `<div class="group">${esc(d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'}))}${x.pc?` · ${x.pc} piezas en uso`:''}</div>`
+      + (x.ps.length ? `<div class="list">${x.ps.map(p => `<div class="row tap" onclick="openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))} → ${esc(fmtDT(p.ends_at))}</div></div><div class="count">${pieces(p)}</div></div>`).join('')}</div>`
+        : `<div class="empty" style="margin:20px 24px">No hay shows este día.</div>`);
+  }
+  return bar('Shows', {actions:`<button class="btn primary small" onclick="openProjectForm()">+ Show</button>`}) + showsSeg()
+    + `<div class="cal"><div class="cal-head"><button class="btn small" onclick="calNav(-1)" aria-label="Mes anterior">‹</button>
+        <h2>${esc(first.toLocaleDateString('es-ES',{month:'long',year:'numeric'}).replace(/^./, c => c.toUpperCase()))}</h2>
+        <button class="btn small" onclick="calToday()">Hoy</button><button class="btn small" onclick="calNav(1)" aria-label="Mes siguiente">›</button></div>
+      <div class="cal-grid">${['L','M','X','J','V','S','D'].map(l => `<div class="cal-dow">${l}</div>`).join('')}${cells}</div>
+      <div class="sub" style="margin-top:8px">El número de cada día son las piezas en uso. Cuanto más oscuro, más carga. Punto redondo: confirmado. Hueco: borrador. Cuadrado: hecho.</div></div>` + detail;
+}
+function openDuplicate(pid){
+  const p = projById(pid), d = new Date(p.starts_at); d.setDate(d.getDate() + 7);
+  openModal(`<h2>Duplicar show</h2><div class="sub">Se copia con la misma duración. Si una unidad está ocupada en las nuevas fechas, se sustituye por otra libre del mismo modelo.</div>
+    <label for="d-name">Nombre</label><input id="d-name" value="${esc(p.name)} (copia)">
+    <label for="d-start">Nueva fecha de inicio</label><input id="d-start" type="datetime-local" value="${toLocalInput(d.toISOString())}">
+    <label class="chkrow"><input type="checkbox" id="d-mat" checked>Copiar el material</label>
+    <label class="chkrow"><input type="checkbox" id="d-crew" checked>Copiar los técnicos</label>
+    <button class="btn primary block" onclick="duplicateProject('${pid}')">Duplicar</button>`);
+}
+async function duplicateProject(pid){
+  const p = projById(pid), name = $('#d-name').value.trim(), s = $('#d-start').value;
+  if (!name || !s) return toast('Indica nombre y fecha', true);
+  const newStart = new Date(s), dur = new Date(p.ends_at) - new Date(p.starts_at), shift = newStart - new Date(p.starts_at);
+  const wantMat = $('#d-mat').checked, wantCrew = $('#d-crew').checked;
+  const np = await db(sb.from('projects').insert({name, client:p.client, venue:p.venue, status:(p.status === 'done' || p.status === 'cancelled') ? 'confirmed' : p.status,
+    notes:p.notes, starts_at:newStart.toISOString(), ends_at:new Date(newStart.getTime() + dur).toISOString(), rental_days:p.rental_days, discount_pct:p.discount_pct, vat_pct:p.vat_pct}).select().single());
+  const report = [];
+  if (wantMat){
+    const rs = S.reservations.filter(r => r.project_id === pid), bs = S.bulkRes.filter(b => b.project_id === pid);
+    const kitIds = [...new Set([...rs, ...bs].map(x => x.kit_id).filter(Boolean))];
+    for (const kid of kitIds){
+      const k = kitById(kid); if (!k) continue;
+      const probs = kitProblem(np, k);
+      if (probs.length){ report.push(`Kit «${k.name}»: ${probs[0]}`); continue; }
+      try { await reserveKit(np.id, kid); } catch(e){ report.push(`Kit «${k.name}»: no se pudo reservar`); }
+      await loadAll(false);
+    }
+    const taken = new Set(S.reservations.filter(r => r.project_id === np.id).map(r => r.unit_id)), rows = [];
+    for (const r of rs.filter(r => !r.kit_id)){
+      const u = unitById(r.unit_id); if (!u) continue;
+      const free = freeUnits(np, u.model_id).filter(x => !taken.has(x.id)), pick = free.find(x => x.id === u.id) || free[0];
+      if (!pick){ report.push('Sin unidad libre de ' + modelById(u.model_id).name); continue; }
+      taken.add(pick.id); rows.push({project_id:np.id, unit_id:pick.id, state:'planned'});
+    }
+    if (rows.length) await db(sb.from('reservations').insert(rows));
+    const want = {};
+    bs.filter(b => !b.kit_id).forEach(b => want[b.model_id] = (want[b.model_id] || 0) + b.qty);
+    for (const mid of Object.keys(want)){
+      const free = bulkFree(np, mid), n = Math.min(free, want[mid]);
+      if (n < want[mid]) report.push(`${modelById(mid).name}: solo quedan ${free} de ${want[mid]}`);
+      if (n > 0) await db(sb.from('bulk_reservations').insert({project_id:np.id, model_id:mid, qty:n, state:'planned'}));
+    }
+  }
+  if (wantCrew){
+    const as = S.assigns.filter(a => a.project_id === pid).map(a => ({project_id:np.id, technician_id:a.technician_id, role:a.role, call_time:a.call_time ? new Date(new Date(a.call_time).getTime() + shift).toISOString() : null}));
+    if (as.length) await db(sb.from('crew_assignments').insert(as));
+  }
+  await loadAll();
+  if (report.length){
+    openModal(`<h2>Show duplicado</h2><div class="sub">Se ha copiado todo, salvo:</div>
+      <div class="list" style="margin:12px 0">${report.map(t => `<div class="row">${esc(t)}</div>`).join('')}</div>
+      <button class="btn primary block" onclick="closeModal();openView('project','${np.id}')">Ver el show</button>`);
+  } else { closeModal(); openView('project', np.id); toast('Show duplicado'); }
+}
+
+/* ============ DATOS DEL NEGOCIO ============ */
+function bizHeader(){
+  const b = S.settings || {};
+  const lines = [b.business_name && `<b>${esc(b.business_name)}</b>`, b.tax_id && 'NIF ' + esc(b.tax_id), b.address && esc(b.address).replace(/\n/g, '<br>'), [b.phone, b.email].filter(Boolean).map(esc).join(' · ')].filter(Boolean);
+  if (!lines.length && !b.logo_data) return '';
+  return `<div class="head"><div>${b.logo_data ? `<img src="${esc(b.logo_data)}" alt="">` : ''}</div><div class="small" style="text-align:right">${lines.join('<br>')}</div></div>`;
+}
+let pendingLogo;
+function openBusiness(){
+  const b = S.settings || {}; pendingLogo = undefined;
+  openModal(`<h2>Datos del negocio</h2><div class="sub">Salen en la cabecera del presupuesto y de la lista de carga.</div>
+    <label for="s-name">Nombre o empresa</label><input id="s-name" value="${esc(b.business_name||'')}">
+    <div class="two"><div><label for="s-tax">NIF / CIF</label><input id="s-tax" value="${esc(b.tax_id||'')}"></div><div><label for="s-phone">Teléfono</label><input id="s-phone" type="tel" value="${esc(b.phone||'')}"></div></div>
+    <label for="s-email">Email</label><input id="s-email" type="email" value="${esc(b.email||'')}">
+    <label for="s-addr">Dirección</label><textarea id="s-addr" style="min-height:64px">${esc(b.address||'')}</textarea>
+    <label for="s-logofile">Logo</label>
+    <img id="s-logo" class="logo-prev" ${b.logo_data?`src="${esc(b.logo_data)}"`:'hidden'} alt="">
+    <input id="s-logofile" type="file" accept="image/*" onchange="pickLogo(this)">
+    ${b.logo_data?`<label class="chkrow"><input type="checkbox" id="s-rmlogo" onchange="if(this.checked){pendingLogo='';$('#s-logo').hidden=true}">Quitar el logo actual</label>`:''}
+    <label for="s-terms">Condiciones de pago (puedes poner aquí tu IBAN)</label><textarea id="s-terms">${esc(b.payment_terms||'')}</textarea>
+    <label for="s-notes">Notas del presupuesto</label><textarea id="s-notes">${esc(b.quote_notes||'')}</textarea>
+    <label for="s-valid">Validez del presupuesto (días)</label><input id="s-valid" type="number" min="1" value="${b.quote_validity_days||30}" inputmode="numeric">
+    <div class="group" style="margin:18px 0 0">Tu furgoneta (opcional)</div><div class="sub">Sirve para ver qué porcentaje de la carga ocupa cada show.</div>
+    <div class="two"><div><label for="s-vanv">Volumen útil (m³)</label><input id="s-vanv" type="number" min="0" step="0.1" value="${b.van_volume_m3!=null?b.van_volume_m3:''}" inputmode="decimal"></div>
+    <div><label for="s-vanw">Carga máxima (kg)</label><input id="s-vanw" type="number" min="0" step="1" value="${b.van_payload_kg!=null?b.van_payload_kg:''}" inputmode="numeric"></div></div>
+    <button class="btn primary block" onclick="saveBusiness()">Guardar</button>`);
+}
+async function pickLogo(input){
+  const f = input.files && input.files[0]; if (!f) return;
+  try {
+    const blob = await resizeImage(f, 400, 'image/png', 1);
+    pendingLogo = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
+    const im = $('#s-logo'); im.src = pendingLogo; im.hidden = false;
+  } catch(e){ toast('No se pudo leer la imagen', true); }
+}
+async function saveBusiness(){
+  const v = parseInt($('#s-valid').value) || 30, t = id => $(id).value.trim() || null;
+  const payload = {id:1, business_name:t('#s-name'), tax_id:t('#s-tax'), phone:t('#s-phone'), email:t('#s-email'), address:t('#s-addr'),
+    payment_terms:t('#s-terms'), quote_notes:t('#s-notes'), quote_validity_days:v,
+    van_volume_m3:nf('#s-vanv'), van_payload_kg:nf('#s-vanw') == null ? null : Math.round(nf('#s-vanw')),
+    logo_data: pendingLogo !== undefined ? (pendingLogo || null) : ((S.settings && S.settings.logo_data) || null), updated_at:new Date().toISOString()};
+  await db(sb.from('settings').upsert(payload));
+  closeModal(); await loadAll(); toast('Datos guardados');
+}
+
+/* ============ IMPORTAR DESDE EXCEL / CSV ============ */
+const norm = s => String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const IMPORT_HEAD = {
+  model:['modelo','nombre','equipo','model','name'], brand:['marca','brand','fabricante'], cat:['categoria','category'],
+  serial:['n de serie','numero de serie','serie','serial','serial number','sn'], qty:['cantidad','qty','unidades','stock'],
+  rate:['tarifa','tarifa por dia','precio dia','precio','rate'], type:['tipo','type']
+};
+let importPlan = null;
+function openImport(){
+  importPlan = null;
+  openModal(`<h2>Importar inventario</h2>
+    <div class="sub">Sube un Excel (.xlsx) o un CSV. Se lee la primera hoja. Columnas: <b>Modelo</b> (obligatoria), Marca, Categoría, Nº de serie, Cantidad, Tarifa por día y Tipo.</div>
+    <div class="info" style="margin:10px 0 0;font-size:14px">Una fila con nº de serie crea una unidad con ese número. Una fila sin nº de serie crea tantas unidades en blanco como indique Cantidad. Si en Tipo pones «cantidad», el modelo se crea como material por cantidad (cables, consumibles) con ese stock. Los números de serie que ya existen se saltan.</div>
+    <div class="actions" style="margin:12px 0 0"><button class="btn" onclick="downloadTemplate()">Descargar plantilla</button></div>
+    <label for="i-file">Archivo</label><input id="i-file" type="file" accept=".xlsx,.xls,.csv,text/csv" onchange="readImport(this)">
+    <div id="i-sum"></div>`);
+}
+function downloadTemplate(){
+  if (typeof XLSX === 'undefined') return toast('No se pudo cargar el generador de Excel.', true);
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['Modelo','Marca','Categoría','Nº de serie','Cantidad','Tarifa por día','Tipo'],
+    ['Robin 300 Wash','Robe','Iluminación','RB-30418','',35,''],
+    ['Robin 300 Wash','Robe','Iluminación','RB-30419','',35,''],
+    ['Foco PAR LED','Chauvet','Iluminación','',6,12,''],
+    ['Cable XLR 5 m','','Audio','',40,0.5,'cantidad']]);
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Inventario');
+  XLSX.writeFile(wb, 'plantilla-inventario.xlsx');
+}
+async function readImport(input){
+  const f = input.files && input.files[0]; if (!f) return;
+  if (typeof XLSX === 'undefined') return toast('No se pudo cargar el lector de Excel. Comprueba tu conexión.', true);
+  try {
+    const wb = XLSX.read(await f.arrayBuffer(), {type:'array', codepage:65001});
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval:''});
+    importPlan = buildImportPlan(rows);
+  } catch(e){ importPlan = {error:'No se pudo leer el archivo.'}; }
+  const el = $('#i-sum'); if (!el) return;
+  if (importPlan.error){ el.innerHTML = `<div class="msg bad">${esc(importPlan.error)}</div>`; return; }
+  const g = importPlan.groups, news = g.filter(x => !x.existing).length;
+  const units = g.reduce((s, x) => s + x.newSerials.length + x.blank, 0), bulk = g.filter(x => x.bulk).length;
+  el.innerHTML = `<div class="msg ok" style="margin-top:12px">${g.length} modelo${g.length===1?'':'s'} (${news} nuevo${news===1?'':'s'}) · ${units} unidad${units===1?'':'es'} nueva${units===1?'':'s'}${bulk?` · ${bulk} por cantidad`:''}${importPlan.ignored?` · ${importPlan.ignored} fila${importPlan.ignored===1?'':'s'} sin modelo ignorada${importPlan.ignored===1?'':'s'}`:''}${importPlan.skipped?` · ${importPlan.skipped} nº de serie ya existente${importPlan.skipped===1?'':'s'} saltado${importPlan.skipped===1?'':'s'}`:''}</div>
+    <div class="list" style="margin:12px 0 0">${g.slice(0, 8).map(x => `<div class="row"><div class="grow"><b>${esc(x.name)}</b><div class="sub">${esc([x.brand, x.cat].filter(Boolean).join(' · '))}</div></div>
+      <span class="badge ${x.existing?'':'ok'}">${x.existing?'Ya existe':'Nuevo'}</span><div class="sub">${x.bulk?'×'+x.stock:'+'+(x.newSerials.length+x.blank)}</div></div>`).join('')}
+      ${g.length > 8 ? `<div class="row sub">…y ${g.length - 8} más</div>` : ''}</div>
+    <button class="btn primary block" onclick="runImport()">Importar ahora</button>`;
+}
+function buildImportPlan(rows){
+  const keys = [...new Set(rows.flatMap(r => Object.keys(r)))], col = {};
+  Object.entries(IMPORT_HEAD).forEach(([f, list]) => col[f] = keys.find(k => list.includes(norm(k))));
+  if (!col.model) return {error:'No encuentro la columna «Modelo». Usa la plantilla para ver el formato.'};
+  const groups = new Map(); let ignored = 0, skipped = 0;
+  rows.forEach(r => {
+    const name = String(r[col.model] || '').trim(); if (!name){ ignored++; return; }
+    const brand = col.brand ? String(r[col.brand] || '').trim() : '', key = norm(name) + '|' + norm(brand);
+    const g = groups.get(key) || {name, brand, cat:'', rate:null, bulk:false, stock:0, serials:[], blank:0};
+    if (col.cat && String(r[col.cat]).trim()) g.cat = String(r[col.cat]).trim();
+    if (col.rate && String(r[col.rate]).trim() !== ''){ const v = parseFloat(String(r[col.rate]).replace(',', '.')); if (!isNaN(v)) g.rate = v; }
+    const type = col.type ? norm(r[col.type]) : '', serial = col.serial ? String(r[col.serial] || '').trim() : '', qty = col.qty ? (parseInt(r[col.qty]) || 0) : 0;
+    if (type.startsWith('cantidad') || type.startsWith('bulk')){ g.bulk = true; g.stock += qty || 1; }
+    else if (serial) g.serials.push(serial);
+    else g.blank += qty > 0 ? qty : 1;
+    groups.set(key, g);
+  });
+  const list = [...groups.values()].map(g => {
+    const existing = S.models.find(m => norm(m.name) === norm(g.name) && (!g.brand || norm(m.brand) === norm(g.brand)));
+    const have = new Set(existing ? S.units.filter(u => u.model_id === existing.id).map(u => norm(u.serial_number)) : []);
+    const seen = new Set(), newSerials = [];
+    g.serials.forEach(s => { if (have.has(norm(s)) || seen.has(norm(s))){ skipped++; return; } seen.add(norm(s)); newSerials.push(s); });
+    return {...g, existing, newSerials};
+  });
+  if (!list.length) return {error:'No hay filas con modelo en el archivo.'};
+  return {groups:list, ignored, skipped};
+}
+async function insertChunks(table, rows, size = 300){
+  const out = [];
+  for (let i = 0; i < rows.length; i += size) out.push(...await db(sb.from(table).insert(rows.slice(i, i + size)).select()));
+  return out;
+}
+async function runImport(){
+  if (!importPlan || importPlan.error) return;
+  toast('Importando…');
+  const plan = importPlan, catMap = {};
+  S.categories.forEach(c => catMap[norm(c.name)] = c.id);
+  const newCats = [...new Set(plan.groups.map(g => g.cat).filter(c => c && !catMap[norm(c)]))];
+  if (newCats.length) (await insertChunks('categories', newCats.map(name => ({name})))).forEach(c => catMap[norm(c.name)] = c.id);
+  const mk = g => norm(g.name) + '|' + norm(g.brand), modelIds = {};
+  plan.groups.filter(g => g.existing).forEach(g => modelIds[mk(g)] = g.existing.id);
+  const fresh = plan.groups.filter(g => !g.existing);
+  if (fresh.length){
+    const made = await insertChunks('equipment_models', fresh.map(g => ({name:g.name, brand:g.brand || null, category_id:g.cat ? catMap[norm(g.cat)] : null, day_rate:g.rate, is_bulk:g.bulk, bulk_stock:g.bulk ? g.stock : 0})));
+    made.forEach(m => modelIds[norm(m.name) + '|' + norm(m.brand)] = m.id);
+  }
+  for (const g of plan.groups.filter(g => g.existing)){
+    const up = {};
+    if (g.rate != null) up.day_rate = g.rate;
+    if (g.bulk && g.existing.is_bulk) up.bulk_stock = g.stock;
+    if (Object.keys(up).length) await db(sb.from('equipment_models').update(up).eq('id', g.existing.id));
+  }
+  const unitRows = [];
+  plan.groups.forEach(g => {
+    if (g.bulk) return;
+    const id = modelIds[mk(g)]; if (!id) return;
+    g.newSerials.forEach(s => unitRows.push({model_id:id, serial_number:s}));
+    for (let i = 0; i < g.blank; i++) unitRows.push({model_id:id});
+  });
+  if (unitRows.length) await insertChunks('units', unitRows, 500);
+  importPlan = null; closeModal(); await loadAll();
+  toast(`Importado: ${plan.groups.length} modelos y ${unitRows.length} unidades`);
+}
+
+/* ============ RESTAURAR COPIA ============ */
+let restoreData = null;
+const RESTORE_ORDER = ['categories','equipment_models','units','kits','kit_items','projects','technicians','reservations','bulk_reservations','crew_assignments','maintenance_logs','scan_events'];
+function openRestore(){
+  restoreData = null;
+  openModal(`<h2>Restaurar copia</h2>
+    <div class="sub">Elige un archivo .json descargado con «Copia completa». Los datos de la copia se vuelven a guardar. Lo que hayas creado después y no esté en la copia se conserva.</div>
+    <label for="r-file">Archivo</label><input id="r-file" type="file" accept=".json,application/json" onchange="readRestore(this)">
+    <div id="r-sum"></div>`);
+}
+async function readRestore(input){
+  const f = input.files && input.files[0]; if (!f) return;
+  const el = $('#r-sum');
+  try {
+    const d = JSON.parse(await f.text());
+    if (!Array.isArray(d.equipment_models) && !Array.isArray(d.projects)) throw new Error('formato');
+    restoreData = d;
+    const lines = RESTORE_ORDER.filter(t => Array.isArray(d[t]) && d[t].length).map(t => `<div class="row"><div class="grow">${esc(t.replace(/_/g, ' '))}</div><div class="count">${d[t].length}</div></div>`).join('');
+    el.innerHTML = `<div class="sub" style="margin-top:10px">Copia del ${d.exportado ? esc(fmtFull(d.exportado)) : 'fecha desconocida'}</div>
+      <div class="list" style="margin:8px 0 0">${lines || '<div class="row sub">La copia está vacía.</div>'}</div>
+      <button class="btn primary block" onclick="runRestore()">Restaurar ahora</button>`;
+  } catch(e){ restoreData = null; el.innerHTML = `<div class="msg bad">Ese archivo no parece una copia de seguridad de esta app.</div>`; }
+}
+async function runRestore(){
+  if (!restoreData || !confirm('Se van a volver a guardar los datos de la copia, sobrescribiendo los registros con el mismo identificador. ¿Continuar?')) return;
+  toast('Restaurando…');
+  try {
+    for (const t of RESTORE_ORDER){
+      const rows = restoreData[t]; if (!Array.isArray(rows) || !rows.length) continue;
+      for (let i = 0; i < rows.length; i += 200) await db(sb.from(t).upsert(rows.slice(i, i + 200), {onConflict:'id'}));
+    }
+    if (restoreData.settings && restoreData.settings.id) await db(sb.from('settings').upsert(restoreData.settings));
+  } catch(e){ return; }
+  restoreData = null; closeModal(); await loadAll(); toast('Copia restaurada');
+}
+
+/* ============ LEYENDA DE COLORES (cables) ============ */
+const COMMON_COLORS = [['#E53935','Rojo'],['#1E66F5','Azul'],['#43A047','Verde'],['#FDD835','Amarillo'],['#FB8C00','Naranja'],['#FFFFFF','Blanco'],['#212121','Negro'],['#8E24AA','Morado'],['#EC407A','Rosa'],['#9E9E9E','Gris'],['#795548','Marrón'],['#00ACC1','Turquesa'],['#C0CA33','Lima'],['#3949AB','Azul oscuro']];
+const legendList = () => Array.isArray(S.settings && S.settings.color_legend) ? S.settings.color_legend : [];
+const colorEntry = hex => hex ? legendList().find(e => e.hex && e.hex.toLowerCase() === String(hex).toLowerCase()) : null;
+// Nombre del color a partir del código hexadecimal (para no depender de verlo)
+function autoName(hex){
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim()); if (!m) return '';
+  const n = parseInt(m[1], 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  let hh = 0;
+  if (d){ hh = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; hh *= 60; if (hh < 0) hh += 360; }
+  if (l < 0.13) return 'negro';
+  if (l > 0.92 && s < 0.5) return 'blanco';
+  if (s < 0.12) return l < 0.35 ? 'gris oscuro' : l > 0.7 ? 'gris claro' : 'gris';
+  let base;
+  if (hh < 15 || hh >= 345) base = l > 0.72 ? 'rosa' : 'rojo';
+  else if (hh < 45) base = l < 0.42 ? 'marrón' : (l > 0.78 && s < 0.7 ? 'beige' : 'naranja');
+  else if (hh < 62) base = 'amarillo';
+  else if (hh < 90) base = 'lima';
+  else if (hh < 165) base = 'verde';
+  else if (hh < 195) base = 'turquesa';
+  else if (hh < 215) base = 'celeste';
+  else if (hh < 255) base = 'azul';
+  else if (hh < 285) base = 'violeta';
+  else if (hh < 325) base = 'morado';
+  else base = 'rosa';
+  return base + (['marrón', 'beige', 'rosa'].includes(base) ? '' : l < 0.28 ? ' oscuro' : l > 0.75 ? ' claro' : '');
+}
+const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+const entryName = e => (e && e.name) || cap(autoName(e && e.hex));
+const colorName = hex => { const e = colorEntry(hex); return e && e.name ? e.name : cap(autoName(hex)); };
+const colorLabel = m => { const e = m && colorEntry(m.color); return e ? (e.label || '') : ''; };
+const colorText = m => m && m.color ? [colorName(m.color), colorLabel(m)].filter(Boolean).join(' · ') : '';
+const entryText = e => [entryName(e), e.label].filter(Boolean).join(' · ');
+const colorDot = m => m && m.color ? `<span class="sw" style="background:${esc(m.color)}" title="${esc(colorText(m))}"></span>` : '';
+function legendChips(){
+  const l = legendList().filter(e => e.hex);
+  return l.length ? `<div class="legend">${l.map(e => `<span class="chip"><span class="sw" style="background:${esc(e.hex)}"></span>${esc(entryText(e))}</span>`).join('')}</div>` : '';
+}
+function colorPicker(sel){
+  const l = legendList().filter(e => e.hex), same = (a, b) => a && b && a.toLowerCase() === b.toLowerCase();
+  if (!l.length) return '<span class="sub">Aún no hay leyenda. Créala en Más > Leyenda de colores.</span>';
+  const extra = sel && !l.some(e => same(e.hex, sel)) ? [{hex:sel, label:'fuera de la leyenda'}] : [];
+  return `<button type="button" class="chip ${!sel?'sel':''}" onclick="pickColor('')">Sin color</button>`
+    + [...l, ...extra].map(e => `<button type="button" class="chip ${same(e.hex, sel)?'sel':''}" onclick="pickColor('${esc(e.hex)}')"><span class="sw" style="background:${esc(e.hex)}"></span>${esc(entryText(e))}</button>`).join('');
+}
+function pickColor(hex){ $('#f-color').value = hex; $('#f-colors').innerHTML = colorPicker(hex); }
+let legendDraft = [], legendOpen = -1;
+function openLegend(){ legendDraft = legendList().map(e => ({hex:e.hex, name:e.name || '', label:e.label || ''})); legendOpen = -1; drawLegend(); }
+function drawLegend(){
+  const rows = legendDraft.map((e, i) => `<div class="lg-row"><button type="button" class="swbtn ${legendOpen===i?'open':''}" style="background:${esc(e.hex)}" onclick="legendPalette(${i})" aria-label="Cambiar color ${i+1}, ahora ${esc(entryName(e))}"></button>
+    <input value="${esc(e.label)}" placeholder="Qué significa (ej. 5 m)" oninput="legendDraft[${i}].label=this.value" aria-label="Significado del color ${i+1}">
+    <button class="btn small" aria-label="Quitar color" onclick="legendRemove(${i})">✕</button></div>
+    <div class="sub" style="margin:3px 0 0 54px">Color: <b>${esc(entryName(e))}</b></div>`
+    + (legendOpen === i ? `<div class="pal">${COMMON_COLORS.map(([c, n]) => `<button type="button" class="chip ${c.toLowerCase()===e.hex.toLowerCase()?'sel':''}" onclick="legendSetColor(${i},'${c}','${n}')"><span class="sw" style="background:${c}"></span>${n}</button>`).join('')}
+      <label>Otro color <input type="color" value="${esc(e.hex)}" onchange="legendSetColor(${i},this.value,'')"></label></div>` : '')).join('');
+  openModal(`<h2>Leyenda de colores</h2>
+    <div class="sub">Toca un color para cambiarlo: cada uno lleva su nombre escrito. Después escribe qué significa en tus cables (por ejemplo, la longitud) y asigna un color a cada modelo al editarlo.</div>
+    ${rows || '<div class="empty" style="margin:20px 0">Aún no hay colores en la leyenda.</div>'}
+    <div class="actions" style="margin:12px 0 0"><button class="btn" onclick="legendAdd()">+ Añadir color</button><button class="btn" onclick="legendCommon()">Añadir colores típicos</button></div>
+    <button class="btn primary block" onclick="saveLegend()">Guardar leyenda</button>`);
+}
+function legendPalette(i){ legendOpen = legendOpen === i ? -1 : i; drawLegend(); }
+function legendSetColor(i, hex, name){ legendDraft[i].hex = hex; legendDraft[i].name = name; legendOpen = -1; drawLegend(); }
+function legendAdd(){ legendDraft.push({hex:'#E53935', name:'Rojo', label:''}); legendOpen = legendDraft.length - 1; drawLegend(); }
+function legendRemove(i){ legendDraft.splice(i, 1); legendOpen = -1; drawLegend(); }
+function legendCommon(){
+  COMMON_COLORS.slice(0, 9).forEach(([hex, name]) => { if (!legendDraft.some(e => e.hex.toLowerCase() === hex.toLowerCase())) legendDraft.push({hex, name, label:''}); });
+  drawLegend();
+}
+async function saveLegend(){
+  const l = legendDraft.map(e => ({hex:e.hex, name:e.name || entryName(e), label:e.label.trim()}));
+  const seen = new Set();
+  for (const e of l){ const k = e.hex.toLowerCase(); if (seen.has(k)) return toast('Hay dos entradas con el mismo color. Quita una.', true); seen.add(k); }
+  await db(sb.from('settings').upsert({id:1, color_legend:l, updated_at:new Date().toISOString()}));
+  closeModal(); await loadAll(); toast('Leyenda guardada');
+}
+
+/* ============ SIN CONEXIÓN: cola de escaneos ============ */
+function updateOffBar(){
+  const el = $('#offbar'); if (!el) return;
+  const n = S.queue.length, off = !navigator.onLine, f = S.failed.length;
+  if (!off && !n && !f){ el.hidden = true; return; }
+  el.hidden = false;
+  el.textContent = off ? `Sin conexión${n ? ` · ${n} pendiente${n===1?'':'s'} de enviar` : ''}` : n ? `Enviando ${n} pendiente${n===1?'':'s'}…` : `${f} escaneo${f===1?'':'s'} sin registrar`;
+}
+function localCond(uid, cond, note, clear){
+  const u = unitById(uid); if (!u) return;
+  if (cond === 'repair') u.status = 'repair';
+  else if (cond === 'incomplete') u.missing_note = note || 'Incompleto';
+  else if (clear) u.missing_note = null;
+}
+// Refleja la operación en los datos del móvil al instante
+function applyLocal(op){
+  if (op.t === 'out'){ const r = S.reservations.find(x => x.unit_id === op.unit_id && x.project_id === op.project_id && x.state !== 'returned'); if (r) r.state = 'out'; }
+  else if (op.t === 'in'){ const r = S.reservations.find(x => x.unit_id === op.unit_id && x.state === 'out'); if (r) r.state = 'returned'; localCond(op.unit_id, op.cond, op.note, op.clear); }
+  else if (op.t === 'kout'){
+    S.reservations.filter(x => x.project_id === op.project_id && x.kit_id === op.kit_id && x.state === 'planned').forEach(x => x.state = 'out');
+    S.bulkRes.filter(x => x.project_id === op.project_id && x.kit_id === op.kit_id && x.state === 'planned').forEach(x => x.state = 'out');
+  } else if (op.t === 'kin'){
+    S.reservations.filter(x => x.kit_id === op.kit_id && x.state === 'out').forEach(x => x.state = 'returned');
+    S.bulkRes.filter(x => x.kit_id === op.kit_id && x.state === 'out').forEach(x => x.state = 'returned');
+    (op.items || []).forEach(i => localCond(i.unit_id, i.cond, i.note, i.clear));
+  }
+}
+const must = r => { if (r.error) throw r.error; return r.data; };
+async function syncCondition(unitId, cond, note, clear, at){
+  if (cond === 'repair'){
+    must(await sb.from('units').update({status:'repair'}).eq('id', unitId));
+    must(await sb.from('maintenance_logs').insert({unit_id:unitId, kind:'repair', done_on:at.slice(0, 10), description:note || 'Devuelta con daños'}));
+  } else if (cond === 'incomplete'){
+    must(await sb.from('units').update({missing_note:note || 'Incompleto'}).eq('id', unitId));
+    must(await sb.from('maintenance_logs').insert({unit_id:unitId, kind:'missing', done_on:at.slice(0, 10), description:note || 'Devuelta incompleta'}));
+  } else if (clear){
+    must(await sb.from('units').update({missing_note:null}).eq('id', unitId));
+  }
+}
+// Envía una operación al servidor
+async function syncOp(op){
+  if (op.t === 'out'){
+    const rs = must(await sb.from('reservations').select('id,state').eq('unit_id', op.unit_id).eq('project_id', op.project_id).neq('state', 'returned').limit(1));
+    if (!rs.length) throw {message:'la unidad ya no estaba reservada en ese show'};
+    if (rs[0].state === 'planned') must(await sb.from('reservations').update({state:'out'}).eq('id', rs[0].id));
+    must(await sb.from('scan_events').insert({unit_id:op.unit_id, project_id:op.project_id, action:'out', at:op.at}));
+  } else if (op.t === 'in'){
+    const rs = must(await sb.from('reservations').select('id,project_id').eq('unit_id', op.unit_id).eq('state', 'out').limit(1));
+    if (rs.length){
+      must(await sb.from('reservations').update({state:'returned'}).eq('id', rs[0].id));
+      must(await sb.from('scan_events').insert({unit_id:op.unit_id, project_id:rs[0].project_id, action:'in', at:op.at, condition:op.cond, note:op.note || null}));
+    }
+    await syncCondition(op.unit_id, op.cond, op.note, op.clear, op.at);
+  } else if (op.t === 'kout'){
+    const rs = must(await sb.from('reservations').select('id,unit_id').eq('project_id', op.project_id).eq('kit_id', op.kit_id).eq('state', 'planned'));
+    if (rs.length){
+      must(await sb.from('reservations').update({state:'out'}).eq('project_id', op.project_id).eq('kit_id', op.kit_id).eq('state', 'planned'));
+      must(await sb.from('scan_events').insert(rs.map(r => ({unit_id:r.unit_id, project_id:op.project_id, action:'out', at:op.at}))));
+    }
+    must(await sb.from('bulk_reservations').update({state:'out'}).eq('project_id', op.project_id).eq('kit_id', op.kit_id).eq('state', 'planned'));
+  } else if (op.t === 'kin'){
+    const rs = must(await sb.from('reservations').select('id,unit_id,project_id').eq('kit_id', op.kit_id).eq('state', 'out'));
+    if (rs.length){
+      must(await sb.from('reservations').update({state:'returned'}).eq('kit_id', op.kit_id).eq('state', 'out'));
+      const by = {}; (op.items || []).forEach(i => by[i.unit_id] = i);
+      must(await sb.from('scan_events').insert(rs.map(r => { const i = by[r.unit_id] || {}; return {unit_id:r.unit_id, project_id:r.project_id, action:'in', at:op.at, condition:i.cond || 'ok', note:i.note || null}; })));
+    }
+    must(await sb.from('bulk_reservations').update({state:'returned'}).eq('kit_id', op.kit_id).eq('state', 'out'));
+    for (const i of (op.items || [])) await syncCondition(i.unit_id, i.cond, i.note, i.clear, op.at);
+  }
+}
+function enqueue(op){
+  op.at = new Date().toISOString();
+  S.queue.push(op); lsSet(QUEUE_KEY, S.queue);
+  applyLocal(op); saveSnapshot(); updateOffBar();
+  flushQueue();
+}
+let flushing = false;
+async function flushQueue(){
+  if (flushing || !S.queue.length || !navigator.onLine || !S.session) return;
+  flushing = true; let synced = 0, failedNow = 0;
+  try {
+    while (S.queue.length){
+      const op = S.queue[0];
+      try { await syncOp(op); S.queue.shift(); synced++; }
+      catch(e){
+        if (isNetErr(e)) break;
+        S.queue.shift(); S.failed.push({op, error:errMsg(e), at:new Date().toISOString()}); failedNow++;
+      }
+      lsSet(QUEUE_KEY, S.queue); lsSet(FAIL_KEY, S.failed);
+    }
+  } finally { flushing = false; lsSet(QUEUE_KEY, S.queue); lsSet(FAIL_KEY, S.failed); }
+  updateOffBar();
+  if (synced || failedNow){
+    await loadAll(false);
+    if (S.tab === 'scan') updateProgress(); else render();
+  }
+  if (failedNow) toast(`${failedNow} escaneo${failedNow===1?'':'s'} no se pudo registrar. Mira Más > Pendientes.`, true);
+}
+const OP_TXT = {out:'Salida', in:'Devolución', kout:'Salida de kit', kin:'Devolución de kit'};
+function opLabel(op){
+  const u = op.unit_id ? unitById(op.unit_id) : null, k = op.kit_id ? kitById(op.kit_id) : null;
+  return `${OP_TXT[op.t] || op.t}: ${u ? unitLabel(u) : k ? k.name : '?'}`;
+}
+function openPending(){
+  const q = S.queue, f = S.failed;
+  openModal(`<h2>Pendientes de sincronizar</h2>
+    <div class="sub">${navigator.onLine ? 'Hay conexión.' : 'Sin conexión.'} Los escaneos se guardan en este móvil y se envían solos cuando vuelve la señal.</div>
+    ${q.length ? `<div class="group" style="margin:14px 0 6px">Por enviar (${q.length})</div><div class="list" style="margin:0">${q.map(o => `<div class="row"><div class="grow">${esc(opLabel(o))}<div class="sub">${esc(fmtFull(o.at))}</div></div></div>`).join('')}</div>` : '<div class="sub" style="margin-top:12px">No hay nada por enviar.</div>'}
+    ${f.length ? `<div class="group" style="margin:14px 0 6px">No se pudieron registrar (${f.length})</div><div class="list" style="margin:0">${f.map(x => `<div class="row"><div class="grow">${esc(opLabel(x.op))}<div class="sub bad">${esc(x.error)}</div></div></div>`).join('')}</div>` : ''}
+    ${q.length ? `<button class="btn primary block" onclick="closeModal();flushQueue()" ${navigator.onLine ? '' : 'disabled'}>Enviar ahora</button>` : ''}
+    ${f.length ? `<button class="btn block" onclick="S.failed=[];lsSet(FAIL_KEY,[]);updateOffBar();closeModal();render()">Descartar los fallidos</button>` : ''}`);
+}
+function pendingBtn(){
+  const n = S.queue.length + S.failed.length;
+  return n ? `<div class="group">Sincronización</div><div class="actions"><button class="btn" style="color:var(--warn)" onclick="openPending()">Pendientes de enviar (${n})</button></div>` : '';
+}
+
+/* ============ ESTADO AL DEVOLVER ============ */
+const COND = {ok:'Completo', repair:'Reparación', incomplete:'Incompleto'};
+let condResolve = null, condState = [];
+const quickReturn = () => { try { return localStorage.getItem('quickReturn') === '1'; } catch(e){ return false; } };
+function setQuick(on){ try { localStorage.setItem('quickReturn', on ? '1' : '0'); } catch(e){} }
+function askCondition(units, title){
+  return new Promise(resolve => {
+    condState = units.map(u => ({unit_id:u.id, cond:'ok', note:''}));
+    condResolve = resolve;
+    openModal(`<h2>Estado al devolver</h2><div class="sub">${esc(title)}</div>
+      ${units.map((u, i) => `<div class="info" style="margin:10px 0 0" id="cb-${i}"><b>${esc(unitLabel(u))}</b>${u.missing_note ? `<div class="sub bad">Salió incompleto: ${esc(u.missing_note)}</div>` : ''}
+        <div class="legend" style="margin:8px 0 0">${['ok','repair','incomplete'].map(c => `<button type="button" class="chip ${c==='ok'?'sel':''}" data-c="${c}" onclick="setCond(${i},'${c}')">${COND[c]}</button>`).join('')}</div>
+        <div id="cn-${i}" hidden><label for="cnt-${i}" id="cnl-${i}">Qué falta</label><textarea id="cnt-${i}" style="min-height:60px" oninput="condState[${i}].note=this.value"></textarea></div></div>`).join('')}
+      <button class="btn primary block" onclick="confirmCond()">Confirmar devolución</button>
+      <button class="btn block" onclick="closeModal()">Cancelar</button>`);
+  });
+}
+function setCond(i, c){
+  condState[i].cond = c;
+  document.querySelectorAll(`#cb-${i} .chip`).forEach(b => b.classList.toggle('sel', b.dataset.c === c));
+  const box = $('#cn-' + i); box.hidden = c === 'ok';
+  $('#cnl-' + i).textContent = c === 'incomplete' ? 'Qué falta' : 'Qué le pasa (opcional)';
+  if (!box.hidden) $('#cnt-' + i).focus();
+}
+function confirmCond(){ const r = condState, res = condResolve; condResolve = null; closeModal(); if (res) res(r); }
+
+/* ============ PESO, VOLUMEN Y POTENCIA ============ */
+const nf = id => { const v = parseFloat(String($(id).value).replace(',', '.')); return isNaN(v) ? null : v; };
+const fmtNum = (n, d = 1) => Number(n || 0).toLocaleString('es-ES', {maximumFractionDigits:d});
+const vol = m => (m && m.width_cm > 0 && m.height_cm > 0 && m.depth_cm > 0) ? Number(m.width_cm) * Number(m.height_cm) * Number(m.depth_cm) / 1e6 : 0;
+const dimsTxt = m => (m.width_cm > 0 && m.height_cm > 0 && m.depth_cm > 0) ? `${fmtNum(m.width_cm)} × ${fmtNum(m.height_cm)} × ${fmtNum(m.depth_cm)} cm` : '';
+function specsLine(m){
+  const parts = [m.weight_kg != null ? fmtNum(m.weight_kg, 2) + ' kg' : '', dimsTxt(m), m.power_w != null ? fmtNum(m.power_w, 0) + ' W' : ''].filter(Boolean);
+  return parts.length ? `<div style="margin-top:6px">${esc(parts.join(' · '))}</div>` : '';
+}
+function kitSpecs(k){
+  const parts = [k.weight_kg != null ? fmtNum(k.weight_kg, 2) + ' kg' : '', dimsTxt(k)].filter(Boolean);
+  return parts.length ? `<div class="sub" style="margin-top:8px;text-align:left">Flight case vacío: ${esc(parts.join(' · '))}</div>` : '';
+}
+// Peso, volumen y potencia de todo lo reservado en un show
+function loadStats(p){
+  const rs = S.reservations.filter(r => r.project_id === p.id), bs = S.bulkRes.filter(b => b.project_id === p.id);
+  let kg = 0, m3 = 0, w = 0; const noW = new Set(), noP = new Set();
+  const add = (m, qty) => {
+    if (!m) return;
+    if (m.weight_kg == null) noW.add(m.name); else kg += Number(m.weight_kg) * qty;
+    m3 += vol(m) * qty;
+    if (m.power_w == null) noP.add(m.name); else w += Number(m.power_w) * qty;
+  };
+  rs.forEach(r => { const u = unitById(r.unit_id); if (u) add(modelById(u.model_id), 1); });
+  bs.forEach(b => add(modelById(b.model_id), b.qty));
+  [...new Set([...rs, ...bs].map(x => x.kit_id).filter(Boolean))].forEach(kid => {
+    const k = kitById(kid); if (!k) return;
+    const kv = vol(k);
+    if (kv > 0){   // si el case tiene medidas, ocupa su volumen en vez del suelto
+      let cv = 0;
+      rs.filter(r => r.kit_id === kid).forEach(r => { const u = unitById(r.unit_id); if (u) cv += vol(modelById(u.model_id)); });
+      bs.filter(b => b.kit_id === kid).forEach(b => cv += vol(modelById(b.model_id)) * b.qty);
+      m3 += kv - cv;
+    }
+    kg += Number(k.weight_kg) || 0;
+  });
+  return {kg, m3, w, noW:[...noW], noP:[...noP]};
+}
+function loadCard(p){
+  if (!pieces(p)) return '';
+  const s = loadStats(p), st = S.settings || {}, vanV = Number(st.van_volume_m3) || 0, vanW = Number(st.van_payload_kg) || 0;
+  const bar = (v, max, what) => max > 0 ? `<div class="prog"><i style="width:${Math.min(100, Math.round(100 * v / max))}%;${v > max ? 'background:var(--bad)' : ''}"></i></div>
+    <div class="sub ${v > max ? 'bad' : ''}">${Math.round(100 * v / max)}% ${what} (${fmtNum(max)})${v > max ? ' · NO CABE' : ''}</div>` : '';
+  const amps = s.w / 230, lines = Math.ceil(amps / 12.8);
+  const miss = (arr, what) => arr.length ? `<div class="sub" style="margin-top:4px">Sin ${what}: ${esc(arr.slice(0, 5).join(', '))}${arr.length > 5 ? ` y ${arr.length - 5} más` : ''}.</div>` : '';
+  return `<div class="info"><b>Carga y potencia</b>
+    <div style="margin-top:6px">Peso <b>${fmtNum(s.kg)} kg</b> · Volumen <b>${fmtNum(s.m3, 2)} m³</b></div>
+    ${bar(s.kg, vanW, 'de la carga máxima en kg')}${bar(s.m3, vanV, 'del volumen útil en m³')}
+    ${vanV || vanW ? '<div class="sub" style="margin-top:4px">El volumen es la suma de las medidas, sin contar huecos al cargar.</div>' : ''}
+    <div style="margin-top:8px">Potencia <b>${fmtNum(s.w / 1000, 2)} kW</b> · ${fmtNum(amps)} A a 230 V · unas ${lines} línea${lines === 1 ? '' : 's'} de 16 A</div>
+    <div class="sub">Orientativo, a máxima potencia y sin simultaneidad.</div>
+    ${miss(s.noW, 'peso')}${miss(s.noP, 'potencia')}</div>`;
+}
+
+/* ============ COBROS ============ */
+const PAY_STATUS = {none:'Sin presupuesto', quoted:'Presupuestado', accepted:'Aceptado', invoiced:'Facturado', paid:'Cobrado'};
+const PAY_CLASS = {none:'', quoted:'', accepted:'', invoiced:'warn', paid:'ok'};
+const projectTotal = p => p.agreed_total != null ? Number(p.agreed_total) : quoteCalc(p).total;
+const daysLate = p => p.due_date ? Math.floor((Date.now() - new Date(p.due_date + 'T12:00:00').getTime()) / 86400000) : 0;
+function paymentCard(p){
+  const st = p.payment_status || 'none', total = projectTotal(p), late = st === 'invoiced' ? daysLate(p) : 0;
+  const bits = [total > 0 ? eur(total) : '', p.invoice_number ? 'Factura ' + p.invoice_number : '', st === 'invoiced' && p.due_date ? 'Vence ' + fmtDay(p.due_date) : '', st === 'paid' && p.paid_date ? 'Cobrado el ' + fmtDay(p.paid_date) : ''].filter(Boolean);
+  return `<div class="info"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">Cobro</b><span class="badge ${PAY_CLASS[st]}">${PAY_STATUS[st]}</span><button class="btn small" onclick="openPayment('${p.id}')">Editar</button></div>
+    <div class="sub" style="margin-top:6px">${esc(bits.join(' · ') || 'Sin importe todavía: pon tarifas a los equipos o un importe pactado.')}</div>
+    ${late > 0 ? `<div class="sub bad">Vencida hace ${late} día${late === 1 ? '' : 's'}</div>` : ''}</div>`;
+}
+function openPayment(pid){
+  const p = projById(pid), q = quoteCalc(p).total;
+  openModal(`<h2>Cobro</h2><div class="sub">${esc(p.name)}${p.client ? ' · ' + esc(p.client) : ''}</div>
+    <label for="pay-st">Estado</label><select id="pay-st">${opts(Object.entries(PAY_STATUS), p.payment_status || 'none')}</select>
+    <label for="pay-total">Importe pactado con IVA (€). Si lo dejas vacío se usa el del presupuesto: ${eur(q)}</label>
+    <input id="pay-total" type="number" min="0" step="0.01" inputmode="decimal" value="${p.agreed_total != null ? p.agreed_total : ''}">
+    <div class="two"><div><label for="pay-inv">Nº de factura</label><input id="pay-inv" value="${esc(p.invoice_number || '')}"></div>
+    <div><label for="pay-due">Vencimiento</label><input id="pay-due" type="date" value="${p.due_date || ''}"></div></div>
+    <label for="pay-paid">Fecha de cobro</label><input id="pay-paid" type="date" value="${p.paid_date || ''}">
+    <button class="btn primary block" onclick="savePayment('${pid}')">Guardar</button>`);
+}
+async function savePayment(pid){
+  const st = $('#pay-st').value; let paid = $('#pay-paid').value || null;
+  if (st === 'paid' && !paid) paid = todayStr();
+  if (st !== 'paid') paid = null;
+  await db(sb.from('projects').update({payment_status:st, agreed_total:nf('#pay-total'), invoice_number:$('#pay-inv').value.trim() || null, due_date:$('#pay-due').value || null, paid_date:paid}).eq('id', pid));
+  closeModal(); await loadAll(); toast('Cobro guardado');
+}
+function payBuckets(){
+  const act = S.projects.filter(p => p.status !== 'cancelled'), by = s => act.filter(p => (p.payment_status || 'none') === s);
+  const sum = a => a.reduce((t, p) => t + projectTotal(p), 0), inv = by('invoiced');
+  return {inv, acc:by('accepted'), quo:by('quoted'), paid:by('paid'), sInv:sum(inv), late:inv.filter(p => daysLate(p) > 0).length};
+}
+function payHeadline(){
+  const b = payBuckets();
+  return b.inv.length ? `Pendiente de cobrar: ${eur(b.sInv)}${b.late ? ` · ${b.late} vencida${b.late === 1 ? '' : 's'}` : ''}` : 'Cobros y facturas';
+}
+function openPayments(){
+  const b = payBuckets(), year = String(new Date().getFullYear());
+  const paidYear = b.paid.filter(p => String(p.paid_date || p.ends_at || '').slice(0, 4) === year);
+  const sum = a => a.reduce((t, p) => t + projectTotal(p), 0);
+  const row = p => { const late = p.payment_status === 'invoiced' ? daysLate(p) : 0;
+    const sub = [p.client, p.invoice_number ? 'Factura ' + p.invoice_number : '', p.payment_status === 'invoiced' && p.due_date ? (late > 0 ? `vencida hace ${late} día${late === 1 ? '' : 's'}` : 'vence ' + fmtDay(p.due_date)) : '', p.payment_status === 'paid' && p.paid_date ? 'cobrado el ' + fmtDay(p.paid_date) : ''].filter(Boolean).join(' · ');
+    return `<div class="row tap" onclick="closeModal();go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub ${late > 0 ? 'bad' : ''}">${esc(sub)}</div></div><b>${eur(projectTotal(p))}</b></div>`; };
+  const sec = (title, arr) => `<div class="group" style="margin:16px 0 6px">${title} · ${eur(sum(arr))}</div>` + (arr.length ? `<div class="list" style="margin:0">${arr.map(row).join('')}</div>` : '<div class="sub">Ninguno.</div>');
+  openModal(`<h2>Cobros</h2><div class="sub">Los importes salen del presupuesto de cada show, o del importe pactado si lo has puesto. Incluyen IVA.</div>
+    ${sec('Pendiente de cobrar (facturado)', b.inv)}${sec('Por facturar (aceptado)', b.acc)}${sec('Presupuestado, sin aceptar', b.quo)}${sec('Cobrado en ' + year, paidYear)}`);
+}
+
+/* ============ RIDER TÉCNICO ============ */
+function printRider(pid){
+  const p = projById(pid), qty = projectQty(p);
+  if (!qty.size) return toast('Este show aún no tiene material', true);
+  const s = loadStats(p), byCat = {};
+  [...qty].forEach(([mid, n]) => { const m = modelById(mid); if (!m) return; const c = S.categories.find(x => x.id === m.category_id), k = c ? c.name : 'Otros'; (byCat[k] = byCat[k] || []).push({m, n}); });
+  const cats = Object.keys(byCat).sort((a, b) => a === 'Otros' ? 1 : b === 'Otros' ? -1 : a.localeCompare(b, 'es'));
+  const amps = s.w / 230;
+  let html = bizHeader() + `<h1>Rider técnico</h1><p><b>${esc(p.name)}</b>${p.client ? ' · ' + esc(p.client) : ''}</p>
+    <p>${esc(fmtFull(p.starts_at))} → ${esc(fmtFull(p.ends_at))}${p.venue ? ' · ' + esc(p.venue) : ''}</p>
+    <h2>Equipamiento</h2><table><tr><th>Equipo</th><th>Marca</th><th class="r">Cant.</th><th class="r">Potencia (W)</th></tr>`
+    + cats.map(c => `<tr><td colspan="4"><b>${esc(c)}</b></td></tr>` + byCat[c].sort((a, b) => a.m.name.localeCompare(b.m.name, 'es', {numeric:true})).map(({m, n}) =>
+      `<tr><td>${esc(m.name)}${colorText(m) ? ` <span class="small">· ${esc(colorText(m))}</span>` : ''}</td><td>${esc(m.brand || '')}</td><td class="r">${n}</td><td class="r">${m.power_w != null ? fmtNum(m.power_w * n, 0) : '—'}</td></tr>`).join('')).join('')
+    + `</table>
+    <h2>Potencia eléctrica</h2><p>Potencia total: <b>${fmtNum(s.w, 0)} W</b> (${fmtNum(s.w / 1000, 2)} kW) · aproximadamente ${fmtNum(amps)} A a 230 V monofásico.</p>`
+    + (s.noP.length ? `<p class="small">Sin dato de potencia: ${esc(s.noP.slice(0, 8).join(', '))}${s.noP.length > 8 ? ' y otros' : ''}.</p>` : '')
+    + `<p class="small">Cifras orientativas, a máxima potencia y sin simultaneidad. Conviene comprobarlas con la instalación de la sala.</p>
+    <h2>Carga y logística</h2><p>Peso aproximado: <b>${fmtNum(s.kg)} kg</b> · Volumen: <b>${fmtNum(s.m3, 2)} m³</b></p>`;
+  if (p.rider_notes) html += `<h2>Necesidades para la sala</h2><p>${esc(p.rider_notes).replace(/\n/g, '<br>')}</p>`;
+  const as = S.assigns.filter(a => a.project_id === pid);
+  if (as.length) html += `<h2>Equipo técnico</h2><table>` + as.map(a => { const t = techById(a.technician_id); return t ? `<tr><td>${esc(t.name)}</td><td>${esc(a.role || '')}</td><td>${a.call_time ? esc(fmtDT(a.call_time)) : ''}</td></tr>` : ''; }).join('') + `</table>`;
+  printDoc('doc', html);
+}
+
+/* ============ Arranque ============ */
+S.queue = lsGet(QUEUE_KEY, []); S.failed = lsGet(FAIL_KEY, []);
+sb.auth.onAuthStateChange((_e, session) => {
+  // Sin conexión no se puede renovar la sesión: si ya habías entrado, se sigue con los datos guardados
+  if (!session && !navigator.onLine && lsGet(WAS_KEY, false) && lsGet(SNAP_KEY, null)) session = {offline:true};
+  if (session && !session.offline) lsSet(WAS_KEY, true);
+  const was = !!S.session; S.session = session;
+  if (session && !was) setTimeout(() => loadAll(), 0); else render();
+});
+window.addEventListener('online', async () => {
+  updateOffBar();
+  if (S.session && S.session.offline){ const r = await sb.auth.getSession(); if (r.data && r.data.session) S.session = r.data.session; }
+  await flushQueue(); await loadAll(false); if (S.tab !== 'scan') render();
+});
+window.addEventListener('offline', updateOffBar);
+setInterval(() => { if (S.queue.length && navigator.onLine) flushQueue(); }, 30000);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
