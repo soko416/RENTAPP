@@ -1,6 +1,6 @@
-// Service worker de "Mi material": deja la app y sus librerías guardadas para poder
+// Service worker de "RentApp": deja la app y sus librerías guardadas para poder
 // abrirla sin conexión (por ejemplo, en un almacén sin cobertura).
-const C = 'mi-material-v7';
+const C = 'rentapp-v8';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 const CDN = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js',

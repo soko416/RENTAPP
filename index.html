@@ -8,6 +8,10 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>RentApp</title>
+<meta name="application-name" content="RentApp">
+<meta name="apple-mobile-web-app-title" content="RentApp">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
@@ -174,7 +178,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = '15 · 1 nov 2026';
+const APP_VERSION = '16 · 1 nov 2026';
 const SUPABASE_URL = 'https://akzopqnsrpcwuxaaqkfc.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrem9wcW5zcnBjd3V4YWFxa2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1MzExNjMsImV4cCI6MjEwOTEwNzE2M30.597llIN7plBgQBbueLQOJMKLVDXnzM9ytOg0UEO6DAc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -304,7 +308,7 @@ async function loadAll(draw=true){
 /* ============ Sesión ============ */
 function loginHTML(){
   return `<div class="login">
-    <h1>Mi material</h1>
+    <h1>RentApp</h1>
     <p class="sub">Entra con el usuario que creaste en Supabase.</p>
     <label for="l-email">Email</label>
     <input id="l-email" type="email" autocomplete="username" autocapitalize="off">
@@ -1225,7 +1229,7 @@ function downloadIcs(id){
   const esc2 = s => String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
   const ev = S.assigns.filter(a => a.technician_id === id).map(a => ({a, p:projById(a.project_id)})).filter(x => x.p && x.p.status !== 'cancelled');
   if (!ev.length) return toast('Este técnico no tiene shows asignados', true);
-  const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Mi material//ES','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+  const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//RentApp//ES','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
   ev.forEach(({a,p}) => {
     lines.push('BEGIN:VEVENT', 'UID:' + a.id + '@mi-material', 'DTSTAMP:' + stamp(Date.now()),
       'DTSTART:' + stamp(a.call_time || p.starts_at), 'DTEND:' + stamp(p.ends_at),
@@ -1268,7 +1272,7 @@ async function exportJson(){
   const data = {exportado: new Date().toISOString(), categories:S.categories, equipment_models:S.models, units:S.units, kits:S.kits, kit_items:S.kitItems,
     projects:S.projects, reservations:S.reservations, bulk_reservations:S.bulkRes, technicians:S.techs, crew_assignments:S.assigns,
     maintenance_logs:S.maint, clients:S.clients, scan_events:ev.data, settings:S.settings};
-  download(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}), `copia-material-${stampName()}.json`);
+  download(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}), `copia-rentapp-${stampName()}.json`);
   markBackup(); render(); toast('Copia descargada');
 }
 function exportExcel(){
@@ -1293,7 +1297,7 @@ function exportExcel(){
   add('Asignaciones', S.assigns.map(a => { const p = projById(a.project_id) || {}, t = techById(a.technician_id) || {};
     return {Show:p.name||'', Técnico:t.name||'', Función:a.role||'', Llamada:a.call_time?fmtFull(a.call_time):''}; }));
   add('Mantenimiento', S.maint.map(l => { const u = unitById(l.unit_id) || {}; return {Equipo:unitLabel(u), Tipo:MAINT_KIND[l.kind], Fecha:l.done_on, Horas:l.hours != null ? Number(l.hours) : '', Coste:l.cost != null ? Number(l.cost) : '', Descripción:l.description||''}; }));
-  XLSX.writeFile(wb, `copia-material-${stampName()}.xlsx`);
+  XLSX.writeFile(wb, `copia-rentapp-${stampName()}.xlsx`);
   markBackup(); render(); toast('Excel descargado');
 }
 

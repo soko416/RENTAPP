@@ -1,7 +1,7 @@
 {
   "name": "RentApp",
   "short_name": "RentApp",
-  "description": "Inventario, reservas y escaneo de mi material de alquiler",
+  "description": "RentApp: inventario, reservas y escaneo de material de alquiler",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
