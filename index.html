@@ -96,6 +96,7 @@ nav.tabs button.on{color:var(--ink);border-top-color:var(--accent)}
 .qrbox{width:150px;height:150px;margin:10px auto;background:#fff;padding:8px;border-radius:8px}
 .qrbox svg{width:100%;height:100%;display:block}
 .code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px}
+.code.faint{font-size:12.5px;opacity:.7}
 .sum{margin-top:12px;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .sum .row{padding:9px 12px;font-size:15px}
 .sum .tot{font-weight:700;font-size:18px;font-stretch:88%;background:var(--bg)}
@@ -145,11 +146,16 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
   body>*:not(#print){display:none!important}
   body{background:#fff!important}
   #print.labels{display:grid!important;grid-template-columns:repeat(3,1fr);gap:4mm;padding:6mm}
-  .label{display:flex;align-items:center;gap:3mm;border:0.3mm solid #000;padding:2.5mm;break-inside:avoid;color:#000;background:#fff}
+  .label{display:flex;align-items:center;gap:2.5mm;border:0.3mm solid #000;padding:2mm;break-inside:avoid;color:#000;background:#fff}
   .label .qr{width:22mm;height:22mm;flex:none}
   .label .qr svg{width:100%;height:100%}
   .label .lt{display:flex;flex-direction:column;font-size:8pt;line-height:1.25;min-width:0}
   .label .lt b{font-size:9pt}
+  .label .lt .big{font-size:10.5pt;font-weight:700;line-height:1.1;margin-bottom:1.2mm;overflow-wrap:anywhere}
+  .label .lt .big.m{font-size:9.5pt}
+  .label .lt .big.s{font-size:8.5pt}
+  .label .lt .mini{font-size:8.5pt;color:#222}
+  .label .lt .code{font-size:5.5pt;color:#666;margin-top:1.2mm}
   #print.doc{display:block!important;padding:12mm;color:#000;background:#fff;font-size:11pt;line-height:1.35;font-family:Arial,Helvetica,sans-serif}
   .doc h1{font-size:20pt;margin:0 0 2mm;white-space:normal;font-stretch:100%}
   .doc h2{font-size:13pt;margin:6mm 0 2mm;border-bottom:.3mm solid #000;padding-bottom:1mm}
@@ -182,7 +188,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = 'V1.03';   // siguiente: V1.01, V1.02, V1.03…
+const APP_VERSION = 'V1.06';   // siguiente: V1.01, V1.02, V1.03…
 const SUPABASE_URL = 'https://akzopqnsrpcwuxaaqkfc.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrem9wcW5zcnBjd3V4YWFxa2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1MzExNjMsImV4cCI6MjEwOTEwNzE2M30.597llIN7plBgQBbueLQOJMKLVDXnzM9ytOg0UEO6DAc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -214,7 +220,7 @@ function errMsg(e){
   if (e.code === '23P01') return 'Esa unidad ya está reservada en otro show que se solapa en fechas.';
   if (e.code === '23505') return 'Ya existe un elemento con ese valor (nombre o código repetido).';
   if (e.code === '23514') return e.message;
-  if (e.code === 'PGRST205' || e.code === 'PGRST204' || /schema cache/i.test(e.message||'')) return 'Falta ejecutar un script nuevo en Supabase: esquema_v2 a v6 (SQL Editor).';
+  if (e.code === 'PGRST205' || e.code === 'PGRST204' || /schema cache/i.test(e.message||'')) return 'Falta ejecutar un script nuevo en Supabase: esquema_v2 a v7 (SQL Editor).';
   if (/fetch|network/i.test(e.message||'')) return 'Sin conexión. Comprueba tu internet.';
   return e.message || 'Error';
 }
@@ -253,7 +259,20 @@ const projById = id => S.projects.find(p => p.id === id);
 const techById = id => S.techs.find(t => t.id === id);
 const kitById = id => S.kits.find(k => k.id === id);
 const clientById = id => S.clients.find(c => c.id === id);
-const unitLabel = u => { const m = modelById(u.model_id); return (m ? m.name : '') + (u.serial_number ? ' · ' + u.serial_number : ''); };
+// Número «nominal»: el número del final del nº de serie, sin ceros a la izquierda (LB008 → 8, 001 → 1).
+// Solo hasta 4 cifras, para que los números de serie largos del fabricante no se cuelen en el nombre.
+function nominalNumber(u){
+  const m = /(\d+)\s*$/.exec(String((u && u.serial_number) || '').trim());
+  return (!m || m[1].length > 4) ? null : parseInt(m[1], 10);
+}
+// Nombre de la unidad: modelo + número (LedBeam 150 8). Sin número de serie, solo el modelo.
+function unitName(u){
+  const m = modelById(u && u.model_id), n = nominalNumber(u), base = (m && m.name) || '';
+  return n == null ? base : `${base} ${n}`;
+}
+// Para listas que ya van bajo el nombre del modelo: el nombre con número, o si no hay número, el nº de serie
+const unitTitleHtml = u => nominalNumber(u) != null ? esc(unitName(u)) : (u.serial_number ? esc(u.serial_number) : '<span class="sub">Sin nº de serie</span>');
+const unitLabel = u => unitName(u) + (u.serial_number ? ' · ' + u.serial_number : '');
 
 // Supabase devuelve como mucho 1000 filas por consulta: se pide por páginas para no perder datos
 async function fetchAll(table){
@@ -304,6 +323,7 @@ async function loadAll(draw=true){
   S.settings = st.data || {};
   S.queue.forEach(applyLocal);          // lo que aún no se ha enviado sigue viéndose reflejado
   saveSnapshot(); updateOffBar();
+  autoMergeBulk();
   if (!S.schemaChecked && navigator.onLine){ S.schemaChecked = true; schemaMissing().then(m => { if (m.length) showSchemaHelp(m); }); }
   if (draw) render();
   if (!S.nagged){ S.nagged = true; setTimeout(flushQueue, 300); }
@@ -545,8 +565,8 @@ function modelView(id){
     </div>
     <div class="group">Unidades (${us.length})</div>
     ${us.length ? `<div class="list">${us.map(u => { const w = unitWhere(u), k = unitKit(u); return `<div class="row tap" onclick="openUnit('${u.id}')">
-      <div class="grow"><b>${u.serial_number ? esc(u.serial_number) : '<span class="sub">Sin nº de serie</span>'}</b>
-      <div class="sub"><span class="code">${esc(u.code)}</span>${k?` · Kit ${esc(k.name)}`:''}${w?` · ${esc(w.t)}`:''}${u.missing_note?` · <span style="color:var(--warn);font-weight:600">Incompleto: ${esc(u.missing_note)}</span>`:''}</div></div>
+      <div class="grow"><b>${unitTitleHtml(u)}</b>${nominalNumber(u) != null && u.serial_number ? `<span class="sub" style="display:block">${esc(u.serial_number)}</span>` : ''}
+      <div class="sub"><span class="code faint">${esc(u.code)}</span>${k?` · Kit ${esc(k.name)}`:''}${w?` · ${esc(w.t)}`:''}${u.missing_note?` · <span style="color:var(--warn);font-weight:600">Incompleto: ${esc(u.missing_note)}</span>`:''}</div></div>
       <span class="badge ${UNIT_CLASS[u.status]}">${UNIT_STATUS[u.status]}</span></div>`; }).join('')}</div>`
       : `<div class="empty">Este modelo aún no tiene unidades.</div>`}
     <div class="actions"><button class="btn primary" onclick="openAddUnits('${id}')">+ Añadir unidades</button></div>`;
@@ -690,7 +710,9 @@ function openUnit(id){
   const u = unitById(id), m = modelById(u.model_id);
   openModal(`<h2>${esc(m.name)}</h2>
     <div class="qrbox">${qrSvg(u.code)}</div>
-    <div class="sub" style="text-align:center">Código <span class="code">${esc(u.code)}</span></div>
+    <div style="text-align:center;font-size:24px;font-weight:700;font-stretch:88%">${esc(unitName(u))}</div>
+    ${u.serial_number ? `<div style="text-align:center;font-size:16px">${esc(u.serial_number)}</div>` : ''}
+    <div class="sub" style="text-align:center">Código interno (el del QR, no se puede cambiar): <span class="code">${esc(u.code)}</span></div>
     <label for="u-serial">Número de serie</label><input id="u-serial" value="${esc(u.serial_number||'')}">
     <label for="u-status">Estado</label><select id="u-status">${opts(Object.entries(UNIT_STATUS), u.status)}</select>
     <label for="u-missing">Si está incompleto, qué falta (vacío = completo)</label><input id="u-missing" value="${esc(u.missing_note||'')}">
@@ -724,7 +746,7 @@ function printLabels(ids){
   if (!ids.length) return toast('No hay unidades para etiquetar', true);
   printDoc('labels', ids.map(id => {
     const u = unitById(id), m = modelById(u.model_id);
-    return `<div class="label"><div class="qr">${qrSvg(u.code)}</div><div class="lt"><b>${esc(m.name)}</b><span>${esc(u.serial_number||'')}</span><span class="code">${esc(u.code)}</span></div></div>`;
+    return `<div class="label"><div class="qr">${qrSvg(u.code)}</div><div class="lt"><span class="big ${unitName(u).length <= 13 ? '' : unitName(u).length <= 17 ? 'm' : 's'}">${esc(unitName(u))}</span>${u.serial_number ? `<span class="mini">${esc(u.serial_number)}</span>` : ''}<span class="code">${esc(u.code)}</span></div></div>`;
   }).join(''));
 }
 function printKitLabel(id){
@@ -748,7 +770,7 @@ function kitView(id){
   if (!k) return bar('Kits', {back:true});
   const us = kitUnits(k), bs = kitBulk(k);
   const unitRows = S.kitItems.filter(i => i.kit_id === id && i.unit_id).map(i => { const u = unitById(i.unit_id); if (!u) return '';
-    return `<div class="row"><div class="grow"><b>${esc(modelById(u.model_id).name)}</b><div class="sub">${u.serial_number?esc(u.serial_number)+' · ':''}<span class="code">${esc(u.code)}</span></div></div>
+    return `<div class="row"><div class="grow"><b>${esc(unitName(u))}</b><div class="sub">${u.serial_number?esc(u.serial_number)+' · ':''}<span class="code">${esc(u.code)}</span></div></div>
       <button class="btn small" aria-label="Quitar del kit" onclick="removeKitItem('${i.id}')">✕</button></div>`; }).join('');
   const bulkRows = bs.map(({item, model, qty}) => `<div class="row"><div class="grow"><b>${esc(model.name)}</b></div><div class="count">×${qty}</div>
       <button class="btn small" aria-label="Quitar del kit" onclick="removeKitItem('${item.id}')">✕</button></div>`).join('');
@@ -933,7 +955,7 @@ function projectView(id){
   const unitsH = Object.keys(byModel).map(mid => {
     const m = modelById(mid), items = byModel[mid];
     return `<div class="row head"><div class="grow"><b>${colorDot(m)}${esc(m?m.name:'')}</b>${m&&m.color?`<div class="sub">${esc(colorText(m))}</div>`:''}</div><div class="count">×${items.length}</div></div>`
-      + items.map(({r,u}) => `<div class="row"><div class="grow"><span class="code">${esc(u.code)}</span>${u.serial_number?` <span class="sub">· ${esc(u.serial_number)}</span>`:''}${u.missing_note?`<div class="sub" style="color:var(--warn)">Incompleto: falta ${esc(u.missing_note)}</div>`:''}</div>
+      + items.map(({r,u}) => `<div class="row"><div class="grow"><b>${unitTitleHtml(u)}</b><div class="sub">${u.serial_number && nominalNumber(u) != null ? esc(u.serial_number) + ' · ' : ''}<span class="code faint">${esc(u.code)}</span></div>${u.missing_note?`<div class="sub" style="color:var(--warn)">Incompleto: falta ${esc(u.missing_note)}</div>`:''}</div>
         <span class="badge ${RES_CLASS[r.state]}">${RES_STATE[r.state]}</span>
         ${r.state==='planned'?`<button class="btn small" aria-label="Quitar" onclick="removeReservation('${r.id}')">✕</button>`:''}</div>`).join('');
   }).join('');
@@ -1330,8 +1352,8 @@ function scanView(){
       <div id="count-actions" class="actions" style="margin:10px 0 0" hidden><button class="btn primary" onclick="openCountResult()">Ver resultado</button><button class="btn" onclick="resetCount()">Reiniciar recuento</button></div>
       <label class="chkrow" id="quick-wrap" hidden><input type="checkbox" id="quick" onchange="setQuick(this.checked)">Devolución rápida: marcar todo como completo sin preguntar</label>
       <div id="out-wrap" hidden><button class="btn block" id="out-toggle" onclick="toggleOutList()"></button><div id="out-list" hidden></div></div>
-      <label for="manual">O escribe el código a mano</label>
-      <div style="display:flex;gap:8px"><input id="manual" placeholder="U-XXXXXXXX o K-XXXXXXXX" autocapitalize="characters" onkeydown="if(event.key==='Enter')manualCode()"><button class="btn" onclick="manualCode()">Aceptar</button></div>
+      <label for="manual">O escribe el nº de serie (ej. LB001) o el código</label>
+      <div style="display:flex;gap:8px"><input id="manual" placeholder="LB001, U-XXXXXXXX o K-XXXXXXXX" autocapitalize="characters" onkeydown="if(event.key==='Enter')manualCode()"><button class="btn" onclick="manualCode()">Aceptar</button></div>
       <div class="group" style="margin:20px 0 6px">Últimos escaneos</div><div class="list" style="margin:0" id="scan-log"></div>
     </div>`;
 }
@@ -1423,8 +1445,10 @@ async function handleCode(raw){
   try {
     const code = raw.trim().toUpperCase();
     if (S.scan.mode === 'count') return await handleCount(code);
-    if (code.startsWith('K-')) return await handleKit(code);
-    const u = S.units.find(x => x.code === code);
+    if (code.startsWith('K-') && S.kits.some(k => k.code === code)) return await handleKit(code);
+    const f = findUnitByInput(raw);
+    if (f.many) return scanMsg(`Hay ${f.many.length} equipos con el nº ${raw.trim()} (${f.many.map(x => (modelById(x.model_id) || {}).name).join(', ')}). Escribe el código U-… de uno de ellos.`, 'warn');
+    const u = f.u;
     if (!u) return scanMsg('Código no reconocido: ' + raw.trim(), 'bad');
     const label = unitLabel(u), off = !navigator.onLine, pend = off ? ' (pendiente de enviar)' : '';
     if (S.scan.mode === 'out'){
@@ -1566,12 +1590,14 @@ async function saveMaintenance(id){
 
 /* ============ Recuento de inventario ============ */
 async function handleCount(code){
-  if (code.startsWith('K-')){
-    const k = S.kits.find(x => x.code === code); if (!k) return scanMsg('Kit no reconocido: ' + code, 'bad');
+  if (code.startsWith('K-') && S.kits.some(x => x.code === code)){
+    const k = S.kits.find(x => x.code === code);
     const us = kitUnits(k); us.forEach(u => S.count.seen.add(u.id)); updateProgress();
     return scanMsg(`Kit «${k.name}»: ${us.length} equipos contados`, 'ok');
   }
-  const u = S.units.find(x => x.code === code);
+  const f = findUnitByInput(code);
+  if (f.many) return scanMsg(`Hay ${f.many.length} equipos con el nº ${code}. Escribe el código U-… de uno de ellos.`, 'warn');
+  const u = f.u;
   if (!u) return scanMsg('Código no reconocido: ' + code, 'bad');
   if (S.count.seen.has(u.id)) return scanMsg('Ya contada: ' + unitLabel(u), 'warn');
   S.count.seen.add(u.id); updateProgress();
@@ -1590,7 +1616,7 @@ function openCountResult(){
   missing.forEach(u => (byModel[u.model_id] = byModel[u.model_id] || []).push(u));
   const miss = Object.keys(byModel).sort((a,b) => modelById(a).name.localeCompare(modelById(b).name, 'es')).map(mid =>
     `<div class="row head"><div class="grow"><b>${esc(modelById(mid).name)}</b></div><div class="count">${byModel[mid].length}</div></div>` +
-    byModel[mid].map(u => `<div class="row"><div class="grow">${u.serial_number ? esc(u.serial_number) : '<span class="sub">Sin nº de serie</span>'} <span class="code sub">${esc(u.code)}</span></div></div>`).join('')).join('');
+    byModel[mid].map(u => `<div class="row"><div class="grow">${unitTitleHtml(u)}${nominalNumber(u) != null && u.serial_number ? ' <span class="sub">· ' + esc(u.serial_number) + '</span>' : ''} <span class="code sub">${esc(u.code)}</span></div></div>`).join('')).join('');
   openModal(`<h2>Resultado del recuento</h2>
     <div class="info" style="margin:10px 0 0"><b>${counted}</b> de <b>${exp.length}</b> equipos contados${missing.length ? ` · <span style="color:var(--bad);font-weight:600">faltan ${missing.length}</span>` : ' · <span style="color:var(--ok);font-weight:600">no falta ninguno</span>'}
       <div class="sub" style="margin-top:4px">El material por cantidad no se cuenta aquí. Los equipos que están fuera en un show no se esperan en el almacén.</div></div>
@@ -2298,7 +2324,7 @@ function printRider(pid){
 }
 
 /* ============ COMPROBAR QUE LA BASE DE DATOS ESTÁ PREPARADA ============ */
-const isSchemaErr = e => !!e && (['PGRST205','PGRST204','42703','42P01'].includes(e.code) || /schema cache|does not exist/i.test(e.message || ''));
+const isSchemaErr = e => !!e && (['PGRST205','PGRST204','PGRST202','42703','42P01','42883'].includes(e.code) || /schema cache|does not exist/i.test(e.message || ''));
 // Qué scripts de Supabase faltan por ejecutar (se comprueba con consultas mínimas)
 async function schemaMissing(){
   const probes = [
@@ -2307,7 +2333,8 @@ async function schemaMissing(){
     ['esquema_v3.sql', sb.from('settings').select('id').limit(1)],
     ['esquema_v4.sql', sb.from('equipment_models').select('color').limit(1)],
     ['esquema_v5.sql', sb.from('projects').select('payment_status').limit(1)],
-    ['esquema_v6.sql', sb.from('clients').select('id').limit(1)]
+    ['esquema_v6.sql', sb.from('clients').select('id').limit(1)],
+    ['esquema_v7.sql', typeof sb.rpc === 'function' ? sb.rpc('merge_bulk_lines') : Promise.resolve({})]
   ];
   const rs = await Promise.all(probes.map(p => Promise.resolve(p[1]).then(r => r, e => ({error:e}))));
   return probes.filter((p, i) => rs[i].error && isSchemaErr(rs[i].error)).map(p => p[0]);
@@ -2481,7 +2508,7 @@ function renderOutList(){
       const all = outKeys(g).every(k => S.outSel.has(k)), cats = {};
       const add = (cat, key, html) => (cats[cat] = cats[cat] || []).push({key, html});
       [...g.kits].forEach(([kid, e]) => add('Kits', `k:${g.p.id}:${kid}`, row(`k:${g.p.id}:${kid}`, esc(e.kit.name), `Kit · ${e.units.length} equipo${e.units.length === 1 ? '' : 's'}${e.bulks.length ? ` + ${e.bulks.length} línea${e.bulks.length === 1 ? '' : 's'} por cantidad` : ''}`, '', e.kit.name)));
-      g.units.forEach(({r, u}) => { const m = modelById(u.model_id) || {}; add(catName(m), 'r:' + r.id, row('r:' + r.id, colorDot(m) + esc(m.name || ''), esc([u.serial_number, u.code].filter(Boolean).join(' · ')) + (u.missing_note ? ` · <span style="color:var(--warn)">Incompleto</span>` : ''), '', `${m.name} ${u.serial_number || ''} ${u.code}`)); });
+      g.units.forEach(({r, u}) => { const m = modelById(u.model_id) || {}; add(catName(m), 'r:' + r.id, row('r:' + r.id, colorDot(m) + esc(unitName(u)), esc([u.serial_number, u.code].filter(Boolean).join(' · ')) + (u.missing_note ? ` · <span style="color:var(--warn)">Incompleto</span>` : ''), '', `${m.name} ${u.serial_number || ''} ${u.code}`)); });
       g.bulks.forEach(b => { const m = modelById(b.model_id) || {}, v = S.outQty[b.id] != null ? S.outQty[b.id] : b.qty;
         add(catName(m), 'b:' + b.id, row('b:' + b.id, colorDot(m) + esc(m.name || ''), `Fuera: ${b.qty}${colorText(m) ? ' · ' + esc(colorText(m)) : ''}`,
           `<div style="width:84px"><div class="sub" style="font-size:12px">Vuelven</div><input type="number" min="1" max="${b.qty}" value="${v}" inputmode="numeric" oninput="clampQty(this);setOutQty('${b.id}',this.value)" aria-label="Cantidad que vuelve de ${esc(m.name || '')}"></div>`, m.name || '')); });
@@ -2564,7 +2591,7 @@ function loadView(pid){
   L.units.forEach(({r, u, m}) => {
     const blocked = r.state === 'planned' && u.status !== 'ok';
     add(catName(m), row({kind:'u', id:r.id, checked:isDone(r.state), disabled:r.state === 'returned' || blocked, doneRow:isDone(r.state),
-      title:colorDot(m) + esc((m || {}).name || ''), sub:esc([u.serial_number, u.code].filter(Boolean).join(' · ')) + (r.state === 'returned' ? ' · devuelto' : '') + (blocked ? ` · <span style="color:var(--bad)">${esc(UNIT_STATUS[u.status])}: no se puede cargar</span>` : '') + (u.missing_note ? ` · <span style="color:var(--warn)">Incompleto: falta ${esc(u.missing_note)}</span>` : ''),
+      title:colorDot(m) + esc(unitName(u)), sub:esc([u.serial_number, u.code].filter(Boolean).join(' · ')) + (r.state === 'returned' ? ' · devuelto' : '') + (blocked ? ` · <span style="color:var(--bad)">${esc(UNIT_STATUS[u.status])}: no se puede cargar</span>` : '') + (u.missing_note ? ` · <span style="color:var(--warn)">Incompleto: falta ${esc(u.missing_note)}</span>` : ''),
       search:`${(m || {}).name} ${u.serial_number || ''} ${u.code}`}), 1, isDone(r.state) ? 1 : 0);
   });
   L.bulks.forEach(({b, m}) => {
@@ -2633,6 +2660,49 @@ function canonBrand(v){
   const b = String(v || '').trim().replace(/\s+/g, ' '); if (!b) return null;
   const old = brandList().find(x => norm(x) === norm(b));
   return old || b;
+}
+
+/* ============ BUSCAR UNA UNIDAD POR CÓDIGO O POR Nº DE SERIE ============ */
+const compactStr = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, '');
+// Acepta el código interno (U-…) o el número de serie (LB001, lb-001…). Si el número de serie lo comparten
+// varias unidades, se queda con la que tiene sentido en ese momento (reservada en el show elegido, o fuera del almacén).
+function findUnitByInput(raw){
+  const code = String(raw || '').trim().toUpperCase();
+  const byCode = S.units.find(x => x.code === code); if (byCode) return {u:byCode};
+  const k = compactStr(raw); if (!k) return {};
+  let hits = S.units.filter(x => x.serial_number && compactStr(x.serial_number) === k);
+  if (hits.length > 1){
+    const mode = S.scan.mode;
+    const pref = mode === 'out' ? hits.filter(x => S.reservations.some(r => r.unit_id === x.id && r.project_id === S.scan.project && r.state !== 'returned'))
+      : mode === 'in' ? hits.filter(x => S.reservations.some(r => r.unit_id === x.id && r.state === 'out')) : [];
+    if (pref.length) hits = pref;
+  }
+  if (hits.length === 1) return {u:hits[0]};
+  return hits.length > 1 ? {many:hits} : {};
+}
+
+/* ============ UNIR LÍNEAS REPETIDAS DE MATERIAL POR CANTIDAD ============ */
+// Mismo show + mismo material + mismo kit + mismo estado = una sola línea (p. ej. «Cable ×2» y «Cable ×18» fuera → «Cable ×20»)
+function hasBulkDupes(){
+  const seen = new Set();
+  return S.bulkRes.some(b => {
+    if (String(b.id).startsWith('tmp-')) return false;
+    const k = [b.project_id, b.model_id, b.kit_id || '', b.state].join('|');
+    if (seen.has(k)) return true; seen.add(k); return false;
+  });
+}
+// La unión la hace la base de datos en una sola operación (esquema_v7.sql). Solo se pide cuando hay conexión y nada pendiente de enviar.
+async function mergeBulk(){
+  if (typeof sb.rpc !== 'function') return 0;
+  const r = await sb.rpc('merge_bulk_lines');
+  if (r.error){ if (isSchemaErr(r.error)) S.mergeOff = true; return 0; }
+  return r.data || 0;
+}
+function autoMergeBulk(){
+  if (S.merging || S.mergeOff || (S.mergeTries || 0) >= 5) return;
+  if (!navigator.onLine || S.queue.length || !S.session || S.session.offline || !hasBulkDupes()) return;
+  S.merging = true; S.mergeTries = (S.mergeTries || 0) + 1;
+  mergeBulk().then(n => { S.merging = false; if (n > 0) loadAll(true); }).catch(() => { S.merging = false; });
 }
 
 /* ============ Arranque ============ */
