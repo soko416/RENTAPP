@@ -174,7 +174,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = '11 · 1 nov 2026';
+const APP_VERSION = '12 · 1 nov 2026';
 const SUPABASE_URL = 'https://akzopqnsrpcwuxaaqkfc.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrem9wcW5zcnBjd3V4YWFxa2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1MzExNjMsImV4cCI6MjEwOTEwNzE2M30.597llIN7plBgQBbueLQOJMKLVDXnzM9ytOg0UEO6DAc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -297,7 +297,7 @@ async function loadAll(draw=true){
   saveSnapshot(); updateOffBar();
   if (!S.schemaChecked && navigator.onLine){ S.schemaChecked = true; schemaMissing().then(m => { if (m.length) showSchemaHelp(m); }); }
   if (draw) render();
-  if (!S.nagged){ S.nagged = true; backupNag(); setTimeout(flushQueue, 300); }
+  if (!S.nagged){ S.nagged = true; setTimeout(flushQueue, 300); }
 }
 
 /* ============ Sesión ============ */
@@ -1224,11 +1224,6 @@ function downloadIcs(id){
 /* ============ MÁS: copia de seguridad ============ */
 const lastBackup = () => { try { return localStorage.getItem('lastBackup'); } catch(e){ return null; } };
 function markBackup(){ try { localStorage.setItem('lastBackup', new Date().toISOString()); } catch(e){} }
-function backupNag(){
-  const l = lastBackup();
-  if (!l || Date.now() - new Date(l).getTime() > 30 * 86400000)
-    toast('Hace tiempo que no haces copia de seguridad. Ve a Más.');
-}
 function moreView(){
   const l = lastBackup(), al = maintAlerts();
   return bar('Más')
