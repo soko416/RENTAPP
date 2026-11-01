@@ -142,6 +142,17 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 .row.done .sub{opacity:.6}
 .cat-head{display:flex;align-items:center;gap:8px;width:100%;margin:12px 0 6px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);color:var(--ink);font:inherit;font-weight:700;cursor:pointer;text-align:left}
 .cat-head .sub{font-weight:600}
+.mat .cat-head{margin:8px 0 4px;padding:7px 12px;font-size:15px}
+.mrow{padding:7px 12px;gap:8px}
+.mrow .mline{display:flex;flex-wrap:wrap;align-items:center;gap:3px 6px}
+.mrow .mline b{display:inline;font-size:15px;overflow:visible;white-space:normal}
+.mrow .badge{font-size:11.5px;padding:1px 7px}
+.mrow .sub{font-size:12.5px;line-height:1.25}
+.mrow .count{font-size:16px;min-width:22px}
+.mrow .thumb{width:34px;height:34px;border-radius:6px}
+.legend.compact{gap:4px;margin:4px 0 6px}
+.legend.compact .chip{font-size:12.5px;padding:1px 8px;gap:5px}
+.legend.compact .chip .sw{width:11px;height:11px}
 #print{display:none}
 @media print{
   body>*:not(#print){display:none!important}
@@ -189,7 +200,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = 'V1.10';   // siguiente: V1.01, V1.02, V1.03…
+const APP_VERSION = 'V1.14';   // siguiente: V1.01, V1.02, V1.03…
 const SUPABASE_URL = 'https://akzopqnsrpcwuxaaqkfc.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrem9wcW5zcnBjd3V4YWFxa2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1MzExNjMsImV4cCI6MjEwOTEwNzE2M30.597llIN7plBgQBbueLQOJMKLVDXnzM9ytOg0UEO6DAc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -221,7 +232,7 @@ function errMsg(e){
   if (e.code === '23P01') return 'Esa unidad ya está reservada en otro show que se solapa en fechas.';
   if (e.code === '23505') return 'Ya existe un elemento con ese valor (nombre o código repetido).';
   if (e.code === '23514') return e.message;
-  if (e.code === 'PGRST205' || e.code === 'PGRST204' || /schema cache/i.test(e.message||'')) return 'Falta ejecutar un script nuevo en Supabase: esquema_v2 a v8 (SQL Editor).';
+  if (e.code === 'PGRST205' || e.code === 'PGRST204' || /schema cache/i.test(e.message||'')) return 'Falta ejecutar un script nuevo en Supabase: esquema_v2 a v9 (SQL Editor).';
   if (/fetch|network/i.test(e.message||'')) return 'Sin conexión. Comprueba tu internet.';
   return e.message || 'Error';
 }
@@ -328,7 +339,7 @@ async function loadAll(draw=true){
     toast(errMsg(bad.error), true); return;
   }
   [S.categories, S.models, S.units, S.projects, S.reservations, S.techs, S.assigns, S.kits, S.kitItems, S.bulkRes, S.maint, S.clients, S.bulkLogs] = rs.map(r => r.data);
-  S.clients.sort(byName); S.categories.sort(byName); S.models.sort(byName); S.techs.sort(byName); S.kits.sort(byName);
+  S.clients.sort(byName); S.categories.sort(catCmp); S.models.sort(modelCmp); S.techs.sort(byName); S.kits.sort(byName);
   S.units.sort((a,b) => String(a.created_at).localeCompare(String(b.created_at)));
   S.projects.sort((a,b) => new Date(a.starts_at) - new Date(b.starts_at));
   S.settings = st.data || {};
@@ -478,43 +489,63 @@ function materialList(){
   if (S.matMode === 'kits') return kitsList();
   const groups = {};
   S.models.forEach(m => {
+    if (S.colorFilter.size && !S.colorFilter.has(String(m.color || '').toLowerCase())) return;       // filtro por color
     const c = S.categories.find(c => c.id === m.category_id);
     const name = c ? c.name : 'Sin categoría';
     (groups[name] = groups[name] || []).push(m);
   });
-  const names = Object.keys(groups).sort((a,b) => a==='Sin categoría' ? 1 : b==='Sin categoría' ? -1 : a.localeCompare(b,'es'));
-  const body = names.map(n => `<div class="group">${esc(n)}</div>${/cabl/i.test(n) ? legendChips() : ''}<div class="list">${groups[n].map(m => {
+  const names = Object.keys(groups).sort(catOrder);
+  const body = '<div class="pad mat">' + names.map(n => catSection('m:' + catKey(n), n, `${groups[n].length} modelo${groups[n].length === 1 ? '' : 's'}`, groups[n].map(m => {
     const us = S.units.filter(u => u.model_id === m.id);
     // Solo dos cuentas: lo que está fuera de servicio (roto, perdido o de baja; en cables, los que están en reparación) y lo marcado como incompleto
     const nBad = us.filter(u => u.status !== 'ok').length + bulkRepair(m), nInc = us.filter(u => u.missing_note).length;
-    return `<div class="row tap" data-s="${esc((m.name+' '+(m.brand||'')+' '+n+' '+us.map(u=>u.serial_number||'').join(' ')).toLowerCase())}" onclick="openView('model','${m.id}')">
+    const subTxt = [colorText(m), m.brand].filter(Boolean).join(' · ');
+    return `<div class="row tap mrow" data-s="${esc((m.name+' '+(m.brand||'')+' '+n+' '+us.map(u=>u.serial_number||'').join(' ')).toLowerCase())}" onclick="openView('model','${m.id}')">
       ${m.photo_url?`<img class="thumb" loading="lazy" src="${esc(m.photo_url)}" alt="">`:''}
-      <div class="grow"><b>${colorDot(m)}${esc(m.name)}</b><div class="sub">${esc([m.brand, colorText(m)].filter(Boolean).join(' · '))}</div>
-        ${m.is_bulk || nBad || nInc ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${m.is_bulk ? '<span class="badge">Por cantidad</span>' : ''}${nBad ? `<span class="badge warn">${nBad} fuera de servicio</span>` : ''}${nInc ? `<span class="badge warn">${nInc} incompleto${nInc === 1 ? '' : 's'}</span>` : ''}</div>` : ''}</div>
-      <div class="count">${m.is_bulk ? m.bulk_stock : us.length}</div></div>`;
-  }).join('')}</div>`).join('');
+      <div class="grow"><div class="mline" style="flex-wrap:nowrap;justify-content:space-between"><b>${colorDot(m)}${esc(m.name)}</b><span class="count">${m.is_bulk ? m.bulk_stock : us.length}</span></div>${subTxt || m.is_bulk || nBad || nInc ? `<div class="mline">${subTxt ? `<span class="sub">${esc(subTxt)}</span>` : ''}${m.is_bulk ? '<span class="badge">Por cantidad</span>' : ''}${nBad ? `<span class="badge warn">${nBad} fuera de servicio</span>` : ''}${nInc ? `<span class="badge warn">${nInc} incompleto${nInc === 1 ? '' : 's'}</span>` : ''}</div>` : ''}</div></div>`;
+  }).join(''), /cabl/i.test(n) ? legendChips() : '')).join('') + '</div>';
   return bar('Material', {actions: `<button class="btn small" onclick="printLabels(S.units.map(u=>u.id))">Etiquetas</button><button class="btn primary small" onclick="openModelForm()">+ Modelo</button>`})
     + matSeg()
     + (S.models.length ? `<div class="search"><input type="search" placeholder="Buscar por nombre, marca o nº de serie" oninput="filterRows(this.value)"></div>` : '')
-    + `<div class="actions" style="margin-top:10px"><button class="btn small" onclick="openCategories()">Gestionar categorías</button><button class="btn small" onclick="openLegend()">Leyenda de colores</button>${repairBtn()}${maintAlerts().length?`<button class="btn small" onclick="openAlerts()" style="color:var(--warn)">Avisos de mantenimiento (${maintAlerts().length})</button>`:''}</div>`
-    + (S.models.length ? body : `<div class="empty">Aún no hay material.<br>Pulsa «+ Modelo» para añadir el primer equipo.</div>`);
+    + `<div class="actions" style="margin-top:10px"><button class="btn small" onclick="openCategories()">Gestionar categorías</button><button class="btn small" onclick="openLegend()">Leyenda de colores</button>${panelBtns()}</div>${colorFilterBar(groups)}${matPanelHtml()}`
+    + (S.models.length ? (names.length || !S.colorFilter.size ? body : '') : `<div class="empty">Aún no hay material.<br>Pulsa «+ Modelo» para añadir el primer equipo.</div>`);
 }
 
 /* ---- Categorías ---- */
 function openCategories(){
-  const rows = S.categories.map(c => {
+  const last = S.categories.length - 1;
+  const rows = S.categories.map((c, i) => {
     const n = S.models.filter(m => m.category_id === c.id).length;
-    return `<div class="row"><div class="grow"><b>${esc(c.name)}</b><div class="sub">${n} modelo${n===1?'':'s'}</div></div>
-      <button class="btn small" onclick="renameCategory('${c.id}')">Renombrar</button>
-      <button class="btn small danger" onclick="deleteCategory('${c.id}')">Borrar</button></div>`;
+    return `<div class="row"><div style="display:flex;flex-direction:column;gap:4px"><button class="btn small" aria-label="Subir ${esc(c.name)}" ${i === 0 ? 'disabled' : ''} onclick="moveCategory('${c.id}',-1)">▲</button><button class="btn small" aria-label="Bajar ${esc(c.name)}" ${i === last ? 'disabled' : ''} onclick="moveCategory('${c.id}',1)">▼</button></div>
+      <div class="grow"><b>${esc(c.name)}</b><div class="sub">${n} modelo${n===1?'':'s'}</div></div>
+      <div style="display:flex;flex-direction:column;gap:4px"><button class="btn small" onclick="renameCategory('${c.id}')">Renombrar</button><button class="btn small danger" onclick="deleteCategory('${c.id}')">Borrar</button></div></div>`;
   }).join('');
   openModal(`<h2>Categorías</h2>
+    <div class="sub">Usa ▲ y ▼ para ordenarlas. Ese es el orden en que salen en Material y en las listas. «Sin categoría» va siempre al final.</div>
     ${S.categories.length ? `<div class="list" style="margin:10px 0">${rows}</div>` : `<div class="empty" style="margin:20px 0">Aún no hay categorías.</div>`}
-    <button class="btn primary block" onclick="newCategory()">+ Nueva categoría</button>`);
+    <button class="btn primary block" onclick="newCategory()">+ Nueva categoría</button>
+    ${S.categories.length > 1 ? `<button class="btn block" onclick="sortCategoriesAZ()">Ordenar de la A a la Z</button>` : ''}`);
+}
+const nextCatOrder = () => Math.max(S.categories.length, ...S.categories.map(c => c.sort_order || 0)) + 1;
+// Guarda el orden de la lista (solo se escriben las categorías que cambian de sitio)
+async function saveCategoryOrder(list){
+  const rows = list.map((c, k) => ({id:c.id, name:c.name, sort_order:k + 1})).filter((r, k) => list[k].sort_order !== r.sort_order);
+  if (rows.length) await db(sb.from('categories').upsert(rows));
+}
+async function moveCategory(id, dir){
+  const list = [...S.categories], i = list.findIndex(c => c.id === id), j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  await saveCategoryOrder(list);
+  await loadAll(); openCategories();
+}
+async function sortCategoriesAZ(){
+  await saveCategoryOrder([...S.categories].sort(byName));
+  await loadAll(); openCategories(); toast('Ordenadas de la A a la Z');
 }
 async function newCategory(){
   const n = prompt('Nombre de la nueva categoría'); if (!n || !n.trim()) return;
-  await db(sb.from('categories').insert({name:n.trim()}));
+  await db(sb.from('categories').insert({name:n.trim(), sort_order:nextCatOrder()}));
   await loadAll(); openCategories(); toast('Categoría creada');
 }
 async function renameCategory(id){
@@ -669,7 +700,7 @@ async function saveModel(id){
     if (!n){ $('#f-newcat').focus(); return toast('Escribe el nombre de la nueva categoría', true); }
     const old = S.categories.find(c => norm(c.name) === norm(n));
     if (old) cat = old.id;                      // si ya existe, se usa esa
-    else cat = (await db(sb.from('categories').insert({name:n}).select().single())).id;
+    else cat = (await db(sb.from('categories').insert({name:n, sort_order:nextCatOrder()}).select().single())).id;
   }
   const bulk = id ? !!modelById(id).is_bulk : $('#f-type').value === 'bulk';
   const rate = parseFloat($('#f-rate').value), lamp = parseInt($('#f-lamp') ? $('#f-lamp').value : '');
@@ -726,8 +757,8 @@ function openUnit(id){
     ${u.serial_number ? `<div style="text-align:center;font-size:16px">${esc(u.serial_number)}</div>` : ''}
     <div class="sub" style="text-align:center">Código interno (el del QR, no se puede cambiar): <span class="code">${esc(u.code)}</span></div>
     <label for="u-serial">Número de serie</label><input id="u-serial" value="${esc(u.serial_number||'')}">
-    <label for="u-status">Estado</label><select id="u-status">${opts(Object.entries(UNIT_STATUS), u.status)}</select>
-    <label for="u-missing">Si está incompleto, qué falta (vacío = completo)</label><input id="u-missing" value="${esc(u.missing_note||'')}">
+    <label for="u-status">Estado</label><select id="u-status" onchange="unitStateChanged(${u.missing_note ? 'true' : 'false'})">${opts(Object.entries(UNIT_FORM_STATES), u.status === 'ok' && u.missing_note ? 'incomplete' : u.status)}</select>
+    <div id="u-missing-box" ${u.missing_note ? '' : 'hidden'}><label for="u-missing">Qué falta</label><input id="u-missing" value="${esc(u.missing_note||'')}" placeholder="Por ejemplo: garra, cable de alimentación…"></div>
     <div class="two"><div><label for="u-buy">Fecha de compra</label><input id="u-buy" type="date" value="${u.purchase_date||''}"></div>
     <div><label for="u-next">Próxima revisión</label><input id="u-next" type="date" value="${u.next_service||''}"></div></div>
     ${m.lamp_life_hours>0?`<label for="u-lamp">Horas de lámpara (vida útil ${m.lamp_life_hours} h)</label><input id="u-lamp" type="number" min="0" step="0.5" value="${u.lamp_hours||0}" inputmode="decimal">`:''}
@@ -736,11 +767,25 @@ function openUnit(id){
     <div class="actions" style="margin:10px 0 0"><button class="btn" onclick="openUnitHistory('${id}')">Historial</button><button class="btn" onclick="openMaintenance('${id}')">Registrar mantenimiento</button></div>
     <div class="actions" style="margin:10px 0 0"><button class="btn" onclick="closeModal();printLabels(['${id}'])">Imprimir etiqueta</button><button class="btn danger" onclick="deleteUnit('${id}')">Eliminar</button></div>`);
 }
+// Estados que se ven en la ficha. «Incompleto» es un equipo operativo al que le falta algo (se guarda como estado Operativa + qué falta).
+const UNIT_FORM_STATES = {ok:'Operativa', incomplete:'Incompleto', repair:'En reparación', lost:'Perdida', retired:'De baja'};
+function unitStateChanged(hadMissing){
+  const v = $('#u-status').value, box = $('#u-missing-box');
+  box.hidden = !(v === 'incomplete' || (v !== 'ok' && hadMissing));       // si estaba incompleto y pasa a reparación, se sigue viendo qué le falta
+  if (v === 'incomplete' && !$('#u-missing').value.trim()) $('#u-missing').focus();
+}
 async function saveUnit(id){
-  const payload = {serial_number:$('#u-serial').value.trim()||null, status:$('#u-status').value, notes:$('#u-notes').value.trim()||null,
-    purchase_date:$('#u-buy').value||null, next_service:$('#u-next').value||null, missing_note:$('#u-missing').value.trim()||null};
+  const u = unitById(id), st = $('#u-status').value;
+  let status = st, missing = $('#u-missing').value.trim() || null;
+  if (st === 'incomplete'){ status = 'ok'; if (!missing) return toast('Escribe qué le falta', true); }
+  else if (st === 'ok') missing = null;                                      // Operativa = completa
+  const payload = {serial_number:$('#u-serial').value.trim()||null, status, notes:$('#u-notes').value.trim()||null,
+    purchase_date:$('#u-buy').value||null, next_service:$('#u-next').value||null, missing_note:missing};
   if ($('#u-lamp')) payload.lamp_hours = parseFloat($('#u-lamp').value) || 0;
   await db(sb.from('units').update(payload).eq('id', id));
+  // el historial de la unidad recoge cuándo pasó a incompleta o a completa
+  if (missing && missing !== (u.missing_note || null)) await db(sb.from('maintenance_logs').insert({unit_id:id, kind:'missing', done_on:todayStr(), description:missing}));
+  else if (!missing && u.missing_note) await db(sb.from('maintenance_logs').insert({unit_id:id, kind:'missing', done_on:todayStr(), description:'Completo: ya no falta nada'}));
   closeModal(); await loadAll(); toast('Guardado');
 }
 async function deleteUnit(id){
@@ -1872,7 +1917,7 @@ async function runImport(){
   const plan = importPlan, catMap = {};
   S.categories.forEach(c => catMap[norm(c.name)] = c.id);
   const newCats = [...new Set(plan.groups.map(g => g.cat).filter(c => c && !catMap[norm(c)]))];
-  if (newCats.length) (await insertChunks('categories', newCats.map(name => ({name})))).forEach(c => catMap[norm(c.name)] = c.id);
+  if (newCats.length) (await insertChunks('categories', newCats.map((name, i) => ({name, sort_order:nextCatOrder() + i})))).forEach(c => catMap[norm(c.name)] = c.id);
   const mk = g => norm(g.name) + '|' + norm(g.brand), modelIds = {};
   plan.groups.filter(g => g.existing).forEach(g => modelIds[mk(g)] = g.existing.id);
   const fresh = plan.groups.filter(g => !g.existing);
@@ -1972,7 +2017,10 @@ const entryText = e => [entryName(e), e.label].filter(Boolean).join(' · ');
 const colorDot = m => m && m.color ? `<span class="sw" style="background:${esc(m.color)}" title="${esc(colorText(m))}"></span>` : '';
 function legendChips(){
   const l = legendList().filter(e => e.hex);
-  return l.length ? `<div class="legend">${l.map(e => `<span class="chip"><span class="sw" style="background:${esc(e.hex)}"></span>${esc(entryText(e))}</span>`).join('')}</div>` : '';
+  if (!l.length) return '';
+  return `<div class="sub" style="font-weight:700;margin:6px 2px 0">Leyenda de colores <span style="font-weight:500">· toca un color para filtrar</span></div>
+    <div class="legend compact">${l.map(e => { const on = S.colorFilter.has(String(e.hex).toLowerCase());
+      return `<button type="button" class="chip ${on ? 'sel' : ''}" aria-pressed="${on}" onclick="toggleColorFilter('${esc(e.hex)}')"><span class="sw" style="background:${esc(e.hex)}"></span>${on ? '✓ ' : ''}${esc(entryText(e))}</button>`; }).join('')}</div>`;
 }
 function colorPicker(sel){
   const l = legendList().filter(e => e.hex), same = (a, b) => a && b && a.toLowerCase() === b.toLowerCase();
@@ -2404,7 +2452,8 @@ async function schemaMissing(){
     ['esquema_v6.sql', sb.from('clients').select('id').limit(1)],
     ['esquema_v7.sql', typeof sb.rpc === 'function' ? sb.rpc('merge_bulk_lines') : Promise.resolve({})],
     ['esquema_v8.sql', sb.from('bulk_logs').select('id').limit(1)],
-    ['esquema_v8.sql', sb.from('equipment_models').select('bulk_repair').limit(1)]
+    ['esquema_v8.sql', sb.from('equipment_models').select('bulk_repair').limit(1)],
+    ['esquema_v9.sql', sb.from('categories').select('sort_order').limit(1)]
   ];
   const rs = await Promise.all(probes.map(p => Promise.resolve(p[1]).then(r => r, e => ({error:e}))));
   return [...new Set(probes.filter((p, i) => rs[i].error && isSchemaErr(rs[i].error)).map(p => p[0]))];
@@ -2632,11 +2681,13 @@ async function returnSelected(){
 S.catOpen = {}; S.loadQty = {};
 const catName = m => { const c = m && S.categories.find(x => x.id === m.category_id); return c ? c.name : 'Sin categoría'; };
 const catKey = c => norm(c).replace(/ /g, '_');
-const catOrder = (a, b) => { const w = n => n === 'Kits' ? 0 : n === 'Sin categoría' ? 2 : 1; return w(a) - w(b) || a.localeCompare(b, 'es'); };
-function catSection(key, title, countTxt, rowsHtml){
+// Orden de los grupos: «Kits» primero, «Sin categoría» al final y, entre medias, el orden que hayas dado a tus categorías
+const catPos = n => { const i = S.categories.findIndex(c => c.name === n); return i < 0 ? 1e6 : i; };
+const catOrder = (a, b) => { const w = n => n === 'Kits' ? 0 : n === 'Sin categoría' ? 2 : 1; return w(a) - w(b) || catPos(a) - catPos(b) || a.localeCompare(b, 'es'); };
+function catSection(key, title, countTxt, rowsHtml, pre){
   const open = S.catOpen[key] !== false;
   return `<button type="button" class="cat-head" onclick="toggleCat('${key}')" aria-expanded="${open}"><span>${open ? '▾' : '▸'}</span><span class="grow">${esc(title)}</span><span class="sub">${esc(countTxt)}</span></button>`
-    + (open ? `<div class="list" style="margin:0">${rowsHtml}</div>` : '');
+    + (open ? `${pre || ''}<div class="list" style="margin:0">${rowsHtml}</div>` : '');
 }
 function toggleCat(key){ S.catOpen[key] = S.catOpen[key] === false; key.startsWith('o:') ? renderOutList() : render(); }
 
@@ -2791,21 +2842,50 @@ function foldShow(pid){
   mids.forEach(m => S.catOpen[`s:${pid}:${m}`] = !anyOpen);
   render();
 }
-function repairsView(){
-  const units = S.units.filter(u => u.status === 'repair').sort(unitCmp), cables = S.models.filter(m => m.is_bulk && bulkRepair(m) > 0).sort(byName);
-  const lastNote = repairLog;
-  const unitRows = units.map(u => { const l = lastNote(u);
+// Contenido de «En reparación»: equipos (con su nota) y cables (con su cantidad)
+function repairsBodyHtml(){
+  const units = S.units.filter(u => u.status === 'repair').sort(unitCmp), cables = S.models.filter(m => m.is_bulk && bulkRepair(m) > 0).sort(modelCmp);
+  const unitRows = units.map(u => { const l = repairLog(u);
     return `<div class="row"><div class="grow"><b>${esc(unitName(u))}</b><div class="sub">${unitSub(u)}${l ? ' · ' + esc(fmtDay(l.done_on)) : ''}</div>${l && l.description ? `<div style="margin-top:4px">${esc(l.description)}</div>` : ''}</div>
       <div style="display:flex;flex-direction:column;gap:6px"><button class="btn small primary" onclick="markRepaired('${u.id}')">Reparado</button><button class="btn small" onclick="openUnit('${u.id}')">Ficha</button></div></div>`; }).join('');
   const cableRows = cables.map(m => { const logs = S.bulkLogs.filter(l => l.model_id === m.id && l.kind === 'repair').sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0, 3);
     return `<div class="row"><div class="grow"><b>${colorDot(m)}${esc(m.name)}</b><div class="sub">${bulkRepair(m)} en reparación · stock ${m.bulk_stock}</div>
       ${logs.map(l => `<div class="sub">${esc(fmtDay(String(l.created_at || '').slice(0, 10) || todayStr()))} · ${l.qty} ud${l.note ? ': ' + esc(l.note) : ''}</div>`).join('')}</div>
       <div style="width:150px"><div class="sub" style="font-size:12px">Ya reparados</div><div style="display:flex;gap:6px"><input id="fix-${m.id}" type="number" min="1" max="${bulkRepair(m)}" value="${bulkRepair(m)}" inputmode="numeric" oninput="clampQty(this)" aria-label="Cuántos ${esc(m.name)} están reparados"><button class="btn small primary" onclick="markBulkFixed('${m.id}')">OK</button></div></div></div>`; }).join('');
-  return bar('En reparación', {back:true})
-    + `<div class="sub" style="margin:12px 16px 0">Aquí queda todo lo que has devuelto como «Reparación». Mientras esté aquí no se puede cargar en ningún show. Cuando vuelva arreglado, márcalo como reparado.</div>`
-    + (units.length ? `<div class="group">Equipos (${units.length})</div><div class="list">${unitRows}</div>` : '')
+  return (units.length ? `<div class="group">Equipos (${units.length})</div><div class="list">${unitRows}</div>` : '')
     + (cables.length ? `<div class="group">Cableado y material por cantidad (${cables.reduce((s, m) => s + bulkRepair(m), 0)})</div><div class="list">${cableRows}</div>` : '')
     + (!units.length && !cables.length ? `<div class="empty">No hay nada en reparación.</div>` : '');
+}
+function repairsView(){
+  return bar('En reparación', {back:true})
+    + `<div class="sub" style="margin:12px 16px 0">Aquí queda todo lo que has devuelto como «Reparación». Mientras esté aquí no se puede cargar en ningún show. Cuando vuelva arreglado, márcalo como reparado.</div>`
+    + repairsBodyHtml();
+}
+// Contenido de «Incompletos»: equipos marcados como incompletos y lo que les falta
+const incompleteUnits = () => S.units.filter(u => u.missing_note);
+function incompleteBodyHtml(){
+  const us = incompleteUnits().sort(unitCmp);
+  return us.length ? `<div class="group">Equipos incompletos (${us.length})</div><div class="list">${us.map(u => `<div class="row"><div class="grow"><b>${esc(unitName(u))}</b><div class="sub">${unitSub(u)}</div><div style="margin-top:4px;color:var(--warn);font-weight:600">Falta: ${esc(u.missing_note)}</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><button class="btn small primary" onclick="markComplete('${u.id}')">Completo</button><button class="btn small" onclick="openUnit('${u.id}')">Ficha</button></div></div>`).join('')}</div>`
+    : `<div class="empty">No hay equipos incompletos.</div>`;
+}
+async function markComplete(id){
+  const u = unitById(id); if (!u || !confirm(`¿Marcar «${unitLabel(u)}» como completo? Se borra lo que le faltaba.`)) return;
+  await db(sb.from('units').update({missing_note:null}).eq('id', id));
+  await db(sb.from('maintenance_logs').insert({unit_id:id, kind:'missing', done_on:todayStr(), description:'Completo: ya no falta nada'}));
+  await loadAll(); toast('Marcado como completo');
+}
+// Botones de la lista de Material: se despliegan aquí mismo, debajo
+S.matPanel = null;
+function panelBtns(){
+  const b = (k, t, n) => n ? `<button class="btn small" style="color:var(--warn)" onclick="toggleMatPanel('${k}')" aria-expanded="${S.matPanel === k}">${S.matPanel === k ? '▾' : '▸'} ${t} (${n})</button>` : '';
+  return b('repair', 'En reparación', repairCount()) + b('incomplete', 'Incompletos', incompleteUnits().length);
+}
+function toggleMatPanel(k){ S.matPanel = S.matPanel === k ? null : k; render(); }
+function matPanelHtml(){
+  if (S.matPanel === 'repair') return repairCount() ? repairsBodyHtml() : '';
+  if (S.matPanel === 'incomplete') return incompleteUnits().length ? incompleteBodyHtml() : '';
+  return '';
 }
 async function markRepaired(id){
   const u = unitById(id); if (!u || !confirm(`¿Marcar «${unitLabel(u)}» como reparado y operativo?`)) return;
@@ -2837,6 +2917,43 @@ function incidenceCard(){
   return `<div class="group">Incidencias</div>
     <div class="info" style="display:flex;align-items:center;gap:14px"><div style="font-size:38px;font-weight:800;font-stretch:88%;line-height:1;color:var(--warn)">${s.total}</div>
       <div class="grow"><b>incidencia${s.total === 1 ? '' : 's'} en total</b><div class="sub">${s.bad} fuera de servicio · ${s.inc} incompleto${s.inc === 1 ? '' : 's'}</div></div></div>`;
+}
+
+/* ============ ORDEN DE LOS MODELOS: por nombre y por tamaño ============ */
+// El tamaño en metros que aparece en el nombre (3M, 10 m, 0,5m…) y el nombre sin ese tamaño: «Cable DMX 5p 3M» → «Cable DMX 5p» y 3
+function modelSize(name){
+  const s = String(name || ''), re = /(\d+(?:[.,]\d+)?)\s*(?:m|mt|mts|metros?)\b/gi;
+  let x, last = null; while ((x = re.exec(s))) last = x;
+  if (!last) return {size:null, family:s.trim()};
+  return {size:parseFloat(last[1].replace(',', '.')), family:(s.slice(0, last.index) + ' ' + s.slice(last.index + last[0].length)).replace(/\s+/g, ' ').trim()};
+}
+// Primero por nombre (todos los «Cable DMX 5p» juntos) y dentro de cada nombre, del más corto al más largo (1 m, 3 m, 5 m… 25 m)
+function modelCmp(a, b){
+  const x = modelSize(a.name), y = modelSize(b.name);
+  return x.family.localeCompare(y.family, 'es', {numeric:true})
+    || (x.size == null ? 1e9 : x.size) - (y.size == null ? 1e9 : y.size)
+    || String(a.name || '').localeCompare(String(b.name || ''), 'es', {numeric:true});
+}
+
+/* ============ ORDEN DE LAS CATEGORÍAS ============ */
+// Primero las que tienen orden (por su número) y, si no hay número, alfabéticamente
+const catCmp = (a, b) => (a.sort_order == null ? 1e9 : a.sort_order) - (b.sort_order == null ? 1e9 : b.sort_order) || byName(a, b);
+
+/* ============ FILTRO POR COLOR (leyenda) ============ */
+S.colorFilter = new Set();
+// Cada color de la leyenda es un botón: se activa y se desactiva. Se pueden activar varios a la vez.
+function toggleColorFilter(hex){
+  const k = String(hex).toLowerCase();
+  if (S.colorFilter.has(k)) S.colorFilter.delete(k); else S.colorFilter.add(k);
+  render();
+}
+function clearColorFilter(){ S.colorFilter = new Set(); render(); }
+// Barra fija mientras hay un filtro activo (así siempre se puede quitar, aunque no quede ningún grupo con la leyenda)
+function colorFilterBar(groups){
+  if (!S.colorFilter.size) return '';
+  const names = [...S.colorFilter].map(k => { const e = legendList().find(x => String(x.hex).toLowerCase() === k); return e ? entryText(e) : colorName(k); });
+  const n = Object.values(groups).reduce((s, g) => s + g.length, 0);
+  return `<div class="info" style="display:flex;align-items:center;gap:10px"><div class="grow"><b>Filtrando por color</b><div class="sub">${esc(names.join(', '))} · ${n} modelo${n === 1 ? '' : 's'}</div></div><button class="btn small" onclick="clearColorFilter()">Quitar filtro</button></div>`;
 }
 
 /* ============ Arranque ============ */
