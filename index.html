@@ -182,7 +182,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = 'V1.02';   // siguiente: V1.01, V1.02, V1.03…
+const APP_VERSION = 'V1.03';   // siguiente: V1.01, V1.02, V1.03…
 const SUPABASE_URL = 'https://akzopqnsrpcwuxaaqkfc.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrem9wcW5zcnBjd3V4YWFxa2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1MzExNjMsImV4cCI6MjEwOTEwNzE2M30.597llIN7plBgQBbueLQOJMKLVDXnzM9ytOg0UEO6DAc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -586,7 +586,9 @@ function openModelForm(id){
   pendingPhoto = null;
   openModal(`<h2>${id?'Editar modelo':'Nuevo modelo'}</h2>
     <label for="f-name">Nombre</label><input id="f-name" value="${esc(m.name||'')}" placeholder="Ej. Robin 300">
-    <label for="f-brand">Marca</label><input id="f-brand" value="${esc(m.brand||'')}" placeholder="Ej. Robe">
+    <label for="f-brand">Marca (elige una de las que ya usas o escribe una nueva)</label>
+    <input id="f-brand" list="brand-list" value="${esc(m.brand||'')}" placeholder="Ej. Robe" autocomplete="off">
+    <datalist id="brand-list">${brandList().map(b => `<option value="${esc(b)}">`).join('')}</datalist>
     <label for="f-cat">Categoría</label>
     <select id="f-cat" onchange="catChanged()"><option value="">Sin categoría</option>${opts(S.categories.map(c=>[c.id,c.name]), m.category_id)}<option value="__new">+ Nueva categoría…</option></select>
     <input id="f-newcat" placeholder="Nombre de la nueva categoría (ej. Cableado)" style="margin-top:8px" hidden>
@@ -639,7 +641,7 @@ async function saveModel(id){
   }
   const bulk = id ? !!modelById(id).is_bulk : $('#f-type').value === 'bulk';
   const rate = parseFloat($('#f-rate').value), lamp = parseInt($('#f-lamp') ? $('#f-lamp').value : '');
-  const payload = {name, brand:$('#f-brand').value.trim()||null, category_id:cat||null, notes:$('#f-notes').value.trim()||null,
+  const payload = {name, brand:canonBrand($('#f-brand').value), category_id:cat||null, notes:$('#f-notes').value.trim()||null,
     is_bulk:bulk, bulk_stock: bulk ? (parseInt($('#f-stock').value)||0) : 0, day_rate: isNaN(rate) ? null : rate,
     lamp_life_hours: (!bulk && lamp > 0) ? lamp : null, color: $('#f-color').value || null,
     weight_kg:nf('#f-wt'), power_w:nf('#f-pw') == null ? null : Math.round(nf('#f-pw')), width_cm:nf('#f-dw'), height_cm:nf('#f-dh'), depth_cm:nf('#f-dd')};
@@ -1826,7 +1828,7 @@ async function runImport(){
   plan.groups.filter(g => g.existing).forEach(g => modelIds[mk(g)] = g.existing.id);
   const fresh = plan.groups.filter(g => !g.existing);
   if (fresh.length){
-    const made = await insertChunks('equipment_models', fresh.map(g => ({name:g.name, brand:g.brand || null, category_id:g.cat ? catMap[norm(g.cat)] : null, day_rate:g.rate, is_bulk:g.bulk, bulk_stock:g.bulk ? g.stock : 0})));
+    const made = await insertChunks('equipment_models', fresh.map(g => ({name:g.name, brand:canonBrand(g.brand), category_id:g.cat ? catMap[norm(g.cat)] : null, day_rate:g.rate, is_bulk:g.bulk, bulk_stock:g.bulk ? g.stock : 0})));
     made.forEach(m => modelIds[norm(m.name) + '|' + norm(m.brand)] = m.id);
   }
   for (const g of plan.groups.filter(g => g.existing)){
@@ -2617,6 +2619,20 @@ function loadAllMark(pid, on){
   if (!ops.length) return toast(on ? 'No queda nada por cargar.' : 'No hay nada cargado que desmarcar.');
   enqueueMany(ops); render();
   if (skipped) toast(`${skipped} elemento${skipped === 1 ? '' : 's'} no se ha cargado porque no está operativo.`, true);
+}
+
+/* ============ MARCAS (se van guardando solas) ============ */
+// Las marcas salen de los modelos que ya has creado: cada marca nueva queda disponible para la próxima vez
+function brandList(){
+  const seen = new Map();
+  S.models.forEach(m => { const b = String(m.brand || '').trim(), k = norm(b); if (b && !seen.has(k)) seen.set(k, b); });
+  return [...seen.values()].sort((a, b) => a.localeCompare(b, 'es'));
+}
+// Si escribes «robe» y ya existe «Robe», se usa la que ya existe (así no hay duplicados por mayúsculas)
+function canonBrand(v){
+  const b = String(v || '').trim().replace(/\s+/g, ' '); if (!b) return null;
+  const old = brandList().find(x => norm(x) === norm(b));
+  return old || b;
 }
 
 /* ============ Arranque ============ */
