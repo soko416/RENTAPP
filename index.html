@@ -174,6 +174,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
+const APP_VERSION = '11 · 1 nov 2026';
 const SUPABASE_URL = 'https://akzopqnsrpcwuxaaqkfc.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrem9wcW5zcnBjd3V4YWFxa2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1MzExNjMsImV4cCI6MjEwOTEwNzE2M30.597llIN7plBgQBbueLQOJMKLVDXnzM9ytOg0UEO6DAc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -1243,7 +1244,8 @@ function moreView(){
       <div class="sub" style="margin-top:6px">Descarga tus datos por si algún día pierdes el acceso a Supabase. Guarda el archivo en tu ordenador o en tu nube.</div></div>
     <div class="actions"><button class="btn primary" onclick="exportExcel()">Descargar Excel</button><button class="btn" onclick="exportJson()">Copia completa (.json)</button><button class="btn" onclick="openRestore()">Restaurar copia</button></div>
     <div class="group">Cuenta</div>
-    <div class="actions"><button class="btn" onclick="logout()">Cerrar sesión</button></div>`;
+    <div class="actions"><button class="btn" onclick="logout()">Cerrar sesión</button></div>
+    <div class="sub" style="margin:28px 16px 0;text-align:center">Versión ${APP_VERSION}</div>`;
 }
 const stampName = () => new Date().toISOString().slice(0,10);
 async function exportJson(){
