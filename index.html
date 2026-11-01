@@ -163,7 +163,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 </head>
 <body>
 <div id="app"></div>
-<div id="modal" class="modal-back" onclick="if(event.target===this)closeModal()"><div class="sheet" id="sheet"></div></div>
+<div id="modal" class="modal-back" onpointerdown="window.__bgDown = (event.target === this)" onclick="if (event.target === this && window.__bgDown) closeModal(); window.__bgDown = false"><div class="sheet" id="sheet"></div></div>
 <div id="toast" class="toast" role="status"></div>
 <div id="print"></div>
 <div id="offbar" class="offbar" role="status" hidden onclick="openPending()"></div>
