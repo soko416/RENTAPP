@@ -222,6 +222,18 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 .label.compact .lname{font-size:7pt}
 .label.compact .code{font-size:4.5pt;margin-top:.6mm}
 .label.compact .brand{padding:1.2mm .3mm;font-size:5.5pt;letter-spacing:0}
+.lrot{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(90deg)}
+.label.rev{flex-direction:row-reverse}
+.label.full .lx{font-size:6.5pt;color:#222;margin-top:.8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.label.full.xt .lrow{margin-bottom:.4mm}.label.full.xt .big{margin-bottom:.4mm}.label.full.xt .mini{font-size:7.5pt}.label.full.xt .code{margin-top:.4mm}.label.full.xt .brand{padding:1.3mm 1mm}.label.full.xt .lx{font-size:6pt;margin-top:.4mm}
+.label.full .lt b.kc{font-size:8.5pt;line-height:1.15;max-height:3.6mm;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.label.full .kcont{font-size:5.8pt;line-height:1.2;margin-top:.6mm;color:#222;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.label.full .lt b.kc ~ .code{margin-top:.6mm}
+.label.kitlist .lt{height:auto}
+.label.kitlist .lt b{font-size:8.5pt;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.label.compact.kitlist .lt b{font-size:6.5pt}
+.klist{column-fill:auto;margin-top:.5mm;line-height:1.2;overflow:hidden}
+.klist .kl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;break-inside:avoid}
 .label.compact .ctitle{font-size:7.5pt}.label.compact .ctitle.m{font-size:6.8pt}.label.compact .ctitle.s{font-size:6pt}
 .label.compact .csub{font-size:6.5pt}.label.compact .cline{display:none}
 .atest{display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Arial,Helvetica,sans-serif}
@@ -266,7 +278,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = 'V1.05';   // siguiente: V1.06, V1.07, V1.08…
+const APP_VERSION = 'V1.09';   // siguiente: V1.10, V1.11…
 // Cómo llamas a los shows (Más > Ajustes de la app): Show / Bolo / Evento… Todas las opciones son masculinas y el plural lleva «s».
 const W = {s:'show', p:'shows', S:'Show', P:'Shows'};
 const capFirst = x => x ? x.charAt(0).toUpperCase() + x.slice(1) : x;
@@ -293,7 +305,7 @@ const opts = (list, sel) => list.map(([v,t]) => `<option value="${esc(v)}" ${v==
 
 const UNIT_STATUS = {ok:'Operativa', repair:'En reparación', lost:'Perdida', retired:'De baja'};
 const UNIT_CLASS = {ok:'ok', repair:'warn', lost:'bad', retired:'bad'};
-const PROJ_STATUS = {draft:'Borrador', confirmed:'Confirmado', done:'Hecho', cancelled:'Cancelado'};
+const PROJ_STATUS = {draft:'Borrador', quoted:'Presupuestado', confirmed:'Confirmado', done:'Hecho', cancelled:'Cancelado'};
 const RES_STATE = {planned:'Pendiente', out:'Fuera', returned:'Devuelto', mixed:'Parcial'};
 const RES_CLASS = {planned:'', out:'warn', returned:'ok', mixed:'warn'};
 
@@ -309,8 +321,9 @@ function errMsg(e){
   const m = String(e.message || ''), c = e.code;
   if (c === '23P01') return 'Esa unidad ya está reservada en otro ' + W.s + ' que se solapa en fechas.';
   if (c === '23505') return 'Ya existe un elemento con ese valor (nombre o código repetido).';
+  if (c === '23514' && /projects_status_check/.test(m)) return 'Falta ejecutar esquema_v15.sql en Supabase (SQL Editor) para usar el estado «Presupuestado».';
   if (c === '23514') return m;
-  if (c === 'PGRST205' || c === 'PGRST204' || /schema cache/i.test(m)) return 'Falta ejecutar un script nuevo en Supabase: esquema_v2 a v13 (SQL Editor).';
+  if (c === 'PGRST205' || c === 'PGRST204' || /schema cache/i.test(m)) return 'Falta ejecutar un script nuevo en Supabase: esquema_v2 a v16 (SQL Editor).';
   if (/failed to fetch|network|load failed|networkerror/i.test(m)) return navigator.onLine ? 'No hay respuesta del servidor. Si tienes internet, puede que el proyecto de Supabase esté pausado por inactividad: entra en supabase.com y reactívalo.' : 'Sin conexión. Comprueba tu internet.';
   if (c === 'PGRST301' || /jwt/i.test(m)) return 'La sesión ha caducado. Cierra sesión y vuelve a entrar.';
   if (c === '42501' || /row-level security|permission denied/i.test(m)) return 'No tienes permiso para hacer eso.';
@@ -344,9 +357,9 @@ function download(blob, name){
 
 /* ============ Estado ============ */
 const S = {
-  session:null, tab:'material', view:null, matMode:'equipos', nagged:false,
+  session:null, tab:'today', view:null, matMode:'equipos', nagged:false,
   categories:[], models:[], units:[], projects:[], reservations:[], techs:[], assigns:[],
-  kits:[], kitItems:[], bulkRes:[], maint:[], settings:{}, clients:[], bulkLogs:[], customLabels:[], photos:[], docs:[],
+  kits:[], kitItems:[], bulkRes:[], maint:[], settings:{}, clients:[], bulkLogs:[], customLabels:[], photos:[], docs:[], accs:[], kitPieces:[], quoteVersions:[], templates:[], tplItems:[],
   showsMode:'lista', calMonth:null, calDay:null,
   count:{seen:new Set()}, queue:[], failed:[],
   scan:{project:'', mode:'out', log:[]}
@@ -435,6 +448,11 @@ async function loadAll(draw=true){
   try { const cl = await fetchAll('custom_labels'); S.customLabels = cl.error ? [] : (cl.data || []).slice().sort(byName); } catch (e) { S.customLabels = []; }      // las pegatinas personalizadas no impiden abrir la app si falta esquema_v10.sql
   try { const ph = await fetchAll('photos'); S.photos = ph.error ? [] : (ph.data || []); } catch (e) { S.photos = []; }
   try { const dc = await fetchAll('model_docs'); S.docs = dc.error ? [] : (dc.data || []); } catch (e) { S.docs = []; }
+  try { const ac = await fetchAll('model_accessories'); S.accs = ac.error ? [] : (ac.data || []); } catch (e) { S.accs = []; }
+  try { const kp = await fetchAll('kit_pieces'); S.kitPieces = kp.error ? [] : (kp.data || []); } catch (e) { S.kitPieces = []; }
+  try { const qv = await fetchAll('quote_versions'); S.quoteVersions = qv.error ? [] : (qv.data || []); } catch (e) { S.quoteVersions = []; }
+  try { const tt = await fetchAll('show_templates'), ti = await fetchAll('template_items'); S.templates = tt.error ? [] : (tt.data || []); S.tplItems = ti.error ? [] : (ti.data || []); } catch (e) { S.templates = []; S.tplItems = []; }
+  try { const nn = await fetchAll('notes'); S.notes = nn.error ? [] : (nn.data || []); } catch (e) { S.notes = []; }
   S.clients.sort(byName); S.categories.sort(catCmp); S.models.sort(modelOrder); S.techs.sort(byName); S.kits.sort(byName);
   S.units.sort((a,b) => String(a.created_at).localeCompare(String(b.created_at)));
   S.projects.sort((a,b) => new Date(a.starts_at) - new Date(b.starts_at));
@@ -469,7 +487,7 @@ async function logout(){ lsSet(WAS_KEY, false); await sb.auth.signOut(); }
 
 /* ============ Navegación ============ */
 function go(tab){ S.tab = tab; S.view = null; render(); window.scrollTo(0,0); }
-function goBack(){ S.view = null; render(); window.scrollTo(0,0); }
+function goBack(){ if (S.tab === 'techs' && !S.view){ go('more'); return; } S.view = null; render(); window.scrollTo(0,0); }
 function openView(name, id){ S.view = {name, id}; render(); window.scrollTo(0,0); }
 function setMat(m){ S.matMode = m; render(); window.scrollTo(0,0); }
 
@@ -477,8 +495,8 @@ function bar(title, {back=false, actions=''} = {}){
   return `<header class="bar">${back?`<button class="btn small" onclick="goBack()">‹ Volver</button>`:''}<h1>${esc(title)}</h1>${actions}</header>`;
 }
 function navHTML(){
-  const t = whMode() ? [['scan','Escanear'],['shows','Carga'],['more','Más']] : [['material','Material'],['shows',('' + W.P + '')],['scan','Escanear'],['techs','Técnicos'],['more','Más']];
-  return `<nav class="tabs">${t.map(([k,l]) => `<button class="${S.tab===k?'on':''}" onclick="go('${k}')">${l}${k === 'more' ? navBadgeHtml() : ''}</button>`).join('')}</nav>`;
+  const t = navTabs();
+  return `<nav class="tabs">${t.map(([k,l]) => `<button class="${(S.tab===k || (k==='more' && S.tab==='techs'))?'on':''}" onclick="go('${k}')">${l}${k === 'more' ? navBadgeHtml() : ''}</button>`).join('')}</nav>`;
 }
 
 let lastKey = '';
@@ -490,7 +508,8 @@ function render(){
   const y = key === lastKey ? window.scrollY : 0;
   let body = '';
   const v = S.view && S.view.name;
-  if (S.tab === 'material') body = v === 'model' ? modelView(S.view.id) : v === 'kit' ? kitView(S.view.id) : v === 'repairs' ? repairsView() : v === 'labels' ? labelsView() : v === 'avail' ? availView() : v === 'retired' ? retiredView() : materialList();
+  if (S.tab === 'today') body = todayView();
+  else if (S.tab === 'material') body = v === 'model' ? modelView(S.view.id) : v === 'kit' ? kitView(S.view.id) : v === 'repairs' ? repairsView() : v === 'labels' ? labelsView() : v === 'avail' ? availView() : v === 'retired' ? retiredView() : v === 'profit' ? profitView() : materialList();
   else if (S.tab === 'shows') body = v === 'load' ? loadView(S.view.id) : (v === 'project' && !whMode()) ? projectView(S.view.id) : showsList();
   else if (S.tab === 'scan') body = scanView();
   else if (S.tab === 'techs') body = v === 'tech' ? techView(S.view.id) : techsList();
@@ -553,23 +572,23 @@ function rentalDays(p, override){
   return d > 0 ? d : Math.max(1, Math.ceil((new Date(p.ends_at) - new Date(p.starts_at)) / 86400000));
 }
 function quoteCalc(p, opt={}){
-  const days = rentalDays(p, opt.days);
+  const days = rentalDays(p, opt.days), useD = opt.useDur != null ? opt.useDur : useDur(p), bdays = billedDays(p, days, useD);
   const disc = opt.disc != null ? opt.disc : Number(p.discount_pct || 0);
   const vat = opt.vat != null ? opt.vat : Number(p.vat_pct != null ? p.vat_pct : 21);
   const lines = [...projectQty(p)].map(([mid, qty]) => {
     const m = modelById(mid), rate = Number(m && m.day_rate || 0);
-    return {m, qty, rate, sub: qty * rate * days};
+    return {m, qty, rate, sub: qty * rate * bdays};
   }).sort((a,b) => ((a.m&&a.m.name)||'').localeCompare((b.m&&b.m.name)||'', 'es'));
   const subtotal = lines.reduce((s,l) => s + l.sub, 0), dAmt = subtotal * disc / 100;
   const base = subtotal - dAmt, vatAmt = base * vat / 100;
-  return {lines, days, disc, vat, subtotal, dAmt, base, vatAmt, total: base + vatAmt};
+  return {lines, days, bdays, useDur:useD, disc, vat, subtotal, dAmt, base, vatAmt, total: base + vatAmt};
 }
 function modelStats(m){
   let shows = 0, income = 0; const now = Date.now();
   S.projects.forEach(p => {
-    if (p.status === 'cancelled' || p.status === 'draft' || new Date(p.ends_at) > now) return;
+    if (p.status === 'cancelled' || p.status === 'draft' || p.status === 'quoted' || new Date(p.ends_at) > now) return;
     const qty = projectQty(p).get(m.id); if (!qty) return;
-    shows++; income += qty * Number(m.day_rate || 0) * rentalDays(p) * (1 - Number(p.discount_pct || 0) / 100);
+    shows++; income += qty * Number(m.day_rate || 0) * billedDays(p, rentalDays(p)) * (1 - Number(p.discount_pct || 0) / 100);
   });
   return {shows, income};
 }
@@ -604,7 +623,7 @@ function materialList(){
   return bar('Material', {actions: `<button class="btn small" onclick="openView('labels','')">Etiquetas${labelPendingCount() ? ' (' + labelPendingCount() + ')' : ''}</button><button class="btn primary small" onclick="openModelForm()">+ Modelo</button>`})
     + matSeg()
     + (S.models.length ? `<div class="search"><input type="search" placeholder="Buscar por nombre, marca o nº de serie" oninput="filterRows(this.value)"></div>` : '')
-    + `<div class="actions" style="margin-top:10px"><button class="btn small" onclick="openCategories()">Gestionar categorías</button><button class="btn small" onclick="openBrands()">Gestionar marcas</button><button class="btn small" onclick="openView('avail','')">Disponibilidad</button><button class="btn small" onclick="massToggle()">${S.mass.on ? 'Cancelar selección' : 'Seleccionar'}</button><button class="btn small" onclick="orderToggle()">${S.matOrder ? 'Terminar de ordenar' : 'Ordenar'}</button>${retiredUnits().length ? `<button class="btn small" onclick="openView('retired','')">Bajas (${retiredUnits().length})</button>` : ''}<button class="btn small" onclick="openLegend()">Leyenda de colores</button>${panelBtns()}</div>${filterBar(groups)}${tagBar()}${massBar()}${matPanelHtml()}`
+    + `<div class="actions" style="margin-top:10px"><button class="btn small" onclick="openCategories()">Gestionar categorías</button><button class="btn small" onclick="openBrands()">Gestionar marcas</button><button class="btn small" onclick="openView('avail','')">Disponibilidad</button><button class="btn small" onclick="openView('profit','')">Rentabilidad</button><button class="btn small" onclick="massToggle()">${S.mass.on ? 'Cancelar selección' : 'Seleccionar'}</button><button class="btn small" onclick="orderToggle()">${S.matOrder ? 'Terminar de ordenar' : 'Ordenar'}</button>${retiredUnits().length ? `<button class="btn small" onclick="openView('retired','')">Bajas (${retiredUnits().length})</button>` : ''}<button class="btn small" onclick="openLegend()">Leyenda de colores</button>${panelBtns()}</div>${filterBar(groups)}${tagBar()}${massBar()}${matPanelHtml()}`
     + (S.models.length ? (names.length || !anyFilter() ? body : '') : `<div class="empty">Aún no hay material.<br>Pulsa «+ Modelo» para añadir el primer equipo.</div>`);
 }
 
@@ -680,7 +699,7 @@ function modelView(id){
   const statTxt = m.day_rate > 0
     ? `${st.shows} ${W.s}${st.shows===1?'':'s'} pasado${st.shows===1?'':'s'} · ingresos ${eur(st.income)}`
     : 'Pon una tarifa por día (Editar) para ver cuánto factura este equipo.';
-  const head = bar(m.name, {back:true})
+  const head = bar(m.name, {back:true, actions:favBtn('model', id)})
     + `<div class="info">${m.photo_url?`<img class="hero" src="${esc(m.photo_url)}" alt="">`:''}<div class="sub">${esc([m.brand, cat?cat.name:''].filter(Boolean).join(' · '))}</div>
        ${m.color?`<div style="margin-top:6px">${colorDot(m)}<b>${esc(colorName(m.color))}</b>${colorLabel(m)?' · '+esc(colorLabel(m)):''}</div>`:''}
        ${m.day_rate>0?`<div style="margin-top:6px"><b>${eur(m.day_rate)}</b> <span class="sub">por día y unidad</span></div>`:''}
@@ -689,7 +708,7 @@ function modelView(id){
   if (m.is_bulk){
     const lines = S.bulkRes.filter(b => b.model_id === id).map(b => ({b, p:projById(b.project_id)})).filter(x => x.p && x.b.state !== 'returned')
       .sort((x,y) => new Date(x.p.starts_at) - new Date(y.p.starts_at));
-    return head + galleryHtml('m', id) + docsHtml(m) + `<div class="info"><b>${m.bulk_stock}</b> en stock · <span class="sub">por cantidad, sin número de serie</span>${bulkRepair(m) ? ` · <span style="color:var(--warn);font-weight:600">${bulkRepair(m)} en reparación</span>` : ''}</div>
+    return head + galleryHtml('m', id) + docsHtml(m) + notesHtml('model', id) + `<div class="info"><b>${m.bulk_stock}</b> en stock · <span class="sub">por cantidad, sin número de serie</span>${bulkRepair(m) ? ` · <span style="color:var(--warn);font-weight:600">${bulkRepair(m)} en reparación</span>` : ''}</div>
       <div class="actions"><button class="btn" onclick="openModelForm('${id}')">Editar</button>${m.consumable ? `<button class="btn" onclick="openStock('${id}','bought')">He comprado…</button><button class="btn" onclick="openStock('${id}','used')">He usado…</button>` : ''}<button class="btn" onclick="openMerge('${id}')">Unir con otro modelo…</button><button class="btn" onclick="openChanges('equipment_models','${id}')">Cambios</button><button class="btn danger" onclick="deleteModel('${id}')">Eliminar</button></div>
       <div class="group">Reservado en ${W.p}</div>
       ${lines.length ? `<div class="list">${lines.map(({b,p}) => `<div class="row tap" onclick="go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))}</div></div>
@@ -697,7 +716,7 @@ function modelView(id){
         : `<div class="empty" style="margin:20px 24px">No está reservado en ningún ${W.s}.</div>`}${bulkHistoryHtml(m)}`;
   }
   const us = S.units.filter(u => u.model_id === id).sort(unitCmp);
-  return head + galleryHtml('m', id) + docsHtml(m)
+  return head + galleryHtml('m', id) + docsHtml(m) + accsHtml(m) + notesHtml('model', id)
     + `<div class="actions">
       <button class="btn" onclick="openModelForm('${id}')">Editar</button><button class="btn" onclick="openNumber('${id}')">Numerar…</button><button class="btn" onclick="openMoveUnits('${id}')">Mover unidades…</button><button class="btn" onclick="openMerge('${id}')">Unir con otro modelo…</button>
       <button class="btn" onclick="printLabels(S.units.filter(u=>u.model_id==='${id}').map(u=>u.id))">Etiquetas QR</button>
@@ -865,6 +884,7 @@ function openUnit(id){
     <div class="two"><div><label for="u-buy">Fecha de compra</label><input id="u-buy" type="date" value="${u.purchase_date||''}"></div>
     <div><label for="u-next">Próxima revisión</label><input id="u-next" type="date" value="${u.next_service||''}"></div></div>
     ${m.lamp_life_hours>0?`<label for="u-lamp">Horas de lámpara (vida útil ${m.lamp_life_hours} h)</label><input id="u-lamp" type="number" min="0" step="0.5" value="${u.lamp_hours||0}" inputmode="decimal">`:''}
+    <label for="u-price">Precio de compra (€, para la rentabilidad)</label><input id="u-price" type="number" min="0" step="0.01" value="${u.purchase_price!=null?u.purchase_price:''}" inputmode="decimal">
     <label for="u-notes">Notas</label><textarea id="u-notes">${esc(u.notes||'')}</textarea>
     ${galleryHtml('u', id, true)}
     <button class="btn primary block" onclick="saveUnit('${id}')">Guardar</button>
@@ -914,7 +934,7 @@ const kitBulk = k => S.kitItems.filter(i => i.kit_id === k.id && i.model_id).map
 function kitsList(){
   return bar('Material', {actions:`<button class="btn primary small" onclick="openKitForm()">+ Kit</button>`}) + matSeg()
     + (S.kits.length ? `<div class="list">${S.kits.map(k => `<div class="row tap" onclick="openView('kit','${k.id}')">
-        <div class="grow"><b>${esc(k.name)}</b><div class="sub">${kitUnits(k).length} equipos · ${kitBulk(k).length} líneas por cantidad</div></div>
+        <div class="grow"><b>${esc(k.name)}</b><div class="sub">${kitUnits(k).length} equipos · ${kitBulk(k).length} líneas por cantidad${k.missing_note ? ' · <span style="color:var(--warn);font-weight:600">incompleto</span>' : ''}</div></div>
         <span class="code sub">${esc(k.code)}</span></div>`).join('')}</div>`
       : `<div class="empty">Aún no hay kits.<br>Un kit es un flight case o un pack que reservas y escaneas de una vez.<br>Pulsa «+ Kit» para crear el primero.</div>`);
 }
@@ -927,15 +947,17 @@ function kitView(id){
       <button class="btn small" aria-label="Quitar del kit" onclick="removeKitItem('${i.id}')">✕</button></div>`; }).join('');
   const bulkRows = bs.map(({item, model, qty}) => `<div class="row"><div class="grow"><b>${esc(model.name)}</b></div><div class="count">×${qty}</div>
       <button class="btn small" aria-label="Quitar del kit" onclick="removeKitItem('${item.id}')">✕</button></div>`).join('');
-  return bar(k.name, {back:true})
+  return bar(k.name, {back:true, actions:favBtn('kit', id)})
     + `<div class="info" style="text-align:center"><div class="qrbox">${qrSvg(k.code)}</div><div class="sub">Código del kit <span class="code">${esc(k.code)}</span></div>${labelStatusHtml('k', k)}
        ${k.notes?`<div style="margin-top:8px;text-align:left">${esc(k.notes)}</div>`:''}${kitSpecs(k)}</div>
-    <div class="actions"><button class="btn" onclick="openKitForm('${id}')">Editar</button><button class="btn" onclick="printKitLabel('${id}')">Imprimir etiqueta</button><button class="btn" onclick="openChanges('kits','${id}')">Cambios</button><button class="btn danger" onclick="deleteKit('${id}')">Eliminar</button></div>
+    ${kitMissingHtml(k)}
+    <div class="actions"><button class="btn" onclick="openKitForm('${id}')">Editar</button><button class="btn" onclick="printKitLabel('${id}')">Imprimir etiqueta</button><button class="btn" onclick="printKitList('${id}')">Imprimir lista de contenido</button><button class="btn" onclick="openChanges('kits','${id}')">Cambios</button><button class="btn danger" onclick="deleteKit('${id}')">Eliminar</button></div>
     <div class="group">Equipos (${us.length})</div>
     ${us.length ? `<div class="list">${unitRows}</div>` : `<div class="empty" style="margin:20px 24px">Sin equipos con número de serie.</div>`}
     <div class="group">Por cantidad (${bs.length})</div>
     ${bs.length ? `<div class="list">${bulkRows}</div>` : `<div class="empty" style="margin:20px 24px">Sin material por cantidad.</div>`}
-    <div class="actions"><button class="btn primary" onclick="openKitContents('${id}')">+ Añadir contenido</button></div>`;
+    <div class="actions"><button class="btn primary" onclick="openKitContents('${id}')">+ Añadir contenido</button></div>
+    ${kitPiecesHtml(k)}${notesHtml('kit', id)}`;
 }
 function openKitForm(id){
   const k = id ? kitById(id) : {};
@@ -1029,13 +1051,13 @@ async function reserveKit(pid, kid){
 function showsList(){
   if (S.showsMode === 'calendario') return calendarView();
   const now = Date.now();
-  const up = S.projects.filter(p => new Date(p.ends_at) >= now).sort((a,b) => new Date(a.starts_at) - new Date(b.starts_at));
-  const past = S.projects.filter(p => new Date(p.ends_at) < now).sort((a,b) => new Date(b.starts_at) - new Date(a.starts_at));
+  const up = S.projects.filter(p => (!S.showStatus || p.status === S.showStatus) && new Date(p.ends_at) >= now).sort((a,b) => new Date(a.starts_at) - new Date(b.starts_at));
+  const past = S.projects.filter(p => (!S.showStatus || p.status === S.showStatus) && new Date(p.ends_at) < now).sort((a,b) => new Date(b.starts_at) - new Date(a.starts_at));
   const rowH = p => `<div class="row tap" onclick="openView('${whMode() ? 'load' : 'project'}','${p.id}')">
       <div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))}${p.venue?' · '+esc(p.venue):''}</div></div>
       ${p.status!=='confirmed'?`<span class="badge ${p.status==='cancelled'?'bad':p.status==='done'?'ok':''}">${PROJ_STATUS[p.status]}</span>`:''}${p.payment_status==='invoiced'?'<span class="badge warn">Facturado</span>':p.payment_status==='paid'?'<span class="badge ok">Cobrado</span>':''}
       <div class="count" title="Piezas reservadas">${pieces(p)}</div></div>`;
-  return bar(whMode() ? 'Carga' : ('' + W.P + ''), {actions:whMode() ? '' : `<button class="btn primary small" onclick="openProjectForm()">+ ${W.S}</button>`}) + (whMode() ? '' : showsSeg())
+  return bar(whMode() ? 'Carga' : ('' + W.P + ''), {actions:whMode() ? '' : `<button class="btn small" onclick="openTemplates('')">Plantillas</button><button class="btn primary small" onclick="openProjectForm()">+ ${W.S}</button>`}) + (whMode() ? '' : showsSeg() + showStatusBar())
     + (S.projects.length ? `${up.length?`<div class="group">Próximos</div><div class="list">${up.map(rowH).join('')}</div>`:''}
        ${past.length?`<div class="group">Pasados</div><div class="list">${past.map(rowH).join('')}</div>`:''}`
       : `<div class="empty">Aún no hay ${W.p}.<br>Pulsa «+ ${W.S}» para crear el primero.</div>`);
@@ -1069,6 +1091,13 @@ async function saveProject(id){
   const cl = await resolveClient(); if (cl === false) return;
   const payload = {name, client:cl.name, client_id:cl.id, venue:$('#p-venue').value.trim()||null,
     status:$('#p-status').value, starts_at:fromLocalInput(s), ends_at:fromLocalInput(e), notes:$('#p-notes').value.trim()||null, rider_notes:$('#p-rider').value.trim()||null};
+  if (id && payload.status === 'confirmed' && projById(id).status !== 'confirmed'){
+    const iss = confirmChecks(id);
+    if (iss.length){ S.pendingProj = {id, payload}; return showConfirmChecks(id, iss); }
+  }
+  return commitProject(id, payload);
+}
+async function commitProject(id, payload){
   let pid = id;
   if (id){
     try { await db(sb.from('projects').update(payload).eq('id', id)); }
@@ -1121,15 +1150,18 @@ function projectView(id){
 
   const as = S.assigns.filter(a => a.project_id === id);
   const total = pieces(p);
-  return bar(p.name, {back:true})
+  return bar(p.name, {back:true, actions:favBtn('project', id)})
     + `<div class="info"><div>${esc(fmtDT(p.starts_at))} → ${esc(fmtDT(p.ends_at))}</div>
        <div class="sub">${esc([p.client, p.venue].filter(Boolean).join(' · '))}</div>
        ${p.client_id && clientById(p.client_id) ? `<div style="margin-top:6px"><button class="btn small" onclick="go('more');openView('client','${p.client_id}')">Ver ficha del cliente</button></div>` : ''}
-       <div style="margin-top:6px"><span class="badge ${p.status==='cancelled'?'bad':p.status==='done'?'ok':''}">${PROJ_STATUS[p.status]}</span></div>
+       <div style="margin-top:6px"><span class="badge ${p.status==='cancelled'?'bad':p.status==='done'?'ok':''}">${PROJ_STATUS[p.status]}</span></div>${closedInfoHtml(p)}
        ${p.notes?`<div style="margin-top:8px">${esc(p.notes)}</div>`:''}</div>
+    ${nextStepBtn(p) ? `<div class="actions">${nextStepBtn(p)}</div>` : ''}
     <div class="actions"><button class="btn" onclick="openProjectForm('${id}')">Editar</button>
       <button class="btn" onclick="openView('load','${id}')">Lista de carga</button>
       <button class="btn" onclick="openQuote('${id}')">Presupuesto</button>
+      <button class="btn" onclick="printContract('${id}')">Contrato</button>
+      <button class="btn" onclick="openTemplates('${id}')">Plantillas…</button>
       <button class="btn" onclick="openDmxPatch('${id}')">Patch DMX</button>
       <button class="btn" onclick="openDuplicate('${id}')">Duplicar</button>
       <button class="btn" onclick="openChanges('projects','${id}')">Cambios</button><button class="btn danger" onclick="deleteProject('${id}')">Eliminar</button></div>
@@ -1146,7 +1178,7 @@ function projectView(id){
       return `<div class="row"><div class="grow"><b>${esc(t.name)}</b><div class="sub">${esc([a.role, a.call_time?'Llamada '+fmtDT(a.call_time):''].filter(Boolean).join(' · '))}</div></div>
       ${t.phone?`<a class="btn small" style="text-decoration:none" target="_blank" rel="noopener" href="${waLink(t, a, p)}">WhatsApp</a>`:''}
       <button class="btn small" aria-label="Quitar" onclick="removeAssign('${a.id}')">✕</button></div>`; }).join('')}</div>`:`<div class="empty" style="margin:20px 24px">Aún no hay técnicos asignados.</div>`}
-    <div class="actions"><button class="btn primary" onclick="openAddAssign('${id}')">+ Añadir técnico</button></div>${showDocsHtml(id)}`;
+    <div class="actions"><button class="btn primary" onclick="openAddAssign('${id}')">+ Añadir técnico</button></div>${showDocsHtml(id)}${notesHtml('project', id)}`;
 }
 function openAddMaterial(pid){
   const p = projById(pid);
@@ -1300,13 +1332,13 @@ function printPackingList(pid){
 /* ---- Presupuesto ---- */
 function readQuoteInputs(){
   const v = parseFloat($('#q-vat').value);
-  return {days: parseInt($('#q-days').value) || 0, disc: parseFloat($('#q-disc').value) || 0, vat: isNaN(v) ? 21 : v};
+  return {days: parseInt($('#q-days').value) || 0, disc: parseFloat($('#q-disc').value) || 0, vat: isNaN(v) ? 21 : v, useDur: $('#q-dur') ? $('#q-dur').checked : null};
 }
 function quoteSummary(q){
   const warn = q.lines.filter(l => !(l.rate > 0)).length;
   return `<div class="sum">
     ${q.lines.map(l => `<div class="row"><div class="grow">${esc(l.m?l.m.name:'')} <span class="sub">×${l.qty}${l.rate>0?` · ${eur(l.rate)}/día`:' · sin tarifa'}</span></div><div>${eur(l.sub)}</div></div>`).join('') || ('<div class="row sub">No hay material en este ' + W.s + '.</div>')}
-    <div class="row"><div class="grow sub">Subtotal (${q.days} día${q.days===1?'':'s'})</div><div>${eur(q.subtotal)}</div></div>
+    <div class="row"><div class="grow sub">Subtotal (${q.days} día${q.days===1?'':'s'}${q.useDur ? ' = ' + jorTxt(q.bdays) : ''})</div><div>${eur(q.subtotal)}</div></div>
     ${q.disc>0?`<div class="row"><div class="grow sub">Descuento ${q.disc}%</div><div>−${eur(q.dAmt)}</div></div>`:''}
     <div class="row"><div class="grow sub">IVA ${q.vat}%</div><div>${eur(q.vatAmt)}</div></div>
     <div class="row tot"><div class="grow">Total</div><div>${eur(q.total)}</div></div></div>
@@ -1318,7 +1350,8 @@ function openQuote(pid){
     <div class="two"><div><label for="q-days">Días de alquiler</label><input id="q-days" type="number" min="1" inputmode="numeric" value="${p.rental_days||''}" placeholder="${rentalDays(p)} (auto)" oninput="refreshQuote('${pid}')"></div>
     <div><label for="q-disc">Descuento %</label><input id="q-disc" type="number" min="0" max="100" step="0.5" inputmode="decimal" value="${p.discount_pct||0}" oninput="refreshQuote('${pid}')"></div></div>
     <label for="q-vat">IVA %</label><input id="q-vat" type="number" min="0" step="0.5" inputmode="decimal" value="${p.vat_pct != null ? p.vat_pct : 21}" oninput="refreshQuote('${pid}')">
-    <div id="q-sum"></div>
+    <label class="chkrow"><input type="checkbox" id="q-dur" ${useDur(p) ? 'checked' : ''} onchange="refreshQuote('${pid}')">Usar la tarifa por duración</label><div class="sub" style="margin:-4px 0 6px"><a href="#" onclick="openDurationPricing();return false" style="color:var(--accent)">Ajustar la tabla de jornadas</a></div>
+    <div id="q-sum"></div>${qvHtml(pid)}
     <button class="btn primary block" onclick="printQuote('${pid}')">Guardar e imprimir / PDF</button>
     <button class="btn block" onclick="saveQuote('${pid}')">Solo guardar ajustes</button>`);
   refreshQuote(pid);
@@ -1326,38 +1359,15 @@ function openQuote(pid){
 function refreshQuote(pid){ $('#q-sum').innerHTML = quoteSummary(quoteCalc(projById(pid), readQuoteInputs())); }
 async function saveQuote(pid, close=true){
   const i = readQuoteInputs();
-  await db(sb.from('projects').update({rental_days: i.days || null, discount_pct: i.disc, vat_pct: i.vat}).eq('id', pid));
+  await db(sb.from('projects').update(Object.assign({rental_days: i.days || null, discount_pct: i.disc, vat_pct: i.vat}, (i.useDur != null && i.useDur !== useDur(projById(pid))) ? {use_duration:i.useDur} : {})).eq('id', pid));
   if (close) closeModal();
   await loadAll(); if (close) toast('Ajustes guardados');
-}
-async function printQuote(pid){
-  await saveQuote(pid, false); closeModal();
-  if ((projById(pid).payment_status || 'none') === 'none'){ await sb.from('projects').update({payment_status:'quoted'}).eq('id', pid); await loadAll(false); }
-  const p = projById(pid), q = quoteCalc(p);
-  const b = S.settings || {}, validity = b.quote_validity_days || 30;
-  const html = bizHeader() + `<h1>Presupuesto</h1>
-    <p><b>${esc(p.name)}</b></p>${clientBlock(p)}
-    <p>${esc(fmtFull(p.starts_at))} → ${esc(fmtFull(p.ends_at))}${p.venue?' · '+esc(p.venue):''}</p>
-    <p class="small">Fecha: ${esc(new Date().toLocaleDateString('es-ES'))}</p>
-    <h2>Detalle</h2>
-    <table><tr><th>Equipo</th><th class="r">Cant.</th><th class="r">€/día</th><th class="r">Días</th><th class="r">Importe</th></tr>
-    ${q.lines.map(l => `<tr><td>${esc(l.m?l.m.name:'')}</td><td class="r">${l.qty}</td><td class="r">${eur(l.rate)}</td><td class="r">${q.days}</td><td class="r">${eur(l.sub)}</td></tr>`).join('')}
-    <tr><td colspan="4" class="r">Subtotal</td><td class="r">${eur(q.subtotal)}</td></tr>
-    ${q.disc>0?`<tr><td colspan="4" class="r">Descuento ${q.disc}%</td><td class="r">−${eur(q.dAmt)}</td></tr>`:''}
-    <tr><td colspan="4" class="r">Base imponible</td><td class="r">${eur(q.base)}</td></tr>
-    <tr><td colspan="4" class="r">IVA ${q.vat}%</td><td class="r">${eur(q.vatAmt)}</td></tr>
-    <tr class="tot"><td colspan="4" class="r">Total</td><td class="r">${eur(q.total)}</td></tr></table>
-    <p class="small" style="margin-top:6mm">Importe = cantidad × tarifa por día × días de alquiler.</p>
-    ${b.quote_notes ? `<p style="margin-top:5mm">${esc(b.quote_notes).replace(/\n/g, '<br>')}</p>` : ''}
-    ${b.payment_terms ? `<h2>Condiciones de pago</h2><p>${esc(b.payment_terms).replace(/\n/g, '<br>')}</p>` : ''}
-    <p class="small" style="margin-top:5mm">Presupuesto válido durante ${validity} días desde la fecha indicada.</p>`;
-  printDoc('doc', html);
 }
 
 /* ============ TÉCNICOS ============ */
 function techsList(){
   const now = Date.now();
-  return bar('Técnicos', {actions:`<button class="btn primary small" onclick="openTechForm()">+ Técnico</button>`})
+  return bar('Técnicos', {back:true, actions:`<button class="btn primary small" onclick="openTechForm()">+ Técnico</button>`})
     + (S.techs.length ? `<div class="list">${S.techs.map(t => {
         const n = S.assigns.filter(a => a.technician_id === t.id).filter(a => { const p = projById(a.project_id); return p && new Date(p.ends_at) >= now && p.status !== 'cancelled'; }).length;
         return `<div class="row tap" onclick="openView('tech','${t.id}')"><div class="grow"><b>${esc(t.name)}</b><div class="sub">${esc([t.phone, t.email].filter(Boolean).join(' · '))}</div></div>
@@ -1438,7 +1448,7 @@ async function exportJson(){
   if (ev.error) return toast(errMsg(ev.error), true);
   const data = {exportado: new Date().toISOString(), categories:S.categories, equipment_models:S.models, units:S.units, kits:S.kits, kit_items:S.kitItems,
     projects:S.projects, reservations:S.reservations, bulk_reservations:S.bulkRes, technicians:S.techs, crew_assignments:S.assigns,
-    maintenance_logs:S.maint, bulk_logs:S.bulkLogs, custom_labels:S.customLabels, photos:S.photos, model_docs:S.docs, clients:S.clients, scan_events:ev.data, settings:S.settings};
+    maintenance_logs:S.maint, bulk_logs:S.bulkLogs, custom_labels:S.customLabels, photos:S.photos, model_docs:S.docs, model_accessories:S.accs, kit_pieces:S.kitPieces, quote_versions:S.quoteVersions, notes:S.notes, show_templates:S.templates, template_items:S.tplItems, clients:S.clients, scan_events:ev.data, settings:S.settings};
   download(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}), `copia-rentapp-${stampName()}.json`);
   markBackup(); render(); toast('Copia descargada');
 }
@@ -1651,15 +1661,17 @@ async function handleKit(code){
   } else {
     const rs = S.reservations.filter(r => r.kit_id === kit.id && r.state === 'out'), bs = S.bulkRes.filter(b => b.kit_id === kit.id && b.state === 'out');
     if (!rs.length && !bs.length) return scanMsg(`El kit «${kit.name}» no consta como fuera del almacén.`, 'warn');
-    let items = rs.map(r => ({unit_id:r.unit_id, cond:'ok', note:'', clear:false})), bulkOps = [], skipBulk = false, bBad = 0;
-    if ((rs.length || bs.length) && !quickReturn()){
-      const r = await askConditionEx(rs.map(x => unitById(x.unit_id)).filter(Boolean), bs.map(b => ({b, qty:b.qty})), 'Kit «' + kit.name + '»');
+    const kInfo = kitPiecesOf(kit.id).length ? [{kit, pieces:kitPiecesOf(kit.id)}] : [];
+    let items = rs.map(r => ({unit_id:r.unit_id, cond:'ok', note:'', clear:false})), bulkOps = [], skipBulk = false, bBad = 0, kcheck = {};
+    if ((rs.length || bs.length || kInfo.length) && !quickReturn()){
+      const r = await askConditionEx(rs.map(x => unitById(x.unit_id)).filter(Boolean), bs.map(b => ({b, qty:b.qty})), 'Kit «' + kit.name + '»', kInfo);
       if (!r) return scanMsg(`Devolución del kit «${kit.name}» cancelada.`, 'warn');
+      if (r.kits && r.kits[0]) kcheck = r.kits[0];
       items = r.units.map(x => ({unit_id:x.unit_id, cond:x.cond, note:x.note.trim(), clear:x.cond === 'ok' && !!(unitById(x.unit_id) || {}).missing_note, photo:x.photo || null}));
       if (bs.length){ skipBulk = true; bulkOps = bulkReturnOps(bs, r.bulks, b => b.qty); bBad = r.bulks.filter(x => x.cond !== 'ok').length; }
     }
-    enqueueMany([{t:'kin', kit_id:kit.id, items, skipBulk}, ...bulkOps]);
-    const inc = items.filter(i => i.cond !== 'ok').length + bBad;
+    enqueueMany([{t:'kin', kit_id:kit.id, items, skipBulk, ...kitCheckFields(kcheck.kit_id ? kcheck : null)}, ...bulkOps]);
+    const inc = items.filter(i => i.cond !== 'ok').length + bBad + ((kcheck.missing || []).length ? 1 : 0);
     scanMsg(`Devuelto el kit «${kit.name}»: ${rs.length} equipos${bs.length ? ` y ${bs.length} línea${bs.length===1?'':'s'} por cantidad` : ''}${inc ? ` · ${inc} con incidencia` : ''}${pend}`, inc ? 'warn' : 'ok');
   }
 }
@@ -1686,6 +1698,7 @@ function maintAlerts(){
   });
   S.models.filter(m => m.is_bulk && bulkRepair(m) > 0).forEach(m => out.push({m, text:`${bulkRepair(m)} en reparación`}));
   out.push(...stockAlerts());
+  S.kits.filter(k => k.missing_note).forEach(k => out.push({k, text:'Kit incompleto: falta ' + k.missing_note}));
   return out;
 }
 // Última nota de reparación de una unidad (la que se escribió al devolverla)
@@ -1695,7 +1708,7 @@ function repairLog(u){
 function openAlerts(){
   const al = maintAlerts();
   openModal(`<h2>Avisos de mantenimiento</h2><div class="sub">Equipos en reparación o incompletos, revisiones en los próximos 30 días y lámparas al 90% o más de su vida útil.</div>
-    ${al.length ? `<div class="list" style="margin:12px 0 0">${al.map(a => a.u ? `<div class="row tap" onclick="openUnit('${a.u.id}')"><div class="grow"><b>${esc(unitLabel(a.u))}</b><div class="sub">${esc(a.text)}</div></div></div>`
+    ${al.length ? `<div class="list" style="margin:12px 0 0">${al.map(a => a.k ? `<div class="row tap" onclick="closeModal();go('material');setMat('kits');openView('kit','${a.k.id}')"><div class="grow"><b>${esc(a.k.name)}</b><div class="sub">${esc(a.text)}</div></div></div>` : a.u ? `<div class="row tap" onclick="openUnit('${a.u.id}')"><div class="grow"><b>${esc(unitLabel(a.u))}</b><div class="sub">${esc(a.text)}</div></div></div>`
       : `<div class="row tap" onclick="closeModal();go('material');${a.go || "openView('repairs','')"}"><div class="grow"><b>${colorDot(a.m)}${esc(a.m.name)}</b><div class="sub">${esc(a.text)}</div></div></div>`).join('')}</div>`
       : `<div class="empty" style="margin:24px 0">Todo al día.</div>`}`);
 }
@@ -1802,7 +1815,7 @@ function calendarView(){
     return `<button class="cal-day ${d.getMonth()!==mo?'off':''} ${k===todayK?'today':''} ${k===S.calDay?'sel':''}" onclick="selDay('${k}')"
       style="${pc?`background:color-mix(in srgb, var(--accent) ${Math.round(pc/max*38)}%, var(--panel))`:''}" aria-label="${d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}: ${ps.length} ${W.s}${ps.length===1?'':'s'}">
       <span class="n">${d.getDate()}</span>
-      <span class="dots">${ps.slice(0,3).map(p => `<i class="dot ${p.status==='draft'?'draft':p.status==='done'?'done':''}"></i>`).join('')}</span>
+      <span class="dots">${ps.slice(0,3).map(p => `<i class="dot ${(p.status==='draft'||p.status==='quoted')?'draft':p.status==='done'?'done':''}"></i>`).join('')}</span>
       ${pc?`<span class="pc">${pc}</span>`:''}</button>`;
   }).join('');
   let detail = '';
@@ -2031,7 +2044,7 @@ async function runImport(){
 
 /* ============ RESTAURAR COPIA ============ */
 let restoreData = null;
-const RESTORE_ORDER = ['categories','equipment_models','units','kits','kit_items','clients','projects','technicians','reservations','bulk_reservations','crew_assignments','maintenance_logs','bulk_logs','custom_labels','photos','model_docs','scan_events'];
+const RESTORE_ORDER = ['categories','equipment_models','units','kits','kit_items','clients','projects','technicians','reservations','bulk_reservations','crew_assignments','maintenance_logs','bulk_logs','custom_labels','photos','model_docs','model_accessories','kit_pieces','quote_versions','show_templates','template_items','notes','scan_events'];
 function openRestore(){
   restoreData = null;
   openModal(`<h2>Restaurar copia</h2>
@@ -2198,6 +2211,7 @@ function applyLocal(op){
     S.reservations.filter(x => x.kit_id === op.kit_id && x.state === 'out').forEach(x => x.state = 'returned');
     if (!op.skipBulk) S.bulkRes.filter(x => x.kit_id === op.kit_id && x.state === 'out').forEach(x => x.state = 'returned');
     (op.items || []).forEach(i => localCond(i.unit_id, i.cond, i.note, i.clear));
+    if (op.kcheck){ const kk = kitById(op.kit_id); if (kk) kk.missing_note = op.kmissing || null; }
   }
 }
 const must = r => { if (r.error) throw r.error; return r.data; };
@@ -2327,6 +2341,7 @@ async function syncOp(op){
     }
     if (!op.skipBulk) must(await sb.from('bulk_reservations').update({state:'returned'}).eq('kit_id', op.kit_id).eq('state', 'out'));
     for (const i of (op.items || [])) await syncCondition(i.unit_id, i.cond, i.note, i.clear, op.at, i.photo);
+    if (op.kcheck) must(await sb.from('kits').update({missing_note:op.kmissing || null}).eq('id', op.kit_id));
   }
 }
 function enqueueMany(ops){
@@ -2386,15 +2401,16 @@ const quickReturn = () => { try { return localStorage.getItem('quickReturn') ===
 function setQuick(on){ try { localStorage.setItem('quickReturn', on ? '1' : '0'); } catch(e){} }
 let condBulk = [];
 // Hoja de estado al devolver: equipos y, si los hay, líneas de cables. Devuelve {units, bulks} o null si se cancela.
-function askConditionEx(units, bulks, title){
+function askConditionEx(units, bulks, title, kits){
   return new Promise(resolve => {
-    condState = units.map(u => ({unit_id:u.id, cond:'ok', note:''}));
+    condState = units.map(u => ({unit_id:u.id, cond:'ok', note:'', acc:modelAccs(u.model_id).map(a => ({...a, ok:true}))}));
+    condKits = (kits || []).map(x => ({kit_id:x.kit.id, pieces:x.pieces.map(p => ({...p, ok:true}))}));
     condBulk = bulks.map(x => ({bulk_id:x.b.id, cond:'ok', n:'', note:'', qty:x.qty, max:x.b.qty, baja:false}));
     condResolve = resolve;
     const chips = (fn, i) => ['ok','repair','incomplete'].map(c => `<button type="button" class="chip ${c==='ok'?'sel':''}" data-c="${c}" onclick="${fn}(${i},'${c}')">${COND[c]}</button>`).join('');
     openModal(`<h2>Estado al devolver</h2><div class="sub">${esc(title)}</div>
       ${units.map((u, i) => `<div class="info" style="margin:10px 0 0" id="cb-${i}"><b>${esc(unitLabel(u))}</b>${u.missing_note ? `<div class="sub bad">Salió incompleto: ${esc(u.missing_note)}</div>` : ''}
-        <div class="legend" style="margin:8px 0 0">${chips('setCond', i)}</div>
+        <div class="legend" style="margin:8px 0 0">${chips('setCond', i)}</div>${accBlock(i)}
         <div id="cn-${i}" hidden><label for="cnt-${i}" id="cnl-${i}">Qué falta</label><textarea id="cnt-${i}" style="min-height:60px" oninput="condState[${i}].note=this.value"></textarea>${photoField('u', i)}</div></div>`).join('')}
       ${bulks.map((x, j) => { const m = modelById(x.b.model_id) || {};
         return `<div class="info" style="margin:10px 0 0" id="bb-${j}"><b>${colorDot(m)}${esc(m.name || '')}</b><div class="sub">Vuelven ${x.qty} de ${x.b.qty}${x.b.kit_id ? ' · Kit «' + esc((kitById(x.b.kit_id) || {}).name || '') + '»' : ''}</div>
@@ -2402,6 +2418,7 @@ function askConditionEx(units, bulks, title){
           <div id="bn-${j}" hidden><label for="bnc-${j}" id="bnl-${j}">¿Cuántos faltan?</label><input id="bnc-${j}" type="number" min="1" inputmode="numeric" oninput="condBulk[${j}].n=this.value">
             <label class="chkrow" id="bbjl-${j}" hidden style="margin-top:6px"><input type="checkbox" id="bbj-${j}" onchange="condBulk[${j}].baja=this.checked"><span>Dar de baja los que faltan (ya no volverán: se restan del stock)</span></label>
             <label for="bnt-${j}">Nota (opcional)</label><textarea id="bnt-${j}" style="min-height:60px" oninput="condBulk[${j}].note=this.value"></textarea>${photoField('b', j)}</div></div>`; }).join('')}
+      ${kitBlocks()}
       <button class="btn primary block" onclick="confirmCond()">Confirmar devolución</button>
       <button class="btn block" onclick="closeModal()">Cancelar</button>`);
   });
@@ -2433,7 +2450,7 @@ function confirmCond(){
       ? (lim < 1 ? `De «${name}» solo hay 1: si no ha vuelto, no la marques como devuelta.` : `Escribe cuántos «${name}» faltan, entre 1 y ${lim}.`)
       : `Escribe cuántos «${name}» van a reparación, entre 1 y ${lim}.`, true);
   }
-  const res = condResolve, out = {units:condState, bulks:condBulk}; condResolve = null; closeModal(); if (res) res(out);
+  const res = condResolve, out = {units:condState, bulks:condBulk, kits:condKits.map(k => ({kit_id:k.kit_id, missing:k.pieces.filter(p => !p.ok).map(accText)}))}; condResolve = null; closeModal(); if (res) res(out);
 }
 
 /* ============ PESO, VOLUMEN Y POTENCIA ============ */
@@ -2589,7 +2606,12 @@ async function schemaMissing(){
     ['esquema_v12.sql', sb.from('settings').select('app_config').limit(1)],
     ['esquema_v13.sql', sb.from('photos').select('id').limit(1)],
     ['esquema_v13.sql', sb.from('units').select('manufacturer_serial').limit(1)],
-    ['esquema_v13.sql', sb.from('equipment_models').select('tags').limit(1)]
+    ['esquema_v13.sql', sb.from('equipment_models').select('tags').limit(1)],
+    ['esquema_v14.sql', sb.from('model_accessories').select('id').limit(1)],
+    ['esquema_v14.sql', sb.from('kits').select('missing_note').limit(1)],
+    ['esquema_v15.sql', sb.from('quote_versions').select('id').limit(1)],
+    ['esquema_v15.sql', sb.from('units').select('purchase_price').limit(1)],
+    ['esquema_v16.sql', sb.from('notes').select('id').limit(1)]
   ];
   const rs = await Promise.all(probes.map(p => Promise.resolve(p[1]).then(r => r, e => ({error:e}))));
   return [...new Set(probes.filter((p, i) => rs[i].error && isSchemaErr(rs[i].error)).map(p => p[0]))];
@@ -2654,7 +2676,7 @@ function clientView(id){
   const ps = showsOf(c).sort((a, b) => new Date(b.starts_at) - new Date(a.starts_at)), act = ps.filter(p => p.status !== 'cancelled');
   const sum = st => act.filter(p => (p.payment_status || 'none') === st).reduce((t, p) => t + projectTotal(p), 0);
   const tel = c.phone ? c.phone.replace(/[^\d+]/g, '') : '';
-  return bar(c.name, {back:true})
+  return bar(c.name, {back:true, actions:favBtn('client', id)})
     + `<div class="info">${c.contact_name ? `<div><b>${esc(c.contact_name)}</b></div>` : ''}
       ${c.phone ? `<div>${esc(c.phone)}</div>` : ''}${c.email ? `<div>${esc(c.email)}</div>` : ''}
       ${c.tax_id ? `<div class="sub">NIF / CIF: ${esc(c.tax_id)}</div>` : ''}
@@ -2790,17 +2812,17 @@ async function returnSelected(){
     const bq = b => Math.min(b.qty, Math.max(1, parseInt(S.outQty[b.id] != null ? S.outQty[b.id] : b.qty) || b.qty));
     const qtyOf = b => b.kit_id ? b.qty : bq(b);            // las líneas de un kit vuelven enteras; las sueltas, lo que pone en «Vuelven»
     // estado de cada equipo y de cada línea de cables (Completo / Reparación / Incompleto), salvo en devolución rápida
-    const units = [...looseR, ...kitRes.flatMap(k => k.rs)].map(r => unitById(r.unit_id)).filter(Boolean), conds = {}, sheet = (units.length || allBulks.length) && !quickReturn();
+    const units = [...looseR, ...kitRes.flatMap(k => k.rs)].map(r => unitById(r.unit_id)).filter(Boolean), conds = {}, kInfo = kitRes.map(k => ({kit:kitById(k.kid), pieces:kitPiecesOf(k.kid)})).filter(x => x.kit && x.pieces.length), sheet = (units.length || allBulks.length || kInfo.length) && !quickReturn(), kchecks = {};
     let bconds = [];
     if (sheet){
-      const r = await askConditionEx(units, allBulks.map(b => ({b, qty:qtyOf(b)})), 'Devolución desde la lista');
+      const r = await askConditionEx(units, allBulks.map(b => ({b, qty:qtyOf(b)})), 'Devolución desde la lista', kInfo);
       if (!r) return;
-      r.units.forEach(x => conds[x.unit_id] = x); bconds = r.bulks;
+      r.units.forEach(x => conds[x.unit_id] = x); bconds = r.bulks; (r.kits || []).forEach(x => kchecks[x.kit_id] = x);
     }
     const cond = uid => conds[uid] || {cond:'ok', note:''};
     const ops = [];
     looseR.forEach(r => { const c = cond(r.unit_id), u = unitById(r.unit_id) || {}; ops.push({t:'in', unit_id:r.unit_id, cond:c.cond, note:(c.note || '').trim(), clear:c.cond === 'ok' && !!u.missing_note, photo:c.photo || null}); });
-    kitRes.forEach(k => ops.push({t:'kin', kit_id:k.kid, skipBulk:sheet && k.bs.length > 0, items:k.rs.map(r => { const c = cond(r.unit_id), u = unitById(r.unit_id) || {}; return {unit_id:r.unit_id, cond:c.cond, note:(c.note || '').trim(), clear:c.cond === 'ok' && !!u.missing_note, photo:c.photo || null}; })}));
+    kitRes.forEach(k => ops.push({t:'kin', kit_id:k.kid, skipBulk:sheet && k.bs.length > 0, ...kitCheckFields(kchecks[k.kid]), items:k.rs.map(r => { const c = cond(r.unit_id), u = unitById(r.unit_id) || {}; return {unit_id:r.unit_id, cond:c.cond, note:(c.note || '').trim(), clear:c.cond === 'ok' && !!u.missing_note, photo:c.photo || null}; })}));
     const bops = bulkReturnOps(sheet ? allBulks : bulks, bconds, qtyOf);
     ops.push(...bops);
     bulks.forEach(b => { delete S.outQty[b.id]; });
@@ -3043,6 +3065,7 @@ function incidenceStats(){
   let bad = 0, inc = 0;
   S.units.forEach(u => { if (u.status !== 'ok') bad++; if (u.missing_note) inc++; });
   S.models.forEach(m => { if (m.is_bulk) bad += bulkRepair(m); });
+  S.kits.forEach(k => { if (k.missing_note) inc++; });
   return {bad, inc, total:bad + inc};
 }
 function navBadgeHtml(){ if (whMode()) return ''; const n = incidenceStats().total; return `<span id="nav-badge" class="tabbadge" ${n ? '' : 'hidden'} aria-label="${n} incidencias">${n}</span>`; }
@@ -3168,12 +3191,23 @@ const LABEL_PRESETS = [
   {id:'a4-3x7', name:'A4 · 3×7 pegatinas · 63,5×38,1 mm', pw:210, ph:297, cols:3, rows:7, w:63.5, h:38.1, gx:2.5, gy:0, mt:15.15, ml:7.2, border:false},
   {id:'a4-2x7', name:'A4 · 2×7 pegatinas · 99,1×38,1 mm', pw:210, ph:297, cols:2, rows:7, w:99.1, h:38.1, gx:2.5, gy:0, mt:15.15, ml:4.65, border:false},
   {id:'a4-5x13', name:'A4 · 5×13 pegatinas · 38,1×21,2 mm', pw:210, ph:297, cols:5, rows:13, w:38.1, h:21.2, gx:2.5, gy:0, mt:10.7, ml:4.7, border:false},
-  {id:'roll-62x29', name:'Impresora de etiquetas · 62×29 mm, una por página', pw:62, ph:29, cols:1, rows:1, w:62, h:29, gx:0, gy:0, mt:0, ml:0, border:false},
+  {id:'roll-62x29', name:'Brother QL · rollo 62×29 mm (DK-11209)', printer:'ql', pw:62, ph:29, cols:1, rows:1, w:62, h:29, gx:0, gy:0, mt:0, ml:0, border:false},
+  {id:'ql-29x90', name:'Brother QL · 29×90 mm (DK-11201)', printer:'ql', pw:29, ph:90, cols:1, rows:1, w:29, h:90, gx:0, gy:0, mt:0, ml:0, border:false},
+  {id:'ql-38x90', name:'Brother QL · 38×90 mm (DK-11208)', printer:'ql', pw:38, ph:90, cols:1, rows:1, w:38, h:90, gx:0, gy:0, mt:0, ml:0, border:false},
+  {id:'ql-62x100', name:'Brother QL · 62×100 mm (DK-11202)', printer:'ql', pw:62, ph:100, cols:1, rows:1, w:62, h:100, gx:0, gy:0, mt:0, ml:0, border:false},
+  {id:'ql-17x54', name:'Brother QL · 17×54 mm (DK-11204)', printer:'ql', pw:17, ph:54, cols:1, rows:1, w:17, h:54, gx:0, gy:0, mt:0, ml:0, border:false},
+  {id:'ql-62x40', name:'Brother QL · rollo continuo 62 mm, 40 mm de largo (DK-22205)', printer:'ql', pw:62, ph:40, cols:1, rows:1, w:62, h:40, gx:0, gy:0, mt:0, ml:0, border:false},
+  {id:'dymo-99010', name:'Dymo LabelWriter · 28×89 mm (99010)', printer:'dymo', pw:28, ph:89, cols:1, rows:1, w:28, h:89, gx:0, gy:0, mt:0, ml:0, border:false},
+  {id:'dymo-99012', name:'Dymo LabelWriter · 36×89 mm (99012)', printer:'dymo', pw:36, ph:89, cols:1, rows:1, w:36, h:89, gx:0, gy:0, mt:0, ml:0, border:false},
+  {id:'dymo-11354', name:'Dymo LabelWriter · 32×57 mm (11354)', printer:'dymo', pw:32, ph:57, cols:1, rows:1, w:32, h:57, gx:0, gy:0, mt:0, ml:0, border:false},
+  {id:'dymo-99014', name:'Dymo LabelWriter · 54×101 mm (99014)', printer:'dymo', pw:54, ph:101, cols:1, rows:1, w:54, h:101, gx:0, gy:0, mt:0, ml:0, border:false},
+  {id:'dymo-30336', name:'Dymo LabelWriter · 25×54 mm (30336)', printer:'dymo', pw:25, ph:54, cols:1, rows:1, w:25, h:54, gx:0, gy:0, mt:0, ml:0, border:false},
   {id:'custom', name:'Personalizada (escribo las medidas)'}
 ];
 const LABEL_DEFAULT = Object.assign({}, LABEL_PRESETS[0], {brand:'RENTFORSHOW', showBrand:true, preset:'rentapp'});
-function labelCfg(){
-  const c = Object.assign({}, LABEL_DEFAULT, (S.settings && S.settings.label_config) || {});
+function labelCfg(){ return normLabelCfg((S.settings && S.settings.label_config) || {}); }
+function normLabelCfg(raw){
+  const c = Object.assign({}, LABEL_DEFAULT, raw);
   ['pw','ph','w','h','gx','gy','mt','ml'].forEach(k => { c[k] = Number(c[k]); if (!isFinite(c[k]) || c[k] < 0) c[k] = LABEL_DEFAULT[k]; });
   ['cols','rows'].forEach(k => { c[k] = Math.max(1, Math.round(Number(c[k]) || LABEL_DEFAULT[k])); });
   c.pw = Math.max(20, c.pw); c.ph = Math.max(20, c.ph); c.w = Math.max(8, c.w); c.h = Math.max(8, c.h);
@@ -3193,7 +3227,7 @@ function brandFs(txt, lay){
 }
 // Contenido de una pegatina. d = {kind:'unit', id} | {kind:'kit', id} | {kind:'custom', title, sub, line3, tile, qr, brand}
 function labelBoxHtml(d, cfg){
-  const lay = labelLayout(cfg), k = labelScale(cfg);
+  const lay = labelLayout(cfg), k = labelScale(cfg), ds = cfg.design || {};
   const brand = cfg.showBrand && cfg.brand && d.brand !== false ? `<div class="brand"${brandFs(cfg.brand, lay)}>${esc(cfg.brand)}</div>` : '';
   const tileCls = s => String(s).length >= 4 ? 'd4' : String(s).length === 3 ? 'd3' : '';
   let qr = '', lt = '';
@@ -3202,22 +3236,26 @@ function labelBoxHtml(d, cfg){
     const m = modelById(u.model_id) || {}, nn = nominalNumber(u), nm = m.name || '', sz = nm.length <= 10 ? '' : nm.length <= 14 ? 'm' : 's';
     qr = qrSvg(u.code);
     const head = nn == null ? `<span class="big ${unitName(u).length <= 13 ? '' : unitName(u).length <= 17 ? 'm' : 's'}">${esc(unitName(u))}</span>`
-      : `<div class="lrow"><span class="ltile ${tileCls(nn)}">${nn}</span>${lay === 'full' ? `<span class="lname ${sz}">${esc(nm)}</span>` : ''}</div>`;
-    lt = head + (u.serial_number ? `<span class="mini">${esc(u.serial_number)}</span>` : `<span class="code">${esc(u.code)}</span>`) + brand;
+      : `<div class="lrow"><span class="ltile ${tileCls(nn)}">${nn}</span>${lay === 'full' && ds.name !== false ? `<span class="lname ${sz}">${esc(nm)}</span>` : ''}</div>`;
+    lt = head + (u.serial_number ? (ds.serial !== false ? `<span class="mini">${esc(u.serial_number)}</span>` : '') : (ds.code !== false ? `<span class="code">${esc(u.code)}</span>` : '')) + (lay === 'full' && ds.extra ? `<span class="lx">${esc(ds.extra)}</span>` : '') + brand;
   } else if (d.kind === 'kit'){
     const kt = kitById(d.id); if (!kt) return '';
     qr = qrSvg(kt.code);
-    lt = `<b>${esc(kt.name)}</b>${lay === 'full' ? '<span>KIT</span>' : ''}<span class="code">${esc(kt.code)}</span>` + brand;
+    const kc = lay === 'full' && ds.kitContent !== false ? kitContentSummary(kt) : '';
+    lt = `<b${kc ? ' class="kc"' : ''}>${esc(kt.name)}</b>${lay === 'full' ? (kc ? `<span class="kcont">${esc(kc)}</span>` : '<span>KIT</span>') : ''}${ds.code !== false ? `<span class="code">${esc(kt.code)}</span>` : ''}` + brand;
+  } else if (d.kind === 'kitlist'){
+    const kt = kitById(d.id); if (!kt) return '';
+    lt = kitListHtml(kt, lay);
   } else {
     qr = d.qr ? qrSvg(d.qr) : '';
     const tl = d.title || '', ts = tl.length <= (d.tile ? 9 : 14) ? '' : tl.length <= (d.tile ? 16 : 24) ? 'm' : 's';
     const row = (d.tile || tl) ? `<div class="lrow">${d.tile ? `<span class="ltile ${tileCls(d.tile)}">${esc(d.tile)}</span>` : ''}${tl ? `<span class="ctitle ${ts}">${esc(tl)}</span>` : ''}</div>` : '';
     lt = row + (d.sub ? `<span class="csub">${esc(d.sub)}</span>` : '') + (d.line3 ? `<span class="cline">${esc(d.line3)}</span>` : '') + brand;
   }
-  return `<div class="lbox label ${lay}" style="--k:${k.toFixed(4)}">${qr ? `<div class="qr">${qr}</div>` : ''}<div class="lt">${lt}</div></div>`;
+  return `<div class="lbox label ${lay}${d.kind === 'kitlist' ? ' kitlist' : ''}${ds.qrSide === 'right' ? ' rev' : ''}${ds.extra && lay === 'full' ? ' xt' : ''}" style="--k:${k.toFixed(4)}">${qr ? `<div class="qr">${qr}</div>` : ''}<div class="lt">${lt}</div></div>`;
 }
 const labelPos = (cfg, col, row) => `left:${(cfg.ml + col * (cfg.w + cfg.gx)).toFixed(3)}mm;top:${(cfg.mt + row * (cfg.h + cfg.gy)).toFixed(3)}mm;width:${cfg.w}mm;height:${cfg.h}mm`;
-const labelCellHtml = (d, cfg, col, row) => `<div class="lcell${cfg.border ? ' bd' : ''}" style="${labelPos(cfg, col, row)}">${labelBoxHtml(d, cfg)}</div>`;
+const labelCellHtml = (d, cfg, col, row) => `<div class="lcell${cfg.border ? ' bd' : ''}" style="${labelPos(cfg, col, row)}">${labelInner(d, cfg)}</div>`;
 // Hojas: cada pegatina va en su sitio exacto; «start» es la primera casilla libre de la primera hoja (para hojas ya empezadas)
 function labelSheetsHtml(items, cfg, start){
   const per = labelsPerSheet(cfg), pages = [[]]; let slot = Math.max(1, Math.min(per, parseInt(start) || 1)) - 1;
@@ -3225,9 +3263,9 @@ function labelSheetsHtml(items, cfg, start){
   return pages.map(pg => `<div class="lsheet" style="width:${cfg.pw}mm;height:${(cfg.ph - 0.6).toFixed(2)}mm">${pg.map(([s, it]) => labelCellHtml(it, cfg, s % cfg.cols, Math.floor(s / cfg.cols))).join('')}</div>`).join('');
 }
 const labelPageCss = cfg => `@page{size:${cfg.pw}mm ${cfg.ph}mm;margin:0}`;
-function printLabelItems(items, start){
+function printLabelItems(items, start, cfg0){
   if (!items.length) return toast('No hay nada que imprimir', true);
-  const cfg = labelCfg();
+  const cfg = cfg0 || labelCfg();
   S.markPending = {units:items.filter(i => i.kind === 'unit').map(i => i.id), kits:items.filter(i => i.kind === 'kit').map(i => i.id)};      // luego se pregunta si salieron bien
   printDoc('labels', labelSheetsHtml(items, cfg, start), labelPageCss(cfg));
 }
@@ -3254,26 +3292,29 @@ function printAlignment(c){
 let LP = {items:[], title:'', start:1};
 function openPrintLabels(items, title){
   if (!items.length) return toast('No hay nada que imprimir', true);
-  LP = {items, title:title || 'Etiquetas', start:1}; drawPrintDialog();
+  LP = {items, title:title || 'Etiquetas', start:1, profile:defaultProfileFor(items)}; drawPrintDialog();
 }
 function drawPrintDialog(){
-  const c = labelCfg(), per = labelsPerSheet(c), n = LP.items.length;
+  const c = lpCfg(), per = labelsPerSheet(c), n = LP.items.length;
   openModal(`<h2>Imprimir ${n} pegatina${n === 1 ? '' : 's'}</h2><div class="sub">${esc(LP.title)}</div>
     <div class="info" style="margin:10px 0;display:flex;align-items:center;gap:10px"><div class="grow"><b>${esc(labelPresetName(c))}</b><div class="sub">${c.cols}×${c.rows} · ${c.w}×${c.h} mm · ${per} por hoja</div></div><button class="btn small" onclick="openSheetCfg(true)">Cambiar hoja</button></div>
-    <label for="lp-start">Empezar en la pegatina nº <span class="sub">(si la hoja ya está empezada)</span></label>
-    <input id="lp-start" type="number" min="1" max="${per}" value="${LP.start}" inputmode="numeric" oninput="lpStart(this.value)">
+    ${profList().length ? `<label for="lp-prof">Perfil de impresión</label><select id="lp-prof" onchange="lpProfile(this.value)"><option value="__current" ${LP.profile === '__current' ? 'selected' : ''}>La hoja actual</option>${profList().map(p => `<option ${LP.profile === p.name ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>` : ''}
+    ${labelHelp(c) ? `<div class="sub" style="margin:6px 0">${esc(labelHelp(c))}</div>` : ''}
+    ${per > 1 ? `<label for="lp-start">Empezar en la pegatina nº <span class="sub">(si la hoja ya está empezada)</span></label>
+    <input id="lp-start" type="number" min="1" max="${per}" value="${LP.start}" inputmode="numeric" oninput="lpStart(this.value)">` : ''}
     <div id="lp-info" class="sub" style="margin-top:6px"></div><div id="lp-prev" style="text-align:center;margin:10px 0"></div>
     <div class="sub">En el cuadro de impresión pon escala 100% (no «ajustar a la página») y sin márgenes.</div>
-    <button class="btn primary block" onclick="lpPrint()">Imprimir</button><button class="btn block" onclick="printAlignment()">Imprimir hoja de prueba</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
+    <button class="btn primary block" onclick="lpPrint()">Imprimir</button><button class="btn block" onclick="lpPdf(false)">Descargar PDF</button>${navigator.canShare ? '<button class="btn block" onclick="lpPdf(true)">Compartir PDF</button>' : ''}<button class="btn block" onclick="printAlignment(lpCfg())">Imprimir hoja de prueba</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
   lpUpdate();
 }
-function lpStart(v){ const c = labelCfg(); LP.start = Math.max(1, Math.min(labelsPerSheet(c), parseInt(v) || 1)); lpUpdate(); }
+function lpStart(v){ const c = lpCfg(); LP.start = Math.max(1, Math.min(labelsPerSheet(c), parseInt(v) || 1)); lpUpdate(); }
 function lpUpdate(){
-  const c = labelCfg(), n = LP.items.length, pages = labelPagesCount(n, LP.start, c);
+  const c = lpCfg(), n = LP.items.length, pages = labelPagesCount(n, LP.start, c);
+  if (labelsPerSheet(c) === 1){ $('#lp-info').innerHTML = `Se imprime${n === 1 ? '' : 'n'} <b>${n} etiqueta${n === 1 ? '' : 's'}</b>, una por página.`; $('#lp-prev').innerHTML = ''; return; }
   $('#lp-info').innerHTML = `Ocupará <b>${pages} hoja${pages === 1 ? '' : 's'}</b>${LP.start > 1 ? ` · empieza en la pegatina ${LP.start} de la primera` : ''}.<br><span style="font-size:13px">Oscuro = se imprime · gris = ya usada, se salta · vacío = libre</span>`;
   $('#lp-prev').innerHTML = sheetSvg(c, LP.start, n) + (pages > 1 ? `<div class="sub">Primera hoja de ${pages}</div>` : '');
 }
-function lpPrint(){ const st = LP.start; closeModal(); printLabelItems(LP.items, st); }
+function lpPrint(){ const st = LP.start, cfg = lpCfg(); closeModal(); printLabelItems(LP.items, st, cfg); }
 
 /* ---- Configurar la hoja ---- */
 let SC = null;
@@ -3281,7 +3322,7 @@ function openSheetCfg(fromPrint){ SC = labelCfg(); SC.fromPrint = !!fromPrint; d
 function drawSheetCfg(){
   const c = SC, num = (k, lab, step) => `<div><label for="sc-${k}">${lab}</label><input id="sc-${k}" type="number" step="${step || 0.1}" min="0" value="${c[k]}" inputmode="decimal" oninput="scSet('${k}',this.value)"></div>`;
   openModal(`<h2>Hoja de pegatinas</h2><div class="sub">Elige tu hoja o escribe las medidas. Imprime la hoja de prueba en papel normal y ponla a contraluz contra tu hoja de pegatinas para comprobar que coincide.</div>
-    <label for="sc-preset">Tipo de hoja</label><select id="sc-preset" onchange="scPreset(this.value)">${LABEL_PRESETS.map(p => `<option value="${p.id}" ${p.id === c.preset ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>
+    <label for="sc-preset">Tipo de hoja</label><select id="sc-preset" onchange="scPreset(this.value)">${['Hojas A4', 'Brother QL (rollo)', 'Dymo LabelWriter (rollo)', 'Otra'].map(g => `<optgroup label="${g}">${LABEL_PRESETS.filter(p => presetGroup(p) === g).map(p => `<option value="${p.id}" ${p.id === c.preset ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</optgroup>`).join('')}</select>${labelHelp(c) ? `<div class="sub" style="margin-top:4px">${esc(labelHelp(c))}</div>` : ''}
     <div class="sub">Las medidas de las hojas comerciales son orientativas: comprueba siempre la tuya con la hoja de prueba.</div>
     <div class="two">${num('pw', 'Ancho de la página (mm)')}${num('ph', 'Alto de la página (mm)')}${num('cols', 'Columnas', 1)}${num('rows', 'Filas', 1)}${num('w', 'Ancho de cada pegatina (mm)')}${num('h', 'Alto de cada pegatina (mm)')}${num('ml', 'Margen izquierdo (mm)')}${num('mt', 'Margen superior (mm)')}${num('gx', 'Hueco entre columnas (mm)')}${num('gy', 'Hueco entre filas (mm)')}</div>
     <label class="chkrow"><input type="checkbox" id="sc-border" ${c.border ? 'checked' : ''} onchange="scSet('border',this.checked)"><span>Dibujar el borde de cada pegatina (para papel normal)</span></label>
@@ -3293,7 +3334,7 @@ function drawSheetCfg(){
 }
 function scPreset(id){
   const p = LABEL_PRESETS.find(x => x.id === id); if (!p) return;
-  if (id !== 'custom') Object.assign(SC, p, {fromPrint:SC.fromPrint}); else SC.preset = 'custom';
+  if (id !== 'custom') Object.assign(SC, p, {fromPrint:SC.fromPrint, preset:id}); else SC.preset = 'custom';
   drawSheetCfg();
 }
 function scSet(k, v){
@@ -3396,8 +3437,8 @@ function labelsView(){
     : `<div class="sub" style="margin:6px 18px">Aún no tienes ninguna. Crea pegatinas con tu propio texto: cajas numeradas, cables, avisos…</div>`;
   return bar('Etiquetas', {back:true})
     + `<div class="group">Hoja de pegatinas</div>
-      <div class="info" style="display:flex;align-items:center;gap:10px"><div class="grow"><b>${esc(labelPresetName(cfg))}</b><div class="sub">${cfg.cols}×${cfg.rows} · ${cfg.w}×${cfg.h} mm · ${per} por hoja</div></div><button class="btn small" onclick="openSheetCfg()">Configurar</button></div>
-      ${pendingLabelsHtml()}
+      <div class="info" style="display:flex;align-items:center;gap:10px"><div class="grow"><b>${esc(labelPresetName(cfg))}</b><div class="sub">${cfg.cols}×${cfg.rows} · ${cfg.w}×${cfg.h} mm · ${per} por hoja</div></div><button class="btn small" onclick="openSheetCfg()">Configurar</button><button class="btn small" onclick="openDesign()">Diseño</button></div>
+      ${pendingLabelsHtml()}${profilesHtml()}
       <div class="group">Pegatinas personalizadas</div>${custom}
       <div class="actions"><button class="btn primary" onclick="openCustomLabel()">+ Nueva pegatina</button></div>
       <div class="group">Etiquetas de material</div>
@@ -3577,7 +3618,7 @@ function openAvail(mid){
 
 /* ============ PAPELERA Y DESHACER ============ */
 const TRASH_KIND = k => ({model:'Modelo', unit:'Unidad', kit:'Kit', project:W.S, client:'Cliente', technician:'Técnico', category:'Categoría', custom_label:'Pegatina'})[k] || k;
-const trashTable = (t, n) => { const one = n === 1, o = {equipment_models:['modelo','modelos'], units:['unidad','unidades'], reservations:['reserva','reservas'], bulk_reservations:['línea de cables','líneas de cables'], kit_items:['pieza de kit','piezas de kit'], maintenance_logs:['registro de mantenimiento','registros de mantenimiento'], bulk_logs:['incidencia de cables','incidencias de cables'], scan_events:['movimiento','movimientos'], kits:['kit','kits'], projects:[W.s, W.p], clients:['cliente','clientes'], technicians:['técnico','técnicos'], categories:['categoría','categorías'], crew_assignments:['asignación','asignaciones'], photos:['foto','fotos'], model_docs:['documento','documentos'], custom_labels:['pegatina','pegatinas']}[t]; return o ? o[one ? 0 : 1] : t; };
+const trashTable = (t, n) => { const one = n === 1, o = {equipment_models:['modelo','modelos'], units:['unidad','unidades'], reservations:['reserva','reservas'], bulk_reservations:['línea de cables','líneas de cables'], kit_items:['pieza de kit','piezas de kit'], maintenance_logs:['registro de mantenimiento','registros de mantenimiento'], bulk_logs:['incidencia de cables','incidencias de cables'], scan_events:['movimiento','movimientos'], kits:['kit','kits'], projects:[W.s, W.p], clients:['cliente','clientes'], technicians:['técnico','técnicos'], categories:['categoría','categorías'], crew_assignments:['asignación','asignaciones'], photos:['foto','fotos'], model_docs:['documento','documentos'], model_accessories:['accesorio','accesorios'], quote_versions:['versión de presupuesto','versiones de presupuesto'], kit_pieces:['pieza de kit','piezas de kit'], custom_labels:['pegatina','pegatinas']}[t]; return o ? o[one ? 0 : 1] : t; };
 // Foto de todo lo que se va a borrar (incluido lo que se borra en cascada), para poder restaurarlo
 async function trashCollect(kind, id){
   const T = [], L = [], real = r => !String(r.id).startsWith('tmp-');
@@ -3587,15 +3628,15 @@ async function trashCollect(kind, id){
     const m = modelById(id), us = S.units.filter(u => u.model_id === id), ids = new Set(us.map(u => u.id));
     add('equipment_models', [m]); add('units', us); add('reservations', S.reservations.filter(r => ids.has(r.unit_id)));
     add('bulk_reservations', S.bulkRes.filter(b => b.model_id === id)); add('kit_items', S.kitItems.filter(k => ids.has(k.unit_id) || k.model_id === id));
-    add('maintenance_logs', S.maint.filter(l => ids.has(l.unit_id))); add('bulk_logs', S.bulkLogs.filter(l => l.model_id === id)); add('photos', S.photos.filter(p => p.model_id === id || ids.has(p.unit_id))); add('model_docs', S.docs.filter(d => d.model_id === id)); add('scan_events', await events([...ids]));
+    add('maintenance_logs', S.maint.filter(l => ids.has(l.unit_id))); add('bulk_logs', S.bulkLogs.filter(l => l.model_id === id)); add('photos', S.photos.filter(p => p.model_id === id || ids.has(p.unit_id))); add('model_docs', S.docs.filter(d => d.model_id === id)); add('model_accessories', S.accs.filter(a => a.model_id === id)); add('scan_events', await events([...ids]));
   } else if (kind === 'unit'){
     add('units', [unitById(id)]); add('reservations', S.reservations.filter(r => r.unit_id === id)); add('kit_items', S.kitItems.filter(k => k.unit_id === id));
     add('maintenance_logs', S.maint.filter(l => l.unit_id === id)); add('photos', S.photos.filter(p => p.unit_id === id)); add('scan_events', await events([id]));
   } else if (kind === 'kit'){
-    add('kits', [kitById(id)]); add('kit_items', S.kitItems.filter(k => k.kit_id === id));
+    add('kits', [kitById(id)]); add('kit_items', S.kitItems.filter(k => k.kit_id === id)); add('kit_pieces', S.kitPieces.filter(p => p.kit_id === id));
     L.push({t:'reservations', col:'kit_id', ids:S.reservations.filter(r => r.kit_id === id).map(r => r.id), val:id}, {t:'bulk_reservations', col:'kit_id', ids:S.bulkRes.filter(b => b.kit_id === id).map(b => b.id), val:id});
   } else if (kind === 'project'){
-    add('projects', [projById(id)]); add('reservations', S.reservations.filter(r => r.project_id === id)); add('bulk_reservations', S.bulkRes.filter(b => b.project_id === id)); add('crew_assignments', S.assigns.filter(a => a.project_id === id));
+    add('projects', [projById(id)]); add('reservations', S.reservations.filter(r => r.project_id === id)); add('bulk_reservations', S.bulkRes.filter(b => b.project_id === id)); add('crew_assignments', S.assigns.filter(a => a.project_id === id)); add('quote_versions', S.quoteVersions.filter(v => v.project_id === id));
   } else if (kind === 'client'){
     add('clients', [clientById(id)]); L.push({t:'projects', col:'client_id', ids:S.projects.filter(p => p.client_id === id).map(p => p.id), val:id});
   } else if (kind === 'technician'){
@@ -3658,7 +3699,7 @@ async function emptyTrash(){ if (!(S.trash || []).length || !confirm(`¿Vaciar l
 
 /* ============ HISTORIAL DE CAMBIOS ============ */
 const audTable = t => ({equipment_models:'Modelo', units:'Unidad', kits:'Kit', projects:W.S, clients:'Cliente', technicians:'Técnico', categories:'Categoría'})[t] || t;
-const AUD_FIELD = {name:'nombre', brand:'marca', category_id:'categoría', day_rate:'tarifa', weight_kg:'peso', power_w:'potencia', width_cm:'ancho', height_cm:'alto', depth_cm:'fondo', notes:'notas', serial_number:'nº de serie', status:'estado', missing_note:'qué falta', purchase_date:'fecha de compra', next_service:'próxima revisión', lamp_hours:'horas de lámpara', lamp_life_hours:'vida de la lámpara', is_bulk:'por cantidad', bulk_stock:'stock', bulk_repair:'en reparación', color:'color', photo_url:'foto', starts_at:'inicio', ends_at:'fin', client:'cliente', client_id:'cliente', phone:'teléfono', email:'email', label_printed_at:'etiqueta impresa', sort_order:'orden', rider_notes:'notas del rider', payment_status:'cobro', invoice_no:'nº de factura', due_date:'vencimiento', tags:'palabras clave', dmx_modes:'modos DMX', owner:'propietario', rent_cost:'coste de alquiler', consumable:'consumible', min_stock:'stock mínimo', manufacturer_serial:'nº de serie del fabricante', retired_reason:'motivo de baja', retired_value:'valor de baja', retired_at:'fecha de baja'};
+const AUD_FIELD = {name:'nombre', brand:'marca', category_id:'categoría', day_rate:'tarifa', weight_kg:'peso', power_w:'potencia', width_cm:'ancho', height_cm:'alto', depth_cm:'fondo', notes:'notas', serial_number:'nº de serie', status:'estado', missing_note:'qué falta', purchase_date:'fecha de compra', next_service:'próxima revisión', lamp_hours:'horas de lámpara', lamp_life_hours:'vida de la lámpara', is_bulk:'por cantidad', bulk_stock:'stock', bulk_repair:'en reparación', color:'color', photo_url:'foto', starts_at:'inicio', ends_at:'fin', client:'cliente', client_id:'cliente', phone:'teléfono', email:'email', label_printed_at:'etiqueta impresa', sort_order:'orden', rider_notes:'notas del rider', payment_status:'cobro', invoice_no:'nº de factura', due_date:'vencimiento', closed_at:'fecha de cierre', closing_notes:'notas de cierre', use_duration:'tarifa por duración', purchase_price:'precio de compra', tags:'palabras clave', dmx_modes:'modos DMX', owner:'propietario', rent_cost:'coste de alquiler', consumable:'consumible', min_stock:'stock mínimo', manufacturer_serial:'nº de serie del fabricante', retired_reason:'motivo de baja', retired_value:'valor de baja', retired_at:'fecha de baja'};
 const AUD_HIDE = new Set(['id', 'created_at', 'updated_at', 'calendar_token']);
 function audValue(k, v){
   if (v == null || v === '') return '(vacío)';
@@ -3799,6 +3840,7 @@ function openSettings(){
     <select id="st-show" onchange="stShowChanged()">${SHOW_TERMS.map(t => `<option value="${t.join('|')}" ${t.join('|') === cur ? 'selected' : ''}>${capFirst(t[0])} / ${capFirst(t[1])}</option>`).join('')}<option value="custom" ${isPre ? '' : 'selected'}>Otro…</option></select>
     <div id="st-custom" ${isPre ? 'hidden' : ''} class="two"><div><label for="st-s">En singular</label><input id="st-s" value="${esc(W.s)}"></div><div><label for="st-p">En plural</label><input id="st-p" value="${esc(W.p)}"></div></div>
     <div class="sub">Cambia las pestañas, los títulos y los botones. Los nombres de lo que ya has creado no cambian. Usa palabras masculinas (bolo, evento, proyecto…).</div>
+    <label class="chkrow"><input type="checkbox" id="st-gest" ${gesturesOn() ? 'checked' : ''} onchange="setGestures(this.checked)"><span>Gestos: deslizar desde el borde izquierdo para volver y tirar hacia abajo para actualizar</span></label>
     <button class="btn block" onclick="closeModal();openWarehouse()">Activar modo almacén…</button>
     <button class="btn primary block" onclick="saveSettingsApp()">Guardar</button><button class="btn block" onclick="closeModal()">Cerrar</button>`);
 }
@@ -3816,16 +3858,17 @@ function moreView(){
   if (whMode()) return whMoreView();
   const l = lastBackup(), al = maintAlerts();
   return bar('Más')
+    + `<div class="actions"><button class="btn" onclick="openSearch()">Buscar en todo</button><button class="btn" onclick="openNotes()">Notas y recordatorios${S.notes.some(n => !n.done) ? ' (' + S.notes.filter(n => !n.done).length + ')' : ''}</button></div>`
     + incidenceCard()
     + (al.length ? `<div class="group">Avisos</div><div class="actions"><button class="btn" style="color:var(--warn)" onclick="openAlerts()">Mantenimiento: ${al.length} aviso${al.length === 1 ? '' : 's'}</button>${repairCount() ? repairBtn() : ''}</div>` : (repairCount() ? `<div class="group">Reparaciones</div><div class="actions">${repairBtn()}</div>` : ''))
-    + `<div class="group">${esc(W.P)}, clientes y cobros</div><div class="actions"><button class="btn" onclick="openView('clients','')">Clientes (${S.clients.length})</button><button class="btn" onclick="openPayments()">${esc(payHeadline())}</button><button class="btn" onclick="openBusiness()">Datos del negocio y presupuesto</button></div>`
+    + `<div class="group">${esc(W.P)}, clientes y cobros</div><div class="actions"><button class="btn" onclick="openView('clients','')">Clientes (${S.clients.length})</button><button class="btn" onclick="go('techs')">Técnicos (${S.techs.length})</button><button class="btn" onclick="openPayments()">${esc(payHeadline())}</button><button class="btn" onclick="openBusiness()">Datos del negocio y presupuesto</button><button class="btn" onclick="openDurationPricing()">Tarifa por duración</button><button class="btn" onclick="openContractEditor()">Contrato (plantilla)</button></div>`
     + pendingBtn()
     + `<div class="group">Inventario</div><div class="actions"><button class="btn" onclick="go('material');openView('labels','')">Gestor de etiquetas</button><button class="btn" onclick="openImport()">Importar desde Excel o CSV</button><button class="btn" onclick="openLegend()">Leyenda de colores</button></div>
     <div class="group">Datos y copias</div>
     <div class="info"><div>Última copia en este dispositivo: <b>${l ? esc(fmtFull(l)) : 'nunca'}</b></div><div class="sub" style="margin-top:6px">Descarga tus datos por si algún día pierdes el acceso a Supabase. Guarda el archivo en tu ordenador o en tu nube.</div></div>
     <div class="actions"><button class="btn primary" onclick="exportExcel()">Descargar Excel</button><button class="btn" onclick="exportJson()">Copia completa (.json)</button><button class="btn" onclick="openRestore()">Restaurar copia</button></div>
     <div class="actions"><button class="btn" onclick="openTrash()">Papelera</button><button class="btn" onclick="openHistory()">Historial de cambios</button></div>
-    <div class="group">Sistema</div><div class="actions"><button class="btn" onclick="openSystem()">Estado del sistema</button><button class="btn" onclick="openSettings()">Ajustes de la app</button><button class="btn" onclick="openHelp()">Ayuda y diagnóstico</button></div>
+    <div class="group">Sistema</div><div class="actions"><button class="btn" onclick="openSystem()">Estado del sistema</button><button class="btn" onclick="openSettings()">Ajustes de la app</button><button class="btn" onclick="openHelp()">Ayuda y diagnóstico</button><button class="btn" onclick="openTour(0)">Paseo por la app</button><button class="btn" onclick="openShortcuts()">Atajos de teclado</button></div>
     <div class="group">Cuenta</div><div class="actions"><button class="btn" onclick="logout()">Cerrar sesión</button></div>
     <div class="sub" style="margin:28px 16px 0;text-align:center">RentApp · ${APP_VERSION}</div>`;
 }
@@ -3859,7 +3902,7 @@ function openUnitInfo(u){
     <div class="info" style="margin:8px 0 0"><b${kind ? ` style="color:var(--${kind})"` : ''}>${esc(dónde)}</b>
       ${u.status === 'ok' && u.missing_note ? `<div class="sub" style="color:var(--warn);font-weight:600">Incompleto: falta ${esc(u.missing_note)}</div>` : ''}
       ${u.status === 'repair' && l && l.description ? `<div class="sub">${esc(l.description)}</div>` : ''}
-      ${kit ? `<div class="sub">Va en el kit «${esc(kit.name)}»</div>` : ''}</div>
+      ${kit ? `<div class="sub">Va en el kit «${esc(kit.name)}»</div>` : ''}${modelAccs(u.model_id).length ? `<div class="sub">Accesorios: ${esc(modelAccs(u.model_id).map(accText).join(', '))}</div>` : ''}</div>
     ${sit.next.length > (sit.out ? 0 : 1) || (sit.out && sit.next.length) ? `<div class="group" style="margin:14px 0 6px">Próximas reservas</div><div class="list" style="margin:0">${sit.next.slice(sit.out ? 0 : 1, (sit.out ? 0 : 1) + 4).map(x => `<div class="row urow"><div class="grow"><b>${esc(x.p.name)}</b><div class="sub">${esc(fmtD(x.p.starts_at))} → ${esc(fmtD(x.p.ends_at))}</div></div></div>`).join('')}</div>` : ''}
     ${mt.length ? `<div class="sub" style="margin-top:10px">${esc(mt.join(' · '))}</div>` : ''}
     <div class="group" style="margin:14px 0 6px">Últimos movimientos</div><div class="list" style="margin:0" id="info-ev"><div class="row urow"><span class="sub">Cargando…</span></div></div>
@@ -3881,9 +3924,9 @@ function openKitInfo(k){
   const out = rs.length || bs.length, p = out ? projById((rs[0] || bs[0]).project_id) : null;
   const next = S.reservations.filter(r => r.kit_id === k.id && r.state === 'planned').map(r => projById(r.project_id)).filter(Boolean).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))[0];
   openModal(`<h2>${esc(k.name)}</h2><div class="sub">Kit · ${esc(k.code)}</div>
-    <div class="info" style="margin:8px 0 0"><b${out ? ' style="color:var(--warn)"' : ''}>${out ? `Fuera del almacén${p ? ' · ' + esc(p.name) : ''}` : next ? `En el almacén, reservado para ${esc(next.name)} (${esc(fmtD(next.starts_at))})` : 'En el almacén, libre'}</b></div>
+    <div class="info" style="margin:8px 0 0"><b${out ? ' style="color:var(--warn)"' : ''}>${out ? `Fuera del almacén${p ? ' · ' + esc(p.name) : ''}` : next ? `En el almacén, reservado para ${esc(next.name)} (${esc(fmtD(next.starts_at))})` : 'En el almacén, libre'}</b>${k.missing_note ? `<div class="sub" style="color:var(--warn);font-weight:600">Incompleto: falta ${esc(k.missing_note)}</div>` : ''}</div>
     <div class="group" style="margin:14px 0 6px">Contenido (${us.length} equipo${us.length === 1 ? '' : 's'})</div>
-    <div class="list" style="margin:0">${us.map(u => `<div class="row urow">${unitTile(u)}<div class="grow"><b>${esc(unitModelName(u))}</b><div class="sub">${unitSub(u)}${u.missing_note ? ' · <span style="color:var(--warn)">incompleto: falta ' + esc(u.missing_note) + '</span>' : ''}</div></div></div>`).join('') || '<div class="row urow"><span class="sub">Sin equipos con número.</span></div>'}</div>
+    <div class="list" style="margin:0">${us.map(u => `<div class="row urow">${unitTile(u)}<div class="grow"><b>${esc(unitModelName(u))}</b><div class="sub">${unitSub(u)}${u.missing_note ? ' · <span style="color:var(--warn)">incompleto: falta ' + esc(u.missing_note) + '</span>' : ''}</div></div></div>`).join('') || '<div class="row urow"><span class="sub">Sin equipos con número.</span></div>'}${kitPiecesOf(k.id).map(p => `<div class="row urow"><div class="grow"><b>${esc(accText(p))}</b><div class="sub">Pieza del kit</div></div></div>`).join('')}</div>
     <div class="actions" style="margin:14px 0 0">${whMode() ? '' : `<button class="btn" onclick="closeModal();go('material');setMat('kits');openView('kit','${k.id}')">Abrir kit</button>`}<button class="btn" onclick="closeModal()">Cerrar</button></div>`);
 }
 
@@ -3992,7 +4035,10 @@ function modelExtras(id, bulk){
   const mn = parseInt($('#f-min').value); set('min_stock', bulk && mn >= 0 ? mn : null, m.min_stock != null ? Number(m.min_stock) : null);
   return ex;
 }
-function unitExtras(u){ const v = $('#u-mfr').value.trim() || null; return v !== (u.manufacturer_serial || null) ? {manufacturer_serial:v} : {}; }
+function unitExtras(u){
+  const ex = {}, v = $('#u-mfr').value.trim() || null; if (v !== (u.manufacturer_serial || null)) ex.manufacturer_serial = v;
+  const pp = parseFloat($('#u-price').value), pv = isNaN(pp) ? null : pp; if (pv !== (u.purchase_price != null ? Number(u.purchase_price) : null)) ex.purchase_price = pv; return ex;
+}
 const lowStock = m => !!(m.is_bulk && m.consumable && m.min_stock != null && Number(m.bulk_stock) <= Number(m.min_stock));
 const dmxLine = m => (m.dmx_modes && m.dmx_modes.length) ? `<div style="margin-top:6px">DMX: ${esc(m.dmx_modes.map(x => `${x.name} ${x.channels} ch`).join(' · '))}${m.power_w ? ` · ≈ ${(m.power_w / 230).toFixed(1)} A a 230 V` : ''}</div>` : '';
 const modelExtraLines = m => ((m.tags || []).length ? `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">${m.tags.map(t => `<span class="badge">${esc(t)}</span>`).join('')}</div>` : '')
@@ -4064,9 +4110,10 @@ function copyDmxPatch(pid){
   navigator.clipboard.writeText(t).then(() => toast('Patch copiado'), () => toast('No se pudo copiar', true));
 }
 // ---- filtros: color, palabras clave, propietario; filtros guardados ----
-const anyFilter = () => !!(S.colorFilter.size || S.tagFilter.size || S.ownerFilter);
+const anyFilter = () => !!(S.colorFilter.size || S.tagFilter.size || S.ownerFilter || S.favOnly);
 function passFilters(m){
   if (S.matOrder || S.mass.on) return true;
+  if (S.favOnly && !isFav('model', m.id)) return false;
   if (S.colorFilter.size && !S.colorFilter.has(String(m.color || '').toLowerCase())) return false;
   const tg = (m.tags || []).map(norm); for (const t of S.tagFilter) if (!tg.includes(t)) return false;
   if (S.ownerFilter === 'own' && m.owner) return false; if (S.ownerFilter === 'third' && !m.owner) return false;
@@ -4075,21 +4122,21 @@ function passFilters(m){
 const savedFilters = () => ((S.settings && S.settings.app_config) || {}).savedFilters || [];
 function toggleTag(i){ const t = allTags()[i]; if (!t) return; if (S.tagFilter.has(t[0])) S.tagFilter.delete(t[0]); else S.tagFilter.add(t[0]); render(); }
 function setOwnerFilter(v){ S.ownerFilter = S.ownerFilter === v ? '' : v; render(); }
-function clearAllFilters(){ S.colorFilter = new Set(); S.tagFilter = new Set(); S.ownerFilter = ''; render(); }
+function clearAllFilters(){ S.colorFilter = new Set(); S.tagFilter = new Set(); S.ownerFilter = ''; S.favOnly = false; render(); }
 const sameSet = (a, b) => a.size === b.size && [...a].every(x => b.has(x));
 const filterIsSaved = f => sameSet(new Set(f.colors || []), S.colorFilter) && sameSet(new Set(f.tags || []), S.tagFilter) && (f.owner || '') === S.ownerFilter;
 function filterBar(groups){
   if (!anyFilter() || S.matOrder || S.mass.on) return '';
   const names = [...S.colorFilter].map(k => { const e = legendList().find(x => String(x.hex).toLowerCase() === k); return e ? entryText(e) : colorName(k); }), tags = [...S.tagFilter].map(k => (allTags().find(t => t[0] === k) || [k, k])[1]);
   const own = S.ownerFilter === 'own' ? 'Propio' : S.ownerFilter === 'third' ? 'De terceros' : '', n = Object.values(groups).reduce((s, g) => s + g.length, 0);
-  return `<div class="info" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><div class="grow"><b>Filtrando</b><div class="sub">${esc([...names, ...tags, own].filter(Boolean).join(' · '))} · ${n} modelo${n === 1 ? '' : 's'}</div></div>${savedFilters().some(filterIsSaved) ? '' : '<button class="btn small" onclick="saveFilterAsk()">Guardar filtro</button>'}<button class="btn small" onclick="clearAllFilters()">Quitar filtros</button></div>`;
+  return `<div class="info" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><div class="grow"><b>Filtrando</b><div class="sub">${esc([...names, ...tags, own, S.favOnly ? 'Favoritos' : ''].filter(Boolean).join(' · '))} · ${n} modelo${n === 1 ? '' : 's'}</div></div>${savedFilters().some(filterIsSaved) ? '' : '<button class="btn small" onclick="saveFilterAsk()">Guardar filtro</button>'}<button class="btn small" onclick="clearAllFilters()">Quitar filtros</button></div>`;
 }
 function tagBar(){
   if (S.matOrder || S.mass.on) return '';
-  const tags = allTags(), thirds = S.models.some(m => m.owner), sv = savedFilters(); if (!tags.length && !thirds && !sv.length) return '';
+  const tags = allTags(), thirds = S.models.some(m => m.owner), sv = savedFilters(); if (!tags.length && !thirds && !sv.length && !favCount()) return '';
   const chip = (on, label, fn) => `<button type="button" class="chip ${on ? 'sel' : ''}" aria-pressed="${on}" onclick="${fn}">${on ? '✓ ' : ''}${esc(label)}</button>`;
   return `<div class="pad">${sv.length ? `<div class="sub" style="font-weight:700;margin:6px 2px 0">Mis filtros · <a href="#" onclick="openSavedFilters();return false" style="color:var(--accent)">gestionar</a></div><div class="legend compact">${sv.map((f, i) => chip(filterIsSaved(f), f.name, `applySavedFilter(${i})`)).join('')}</div>` : ''}
-    ${tags.length || thirds ? `<div class="sub" style="font-weight:700;margin:6px 2px 0">Palabras clave · toca para filtrar</div><div class="legend compact">${tags.map(([k, t], i) => chip(S.tagFilter.has(k), t, `toggleTag(${i})`)).join('')}${thirds ? chip(S.ownerFilter === 'own', 'Propio', "setOwnerFilter('own')") + chip(S.ownerFilter === 'third', 'De terceros', "setOwnerFilter('third')") : ''}</div>` : ''}</div>`;
+    ${tags.length || thirds || favCount() ? `<div class="sub" style="font-weight:700;margin:6px 2px 0">Palabras clave · toca para filtrar</div><div class="legend compact">${favCount() ? chip(S.favOnly, '★ Favoritos', 'toggleFavOnly()') : ''}${tags.map(([k, t], i) => chip(S.tagFilter.has(k), t, `toggleTag(${i})`)).join('')}${thirds ? chip(S.ownerFilter === 'own', 'Propio', "setOwnerFilter('own')") + chip(S.ownerFilter === 'third', 'De terceros', "setOwnerFilter('third')") : ''}</div>` : ''}</div>`;
 }
 async function persistConfig(){ try { const r = await sb.from('settings').upsert({id:1, app_config:S.settings.app_config}); if (r.error) throw r.error; return true; } catch (e) { toast(errMsg(e), true, true); return false; } }
 async function saveFilterAsk(){
@@ -4244,6 +4291,682 @@ function matRowCtl(m, idx, total){
   return {click:`openView('model','${m.id}')`, lead:'', trail:''};
 }
 const rowExtraBadges = m => (m.owner ? `<span class="badge">De terceros: ${esc(m.owner)}</span>` : '') + (lowStock(m) ? '<span class="badge bad">Bajo mínimo</span>' : '');
+
+/* ============ LISTAS DE COMPROBACIÓN V1.06: accesorios, piezas del kit, etiqueta con contenido ============ */
+const accText = a => (a.qty > 1 ? a.qty + '× ' : '') + a.name;
+const modelAccs = mid => S.accs.filter(a => a.model_id === mid).sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')) || a.name.localeCompare(b.name, 'es'));
+const kitPiecesOf = kid => S.kitPieces.filter(p => p.kit_id === kid).sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')) || a.name.localeCompare(b.name, 'es'));
+function accsHtml(m){
+  const as = modelAccs(m.id);
+  return `<div class="group">Accesorios que lleva${as.length ? ` (${as.length})` : ''}</div>${as.length ? `<div class="list">${as.map(a => `<div class="row urow"><div class="grow"><b>${esc(accText(a))}</b></div><button class="btn small" aria-label="Quitar accesorio" onclick="delAcc('${a.id}')">✕</button></div>`).join('')}</div>` : `<div class="sub" style="padding:0 16px">Al devolver cada equipo se te preguntará si han vuelto.</div>`}
+    <div class="actions"><button class="btn small" onclick="openAcc('${m.id}')">+ Añadir accesorio</button></div>`;
+}
+function openAcc(mid){
+  openModal(`<h2>Añadir accesorio</h2><div class="sub">${esc(modelById(mid).name)}</div><label for="ac-name">Nombre</label><input id="ac-name" list="acc-list" autocomplete="off" placeholder="Ej. garra, cable de alimentación, funda"><datalist id="acc-list">${[...new Set(S.accs.map(a => a.name))].map(n => `<option value="${esc(n)}">`).join('')}</datalist>
+    <label for="ac-qty">Cantidad por equipo</label><input id="ac-qty" type="number" min="1" value="1" inputmode="numeric"><button class="btn primary block" style="margin-top:10px" onclick="addAcc('${mid}')">Añadir</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
+}
+async function addAcc(mid){
+  const name = $('#ac-name').value.trim(), qty = Math.max(1, parseInt($('#ac-qty').value) || 1); if (!name) return toast('Escribe el nombre del accesorio', true);
+  if (S.accs.some(a => a.model_id === mid && norm(a.name) === norm(name))) return toast('Ese accesorio ya está en la lista', true);
+  await db(sb.from('model_accessories').insert({model_id:mid, name, qty})); closeModal(); await loadAll(); toast('Accesorio añadido');
+}
+async function delAcc(id){ await db(sb.from('model_accessories').delete().eq('id', id)); await loadAll(); }
+// ---- piezas sueltas de un kit y aviso de kit incompleto ----
+function kitContentLines(k){
+  const by = new Map(); kitUnits(k).forEach(u => { const n = (modelById(u.model_id) || {}).name || '?'; by.set(n, (by.get(n) || 0) + 1); });
+  const lines = [...by.entries()].sort((a, b) => a[0].localeCompare(b[0], 'es')).map(([n, c]) => `${c}× ${n}`);
+  kitBulk(k).forEach(({model, qty}) => lines.push(`${qty}× ${model.name}`));
+  kitPiecesOf(k.id).forEach(p => lines.push(`${p.qty}× ${p.name}`));
+  return lines;
+}
+const kitContentSummary = k => kitContentLines(k).join(' · ');
+const kitMissingHtml = k => k.missing_note ? `<div class="info"><b style="color:var(--warn)">Kit incompleto: falta ${esc(k.missing_note)}</b><div style="margin-top:6px"><button class="btn small" onclick="kitComplete('${k.id}')">Marcar completo</button></div></div>` : '';
+async function kitComplete(id){ await db(sb.from('kits').update({missing_note:null}).eq('id', id)); await loadAll(); toast('Kit completo'); }
+function kitPiecesHtml(k){
+  const ps = kitPiecesOf(k.id);
+  return `<div class="group">Otras piezas (${ps.length})</div>${ps.length ? `<div class="list">${ps.map(p => `<div class="row urow"><div class="grow"><b>${esc(accText(p))}</b></div><button class="btn small" aria-label="Quitar pieza" onclick="delKitPiece('${p.id}')">✕</button></div>`).join('')}</div>` : `<div class="empty" style="margin:20px 24px">Sin piezas sueltas (fuente, cable de corriente…). Al devolver el kit se te preguntará si han vuelto.</div>`}
+    <div class="actions"><button class="btn small" onclick="openKitPiece('${k.id}')">+ Añadir pieza</button></div>`;
+}
+function openKitPiece(kid){
+  openModal(`<h2>Añadir pieza al kit</h2><div class="sub">${esc(kitById(kid).name)}</div><label for="kp-name">Nombre</label><input id="kp-name" list="kp-list" autocomplete="off" placeholder="Ej. fuente de alimentación"><datalist id="kp-list">${[...new Set(S.kitPieces.map(p => p.name))].map(n => `<option value="${esc(n)}">`).join('')}</datalist>
+    <label for="kp-qty">Cantidad</label><input id="kp-qty" type="number" min="1" value="1" inputmode="numeric"><button class="btn primary block" style="margin-top:10px" onclick="addKitPiece('${kid}')">Añadir</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
+}
+async function addKitPiece(kid){
+  const name = $('#kp-name').value.trim(), qty = Math.max(1, parseInt($('#kp-qty').value) || 1); if (!name) return toast('Escribe el nombre de la pieza', true);
+  if (S.kitPieces.some(p => p.kit_id === kid && norm(p.name) === norm(name))) return toast('Esa pieza ya está en el kit', true);
+  await db(sb.from('kit_pieces').insert({kit_id:kid, name, qty})); closeModal(); await loadAll(); toast('Pieza añadida');
+}
+async function delKitPiece(id){ await db(sb.from('kit_pieces').delete().eq('id', id)); await loadAll(); }
+const kitCheckFields = c => c ? {kcheck:true, kmissing:c.missing.join(', ')} : {};
+// ---- hoja de devolución: accesorios y piezas ----
+let condKits = [];
+function accBlock(i){
+  const a = (condState[i] || {}).acc || []; if (!a.length) return '';
+  return `<div class="accs" id="ac-${i}"><div class="sub" style="margin-top:8px;font-weight:700">Accesorios que deben volver</div>${a.map((x, j) => `<label class="chkrow"><input type="checkbox" checked onchange="accToggle(${i},${j},this.checked)"><span>${esc(accText(x))}</span></label>`).join('')}</div>`;
+}
+function accToggle(i, j, on){
+  const st = condState[i]; st.acc[j].ok = on;
+  const miss = st.acc.filter(a => !a.ok).map(accText);
+  if (miss.length){
+    if (st.cond === 'ok' || st.autoNote){ if (st.cond === 'ok') setCond(i, 'incomplete'); st.note = miss.join(', '); $('#cnt-' + i).value = st.note; st.autoNote = st.note; }
+  } else if (st.autoNote){ st.autoNote = null; setCond(i, 'ok'); st.note = ''; $('#cnt-' + i).value = ''; }
+}
+function kitBlocks(){
+  return condKits.map((k, ki) => { const kit = kitById(k.kit_id) || {};
+    return `<div class="info" style="margin:10px 0 0" id="kp-${ki}"><b>Kit «${esc(kit.name || '')}»</b>${kit.missing_note ? `<div class="sub bad">Salió incompleto: ${esc(kit.missing_note)}</div>` : ''}<div class="sub" style="margin-top:6px;font-weight:700">Piezas que deben volver</div>${k.pieces.map((p, pj) => `<label class="chkrow"><input type="checkbox" checked onchange="kpToggle(${ki},${pj},this.checked)"><span>${esc(accText(p))}</span></label>`).join('')}</div>`; }).join('');
+}
+function kpToggle(ki, pj, on){ condKits[ki].pieces[pj].ok = on; }
+// ---- lista de contenido para pegar en la tapa del kit: el tamaño de letra se ajusta solo para que quepa ----
+function kitListHtml(kt, lay){
+  const L = kitContentLines(kt), Wd = lay === 'full' ? 58.9 : 34, Ht = lay === 'full' ? 22 : 15, tfs = lay === 'full' ? 8.5 : 6.5;
+  const avail = Ht - tfs * 1.15 * 0.3528 - 0.8, long = Math.max(0, ...L.map(x => x.length));
+  let pick = null, shown = L.length ? L : ['Sin contenido definido'];
+  outer: for (const fs of [8, 7.5, 7, 6.5, 6, 5.5, 5, 4.5]) for (const cols of [1, 2, 3]){
+    const lh = fs * 1.2 * 0.3528, rows = Math.floor(avail / lh), cw = (Wd - (cols - 1) * 1.5) / cols, ch = Math.floor(cw / (fs * 0.52 * 0.3528));
+    if (rows >= 1 && rows * cols >= shown.length && long <= ch){ pick = {fs, cols, rows, lh}; break outer; }
+  }
+  if (!pick){
+    const fs = 4.5, cols = 3, lh = fs * 1.2 * 0.3528, rows = Math.max(1, Math.floor(avail / lh)); pick = {fs, cols, rows, lh};
+    if (shown.length > rows * cols) shown = shown.slice(0, rows * cols - 1).concat('… y ' + (shown.length - rows * cols + 1) + ' más');
+  }
+  return `<b>${esc(kt.name)}</b><div class="klist" style="font-size:${pick.fs}pt;column-count:${pick.cols};column-gap:1.5mm;height:${(pick.rows * pick.lh).toFixed(2)}mm">${shown.map(x => `<div class="kl">${esc(x)}</div>`).join('')}</div>`;
+}
+function printKitList(id){ openPrintLabels([{kind:'kitlist', id}], 'Lista de contenido del kit'); }
+
+/* ============ SHOWS Y DINERO V1.07 ============ */
+S.quoteVersions = []; S.templates = []; S.tplItems = []; S.showStatus = ''; S.pendingProj = null;
+// ---- tarifa por duración (55) ----
+const DUR_DEFAULT = [{days:1, factor:1}, {days:2, factor:1.5}, {days:3, factor:2}, {days:7, factor:3.5}, {days:14, factor:5.5}, {days:30, factor:9}];
+const appCfg = () => (S.settings && S.settings.app_config) || {};
+function durCfg(){
+  const c = appCfg(), t = (Array.isArray(c.durTable) && c.durTable.length ? c.durTable : DUR_DEFAULT).map(x => ({days:Number(x.days), factor:Number(x.factor)})).filter(x => x.days >= 1 && x.factor > 0).sort((a, b) => a.days - b.days);
+  return {enabled:!!c.durEnabled, table:t.length ? t : DUR_DEFAULT};
+}
+function durFactor(days, table){
+  const t = table || durCfg().table; days = Math.max(1, Number(days) || 1);
+  if (days <= t[0].days) return Math.round(t[0].factor * days / t[0].days * 100) / 100;
+  for (let i = 1; i < t.length; i++) if (days <= t[i].days){ const a = t[i - 1], b = t[i]; return Math.round((a.factor + (b.factor - a.factor) * (days - a.days) / (b.days - a.days)) * 100) / 100; }
+  const a = t[t.length - 2] || {days:0, factor:0}, b = t[t.length - 1], slope = t.length > 1 ? (b.factor - a.factor) / (b.days - a.days) : b.factor / b.days;
+  return Math.round((b.factor + slope * (days - b.days)) * 100) / 100;
+}
+const jorTxt = n => fmtNum(n, 2) + ' jornada' + (Number(n) === 1 ? '' : 's');
+const useDur = p => (p && p.use_duration != null) ? !!p.use_duration : durCfg().enabled;
+const billedDays = (p, days, useD) => (useD != null ? useD : useDur(p)) ? durFactor(days) : days;
+function openDurationPricing(){
+  const c = durCfg();
+  openModal(`<h2>Tarifa por duración</h2><div class="sub">En vez de cobrar «días × tarifa», cada duración equivale a un número de jornadas. Ejemplo: 3 días = 2 jornadas. Es una propuesta de partida: ajústala a tus precios y a los de tu competencia.</div>
+    <label class="chkrow"><input type="checkbox" id="du-on" ${c.enabled ? 'checked' : ''} onchange="durPreview()">Usarla en los presupuestos (cada ${esc(W.s)} puede cambiarlo en su presupuesto)</label>
+    <div id="du-rows">${c.table.map((x, i) => durRow(x, i)).join('')}</div>
+    <div class="actions" style="margin:8px 0"><button class="btn small" onclick="durAdd()">+ Añadir tramo</button><button class="btn small" onclick="durReset()">Restaurar propuesta</button></div>
+    <div id="du-prev" class="info"></div>
+    <button class="btn primary block" style="margin-top:10px" onclick="saveDuration()">Guardar</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
+  durPreview();
+}
+const durRow = (x, i) => `<div class="two" style="align-items:end"><div><label>Desde (días)</label><input class="du-d" type="number" min="1" value="${x.days}" inputmode="numeric" oninput="durPreview()"></div><div><label>Jornadas</label><div style="display:flex;gap:6px"><input class="du-f" type="number" min="0.1" step="0.05" value="${x.factor}" inputmode="decimal" oninput="durPreview()"><button class="btn small" aria-label="Quitar tramo" onclick="this.closest('.two').remove();durPreview()">✕</button></div></div></div>`;
+function durRead(){ return [...document.querySelectorAll('#du-rows .two')].map(r => ({days:parseInt(r.querySelector('.du-d').value), factor:parseFloat(r.querySelector('.du-f').value)})).filter(x => x.days >= 1 && x.factor > 0).sort((a, b) => a.days - b.days); }
+function durAdd(){ const t = durRead(), last = t[t.length - 1] || {days:1, factor:1}; $('#du-rows').insertAdjacentHTML('beforeend', durRow({days:last.days + 7, factor:Math.round((last.factor + 1.5) * 100) / 100}, t.length)); durPreview(); }
+function durReset(){ $('#du-rows').innerHTML = DUR_DEFAULT.map((x, i) => durRow(x, i)).join(''); durPreview(); }
+function durPreview(){ const t = durRead(), b = $('#du-prev'); if (!b) return; b.innerHTML = t.length ? '<b>Resultado</b><div class="sub">' + [1, 2, 3, 5, 7, 10, 14, 21, 30].map(d => `${d} día${d === 1 ? '' : 's'} = ${jorTxt(durFactor(d, t))}`).join(' · ') + '</div>' : '<span class="sub">Añade al menos un tramo.</span>'; }
+async function saveDuration(){
+  const t = durRead(); if (!t.length) return toast('Añade al menos un tramo', true);
+  const c = Object.assign({}, appCfg()); c.durEnabled = $('#du-on').checked; c.durTable = t; S.settings.app_config = c;
+  if (await persistConfig()){ closeModal(); toast('Tarifa por duración guardada'); render(); }
+}
+// ---- estados del show (36) y comprobación al confirmar (38) ----
+function confirmChecks(pid){
+  const p = projById(pid), out = [], rs = S.reservations.filter(r => r.project_id === pid && r.state !== 'returned'), bs = S.bulkRes.filter(b => b.project_id === pid && b.state !== 'returned');
+  if (!rs.length && !bs.length) out.push({lvl:'warn', text:'No tiene material reservado.'});
+  if (!p.client_id && !p.client) out.push({lvl:'warn', text:'No tiene cliente.'});
+  rs.forEach(r => { const u = unitById(r.unit_id); if (!u) return;
+    if (u.status !== 'ok') out.push({lvl:'bad', text:`${unitLabel(u)} está ${UNIT_STATUS[u.status].toLowerCase()}.`});
+    else if (u.missing_note) out.push({lvl:'warn', text:`${unitLabel(u)} está incompleto: falta ${u.missing_note}.`});
+    else if (u.next_service && new Date(u.next_service + 'T12:00:00') < new Date(p.starts_at)) out.push({lvl:'warn', text:`${unitLabel(u)} tiene la revisión vencida (${fmtDay(u.next_service)}).`});
+    const m = modelById(u.model_id); if (m && m.lamp_life_hours > 0 && Number(u.lamp_hours) >= 0.9 * m.lamp_life_hours) out.push({lvl:'warn', text:`${unitLabel(u)}: lámpara al ${Math.round(100 * Number(u.lamp_hours) / m.lamp_life_hours)}%.`}); });
+  [...new Set(bs.map(b => b.model_id))].forEach(mid => { const m = modelById(mid); if (!m) return; const short = bulkUsed(p, mid) - (m.bulk_stock - bulkRepair(m)); if (short > 0) out.push({lvl:'bad', text:`${m.name}: hay reservados más de los que tienes (faltan ${short}).`}); });
+  [...new Set([...rs.map(r => r.kit_id), ...bs.map(b => b.kit_id)].filter(Boolean))].forEach(kid => { const k = kitById(kid); if (k && k.missing_note) out.push({lvl:'warn', text:`Kit «${k.name}» incompleto: falta ${k.missing_note}.`}); });
+  const noRate = [...projectQty(p).keys()].map(modelById).filter(m => m && !(Number(m.day_rate) > 0)).map(m => m.name);
+  if (noRate.length) out.push({lvl:'warn', text:`Sin tarifa: ${noRate.join(', ')}.`});
+  return out;
+}
+function showConfirmChecks(pid, iss){
+  const bad = iss.filter(i => i.lvl === 'bad').length;
+  openModal(`<h2>Antes de confirmar</h2><div class="sub">${esc(projById(pid).name)}: ${bad ? `${bad} problema${bad === 1 ? '' : 's'} serio${bad === 1 ? '' : 's'}` : 'hay avisos'}.</div>
+    <div class="list" style="margin:12px 0">${iss.map(i => `<div class="row urow"><div class="grow"><b style="color:var(--${i.lvl === 'bad' ? 'bad' : 'warn'})">${i.lvl === 'bad' ? 'Problema' : 'Aviso'}</b><div>${esc(i.text)}</div></div></div>`).join('')}</div>
+    <button class="btn primary block" onclick="proceedConfirm('${pid}')">Confirmar igualmente</button><button class="btn block" onclick="S.pendingProj=null;closeModal()">Volver y arreglarlo</button>`);
+}
+async function proceedConfirm(pid){
+  const pp = S.pendingProj; S.pendingProj = null;
+  if (pp && pp.id === pid) return commitProject(pp.id, pp.payload);
+  await setShowStatus(pid, 'confirmed'); closeModal();
+}
+async function setShowStatus(pid, st, extra){ await db(sb.from('projects').update(Object.assign({status:st}, extra || {})).eq('id', pid)); await loadAll(false); render(); toast('Estado: ' + PROJ_STATUS[st]); }
+function confirmShow(pid){ const iss = confirmChecks(pid); if (iss.length) return showConfirmChecks(pid, iss); setShowStatus(pid, 'confirmed'); }
+function nextStepBtn(p){
+  const id = p.id;
+  if (p.status === 'draft') return `<button class="btn primary" onclick="setShowStatus('${id}','quoted')">Marcar presupuestado</button>`;
+  if (p.status === 'quoted') return `<button class="btn primary" onclick="confirmShow('${id}')">Confirmar</button>`;
+  if (p.status === 'confirmed') return `<button class="btn primary" onclick="openCloseShow('${id}')">Cerrar ${esc(W.s)}…</button>`;
+  if (p.status === 'done') return `<button class="btn" onclick="reopenShow('${id}')">Reabrir</button>`;
+  return '';
+}
+async function reopenShow(pid){ if (!confirm('¿Reabrir este ' + W.s + '? Vuelve a Confirmado.')) return; await setShowStatus(pid, 'confirmed', {closed_at:null}); }
+function showStatusBar(){
+  const c = {}; S.projects.forEach(p => c[p.status] = (c[p.status] || 0) + 1);
+  const chip = (k, l, n) => `<button type="button" class="chip ${S.showStatus === k ? 'sel' : ''}" aria-pressed="${S.showStatus === k}" onclick="S.showStatus='${k}';render()">${S.showStatus === k ? '✓ ' : ''}${esc(l)} (${n})</button>`;
+  return `<div class="pad"><div class="legend compact" style="margin:8px 0 0">${chip('', 'Todos', S.projects.length)}${Object.entries(PROJ_STATUS).filter(([k]) => c[k]).map(([k, l]) => chip(k, l, c[k])).join('')}</div></div>`;
+}
+// ---- cierre del show (45) ----
+async function openCloseShow(pid){
+  const p = projById(pid), rs = S.reservations.filter(r => r.project_id === pid), bs = S.bulkRes.filter(b => b.project_id === pid), outN = rs.filter(r => r.state === 'out').length + bs.filter(b => b.state === 'out').length;
+  openModal(`<h2>Cerrar ${esc(W.s)}</h2><div class="sub">${esc(p.name)}</div><div id="cl-body"><div class="empty" style="margin:24px 0">Calculando…</div></div>`);
+  let ev = [];
+  try { const r = await sb.from('scan_events').select('*').eq('project_id', pid).eq('action', 'in').limit(500); ev = (r.data || []).filter(e => e.condition && e.condition !== 'ok'); } catch (e) {}
+  if (!$('#cl-body')) return;
+  const sm = closeSummary(p, ev), box = $('#cl-body');
+  box.innerHTML = `${outN ? `<div class="info"><b style="color:var(--bad)">Aún hay ${outN} pieza${outN === 1 ? '' : 's'} fuera del almacén.</b><div class="sub">Devuélvelas antes de cerrar.</div></div>` : ''}
+    <div class="info"><b>${sm.units}</b> equipos${sm.bulk ? ` y <b>${sm.bulk}</b> piezas por cantidad` : ''} · ${esc(fmtD(p.starts_at))} → ${esc(fmtD(p.ends_at))}<div class="sub">${sm.techs} técnico${sm.techs === 1 ? '' : 's'}</div></div>
+    <div class="group" style="margin:12px 0 6px">Incidencias al devolver (${ev.length})</div>${ev.length ? `<div class="list" style="margin:0">${ev.map(e => { const u = unitById(e.unit_id); return `<div class="row urow"><div class="grow"><b>${esc(u ? unitLabel(u) : 'Equipo')}</b><div class="sub">${esc(COND[e.condition] || e.condition)}${e.note ? ': ' + esc(e.note) : ''}</div></div></div>`; }).join('')}</div>` : '<div class="sub">Todo volvió completo.</div>'}
+    <div class="group" style="margin:12px 0 6px">Dinero</div><div class="info"><div>Importe: <b>${eur(sm.total)}</b>${p.agreed_total != null ? ' <span class="sub">(acordado)</span>' : ''}</div>${sm.cost ? `<div>Coste del material de terceros: <b>${eur(sm.cost)}</b></div><div>Margen: <b>${eur(sm.total - sm.cost)}</b></div>` : ''}<div class="sub">Cobro: ${esc(PAY_STATUS[p.payment_status || 'none'])}</div>${(p.payment_status || 'none') !== 'paid' ? `<div class="sub" style="color:var(--warn);font-weight:600">${(p.payment_status || 'none') === 'invoiced' ? 'Falta cobrar la factura.' : 'Falta facturar.'}</div>` : ''}</div>
+    <label for="cl-notes">Notas de cierre (opcional)</label><textarea id="cl-notes">${esc(p.closing_notes || '')}</textarea>
+    <button class="btn primary block" ${outN ? 'disabled' : ''} onclick="doCloseShow('${pid}')">Cerrar ${esc(W.s)}</button><button class="btn block" onclick="copyCloseSummary('${pid}')">Copiar resumen</button><button class="btn block" onclick="closeModal()">Cancelar</button>`;
+  S.closeEv = ev;
+}
+function closeSummary(p, ev){
+  const rs = S.reservations.filter(r => r.project_id === p.id), bs = S.bulkRes.filter(b => b.project_id === p.id), days = rentalDays(p);
+  const cost = rs.reduce((s, r) => { const m = (unitById(r.unit_id) && modelById(unitById(r.unit_id).model_id)) || {}; return s + (m.owner ? Number(m.rent_cost || 0) * days : 0); }, 0) + bs.reduce((s, b) => { const m = modelById(b.model_id) || {}; return s + (m.owner ? Number(m.rent_cost || 0) * days * b.qty : 0); }, 0);
+  return {units:rs.length, bulk:bs.reduce((s, b) => s + b.qty, 0), techs:S.assigns.filter(a => a.project_id === p.id).length, total:projectTotal(p), cost, inc:(ev || []).length};
+}
+function closeSummaryText(p){
+  const sm = closeSummary(p, S.closeEv || []);
+  return [`Cierre: ${p.name}${p.client ? ' · ' + p.client : ''}`, `${fmtD(p.starts_at)} → ${fmtD(p.ends_at)}`, `${sm.units} equipos${sm.bulk ? ` y ${sm.bulk} piezas por cantidad` : ''} · ${sm.techs} técnicos`, `Incidencias al devolver: ${sm.inc}`, `Importe: ${eur(sm.total)}${sm.cost ? ` · coste de terceros ${eur(sm.cost)} · margen ${eur(sm.total - sm.cost)}` : ''}`, `Cobro: ${PAY_STATUS[p.payment_status || 'none']}`, ($('#cl-notes') && $('#cl-notes').value.trim()) ? 'Notas: ' + $('#cl-notes').value.trim() : ''].filter(Boolean).join('\n');
+}
+function copyCloseSummary(pid){ navigator.clipboard.writeText(closeSummaryText(projById(pid))).then(() => toast('Resumen copiado'), () => toast('No se pudo copiar', true)); }
+async function doCloseShow(pid){
+  const n = $('#cl-notes').value.trim() || null;
+  await db(sb.from('projects').update({status:'done', closed_at:new Date().toISOString(), closing_notes:n}).eq('id', pid)); closeModal(); await loadAll(false); render(); toast(W.S + ' cerrado');
+}
+const closedInfoHtml = p => p.closed_at ? `<div style="margin-top:8px"><span class="badge ok">Cerrado el ${esc(fmtD(p.closed_at))}</span>${p.closing_notes ? `<div class="sub" style="margin-top:4px">${esc(p.closing_notes)}</div>` : ''}</div>` : '';
+// ---- presupuestos con versiones (49) ----
+const qvOf = pid => S.quoteVersions.filter(v => v.project_id === pid).sort((a, b) => a.version - b.version);
+function quoteSnapshot(q){ return {days:q.days, bdays:q.bdays, useDur:!!q.useDur, disc:q.disc, vat:q.vat, subtotal:q.subtotal, dAmt:q.dAmt, base:q.base, vatAmt:q.vatAmt, total:q.total, lines:q.lines.map(l => ({name:l.m ? l.m.name : '', qty:l.qty, rate:l.rate, sub:l.sub}))}; }
+const snapQ = s => Object.assign({}, s, {lines:s.lines.map(l => ({m:{name:l.name}, qty:l.qty, rate:l.rate, sub:l.sub}))});
+const sameSnap = (a, b) => ['days', 'bdays', 'disc', 'vat', 'total', 'subtotal'].every(k => Math.abs(Number(a[k]) - Number(b[k])) < 0.005) && !!a.useDur === !!b.useDur && a.lines.length === b.lines.length && a.lines.every((l, i) => l.name === b.lines[i].name && l.qty === b.lines[i].qty && Math.abs(l.rate - b.lines[i].rate) < 0.005 && Math.abs(l.sub - b.lines[i].sub) < 0.005);
+async function saveQuoteVersion(pid, q){
+  try {
+    const vs = qvOf(pid), snap = quoteSnapshot(q), last = vs[vs.length - 1];
+    if (last && sameSnap(last.snapshot, snap)) return last;
+    const r = await sb.from('quote_versions').insert({project_id:pid, version:(last ? last.version : 0) + 1, snapshot:snap}).select().single();
+    if (r.error) return null; S.quoteVersions.push(r.data); return r.data;
+  } catch (e) { return null; }
+}
+function quoteDocHtml(p, q, ver, when){
+  const b = S.settings || {}, validity = b.quote_validity_days || 30, j = !!q.useDur;
+  return bizHeader() + `<h1>Presupuesto${ver ? ' · versión ' + ver : ''}</h1>
+    <p><b>${esc(p.name)}</b></p>${clientBlock(p)}
+    <p>${esc(fmtFull(p.starts_at))} → ${esc(fmtFull(p.ends_at))}${p.venue ? ' · ' + esc(p.venue) : ''}</p>
+    <p class="small">Fecha: ${esc(new Date(when || Date.now()).toLocaleDateString('es-ES'))}</p>
+    <h2>Detalle</h2>
+    <table><tr><th>Equipo</th><th class="r">Cant.</th><th class="r">€/día</th><th class="r">${j ? 'Jornadas' : 'Días'}</th><th class="r">Importe</th></tr>
+    ${q.lines.map(l => `<tr><td>${esc(l.m ? l.m.name : '')}</td><td class="r">${l.qty}</td><td class="r">${eur(l.rate)}</td><td class="r">${j ? fmtNum(q.bdays, 2) : q.days}</td><td class="r">${eur(l.sub)}</td></tr>`).join('')}
+    <tr><td colspan="4" class="r">Subtotal</td><td class="r">${eur(q.subtotal)}</td></tr>
+    ${q.disc > 0 ? `<tr><td colspan="4" class="r">Descuento ${q.disc}%</td><td class="r">−${eur(q.dAmt)}</td></tr>` : ''}
+    <tr><td colspan="4" class="r">Base imponible</td><td class="r">${eur(q.base)}</td></tr>
+    <tr><td colspan="4" class="r">IVA ${q.vat}%</td><td class="r">${eur(q.vatAmt)}</td></tr>
+    <tr class="tot"><td colspan="4" class="r">Total</td><td class="r">${eur(q.total)}</td></tr></table>
+    <p class="small" style="margin-top:6mm">Importe = cantidad × tarifa por día × ${j ? 'jornadas' : 'días de alquiler'}.${j ? ` ${q.days} día${q.days === 1 ? '' : 's'} de alquiler equivalen a ${jorTxt(q.bdays)} según la tarifa por duración.` : ''}</p>
+    ${b.quote_notes ? `<p style="margin-top:5mm">${esc(b.quote_notes).replace(/\n/g, '<br>')}</p>` : ''}
+    ${b.payment_terms ? `<h2>Condiciones de pago</h2><p>${esc(b.payment_terms).replace(/\n/g, '<br>')}</p>` : ''}
+    <p class="small" style="margin-top:5mm">Presupuesto válido durante ${validity} días desde la fecha indicada.</p>`;
+}
+async function printQuote(pid){
+  await saveQuote(pid, false); closeModal();
+  const p0 = projById(pid);
+  if ((p0.payment_status || 'none') === 'none') await sb.from('projects').update({payment_status:'quoted'}).eq('id', pid);
+  if (p0.status === 'draft') await sb.from('projects').update({status:'quoted'}).eq('id', pid);
+  await loadAll(false);
+  const p = projById(pid), q = quoteCalc(p), v = await saveQuoteVersion(pid, q);
+  printDoc('doc', quoteDocHtml(p, q, v ? v.version : null, v ? v.created_at : null));
+}
+function printQuoteVersion(vid){ const v = S.quoteVersions.find(x => x.id === vid); if (!v) return; closeModal(); printDoc('doc', quoteDocHtml(projById(v.project_id), snapQ(v.snapshot), v.version, v.created_at)); }
+function qvHtml(pid){
+  const vs = qvOf(pid).slice().reverse(); if (!vs.length) return '';
+  return `<div class="group" style="margin:14px 0 6px">Versiones enviadas (${vs.length})</div><div class="list" style="margin:0">${vs.map((v, i) => { const prev = vs[i + 1], d = prev ? v.snapshot.total - prev.snapshot.total : 0;
+    return `<div class="row urow"><div class="grow"><b>Versión ${v.version}</b>${v.accepted ? ' <span class="badge ok">Aceptada</span>' : ''}<div class="sub">${esc(fmtD(v.created_at))} · ${eur(v.snapshot.total)}${prev && Math.abs(d) > 0.004 ? ` · ${d > 0 ? '+' : '−'}${eur(Math.abs(d))} respecto a la V${prev.version}` : ''}</div></div><button class="btn small" onclick="printQuoteVersion('${v.id}')">Ver</button>${v.accepted ? '' : `<button class="btn small" onclick="acceptQuoteVersion('${v.id}')">Aceptar</button>`}</div>`; }).join('')}</div>`;
+}
+async function acceptQuoteVersion(vid){
+  const v = S.quoteVersions.find(x => x.id === vid); if (!v) return; const p = projById(v.project_id);
+  if (!confirm(`¿Dar la versión ${v.version} como aceptada? El importe acordado de este ${W.s} pasará a ser ${eur(v.snapshot.total)}.`)) return;
+  await db(sb.from('quote_versions').update({accepted:false}).eq('project_id', v.project_id)); await db(sb.from('quote_versions').update({accepted:true}).eq('id', vid));
+  await db(sb.from('projects').update({agreed_total:v.snapshot.total, payment_status:(p.payment_status === 'invoiced' || p.payment_status === 'paid') ? p.payment_status : 'accepted'}).eq('id', p.id));
+  await loadAll(false); openQuote(p.id); toast('Versión ' + v.version + ' aceptada');
+}
+// ---- plantillas de show (35) ----
+const tplItemsOf = tid => S.tplItems.filter(i => i.template_id === tid);
+const tplSummary = t => tplItemsOf(t.id).map(i => i.kit_id ? `Kit «${(kitById(i.kit_id) || {}).name || '?'}»` : `${i.qty}× ${(modelById(i.model_id) || {}).name || '?'}`).join(' · ') || 'Vacía';
+async function saveAsTemplate(pid){
+  const nm = prompt('Nombre de la plantilla (por ejemplo: Boda básica)', projById(pid).name); if (!nm || !nm.trim()) return;
+  const q = {}; S.reservations.filter(r => r.project_id === pid && !r.kit_id).forEach(r => { const u = unitById(r.unit_id); if (u) q[u.model_id] = (q[u.model_id] || 0) + 1; });
+  S.bulkRes.filter(b => b.project_id === pid && !b.kit_id).forEach(b => q[b.model_id] = (q[b.model_id] || 0) + b.qty);
+  const kids = [...new Set([...S.reservations, ...S.bulkRes].filter(x => x.project_id === pid && x.kit_id).map(x => x.kit_id))];
+  if (!Object.keys(q).length && !kids.length) return toast('Este ' + W.s + ' no tiene material que guardar', true);
+  const t = await db(sb.from('show_templates').insert({name:nm.trim()}).select().single());
+  await db(sb.from('template_items').insert([...Object.entries(q).map(([model_id, qty]) => ({template_id:t.id, model_id, qty})), ...kids.map(kit_id => ({template_id:t.id, kit_id, qty:1}))]));
+  await loadAll(false); openTemplates(pid); toast('Plantilla guardada');
+}
+function openTemplates(pid){
+  openModal(`<h2>Plantillas de ${esc(W.s)}</h2><div class="sub">${pid ? `Añade el material de una plantilla a «${esc(projById(pid).name)}».` : 'Crea un ' + esc(W.s) + ' nuevo con el material ya reservado.'} Si falta alguna unidad en esas fechas, se avisa.</div>
+    ${S.templates.length ? `<div class="list" style="margin:12px 0 0">${S.templates.map(t => `<div class="row urow"><div class="grow"><b>${esc(t.name)}</b><div class="sub">${esc(tplSummary(t))}</div></div><button class="btn small primary" onclick="useTemplate('${t.id}','${pid || ''}')">Usar</button><button class="btn small" aria-label="Borrar plantilla" onclick="delTemplate('${t.id}','${pid || ''}')">✕</button></div>`).join('')}</div>` : '<div class="empty" style="margin:20px 0">Aún no hay plantillas. Abre un ' + esc(W.s) + ' con material y guárdalo como plantilla.</div>'}
+    ${pid ? `<button class="btn block" style="margin-top:12px" onclick="saveAsTemplate('${pid}')">Guardar este ${esc(W.s)} como plantilla</button>` : ''}<button class="btn block" onclick="closeModal()">Cerrar</button>`);
+}
+async function delTemplate(tid, pid){ const t = S.templates.find(x => x.id === tid); if (!t || !confirm(`¿Borrar la plantilla «${t.name}»?`)) return; await db(sb.from('show_templates').delete().eq('id', tid)); await loadAll(false); openTemplates(pid); }
+function useTemplate(tid, pid){
+  if (pid) return applyTemplateUi(tid, pid);
+  const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(10, 0, 0, 0); const t = S.templates.find(x => x.id === tid);
+  openModal(`<h2>Nuevo ${esc(W.s)} desde plantilla</h2><div class="sub">${esc(t.name)}</div><label for="tp-name">Nombre</label><input id="tp-name" value="${esc(t.name)}">
+    <label for="tp-start">Desde</label><input id="tp-start" type="datetime-local" value="${toLocalInput(d.toISOString())}"><label for="tp-end">Hasta</label><input id="tp-end" type="datetime-local" value="${toLocalInput(new Date(d.getTime() + 14 * 3600e3).toISOString())}">
+    <button class="btn primary block" style="margin-top:10px" onclick="createFromTemplate('${tid}')">Crear</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
+}
+async function createFromTemplate(tid){
+  const name = $('#tp-name').value.trim(), s = $('#tp-start').value, e = $('#tp-end').value; if (!name || !s || !e) return toast('Indica nombre y fechas', true); if (new Date(e) <= new Date(s)) return toast('La fecha final debe ser posterior a la inicial', true);
+  const np = await db(sb.from('projects').insert({name, status:'draft', starts_at:fromLocalInput(s), ends_at:fromLocalInput(e)}).select().single()); await loadAll(false);
+  await applyTemplateUi(tid, np.id, true);
+}
+async function applyTemplate(p, tid){
+  const report = [];
+  for (const it of tplItemsOf(tid).filter(i => i.kit_id)){ const k = kitById(it.kit_id); if (!k){ report.push('Un kit de la plantilla ya no existe'); continue; }
+    const probs = kitProblem(p, k); if (probs.length){ report.push(`Kit «${k.name}»: ${probs[0]}`); continue; }
+    try { await reserveKit(p.id, k.id); } catch (e) { report.push(`Kit «${k.name}»: no se pudo reservar`); } await loadAll(false); }
+  const taken = new Set(S.reservations.filter(r => r.project_id === p.id).map(r => r.unit_id)), rows = [];
+  const want = new Map(); tplItemsOf(tid).filter(i => i.model_id).forEach(i => want.set(i.model_id, (want.get(i.model_id) || 0) + i.qty));
+  for (const [mid, qty] of want){ const it = {model_id:mid, qty}, m = modelById(mid); if (!m){ report.push('Un modelo de la plantilla ya no existe'); continue; }
+    if (m.is_bulk){ const free = bulkFree(p, m.id), n = Math.max(0, Math.min(free, it.qty)); if (n < it.qty) report.push(`${m.name}: solo quedan ${Math.max(0, free)} de ${it.qty}`); if (n > 0) await db(sb.from('bulk_reservations').insert({project_id:p.id, model_id:m.id, qty:n, state:'planned'})); }
+    else { const pick = freeUnits(p, m.id).filter(x => !taken.has(x.id)).slice(0, it.qty); if (pick.length < it.qty) report.push(`${m.name}: solo hay ${pick.length} libres de ${it.qty}`); pick.forEach(u => { taken.add(u.id); rows.push({project_id:p.id, unit_id:u.id, state:'planned'}); }); } }
+  if (rows.length) await db(sb.from('reservations').insert(rows));
+  await loadAll(false); return report;
+}
+async function applyTemplateUi(tid, pid, isNew){
+  const p = projById(pid), report = await applyTemplate(p, tid); closeModal(); render();
+  if (report.length) openModal(`<h2>Plantilla aplicada</h2><div class="sub">Se ha añadido todo, salvo:</div><div class="list" style="margin:12px 0">${report.map(t => `<div class="row">${esc(t)}</div>`).join('')}</div><button class="btn primary block" onclick="closeModal();go('shows');openView('project','${pid}')">Ver el ${esc(W.s)}</button>`);
+  else { go('shows'); openView('project', pid); toast(isNew ? W.S + ' creado desde la plantilla' : 'Plantilla añadida'); }
+}
+// ---- rentabilidad por equipo (58) ----
+S.profitSort = 'net';
+function profitRows(){
+  const rows = S.models.map(m => {
+    const us = S.units.filter(u => u.model_id === m.id), ids = new Set(us.map(u => u.id)), st = modelStats(m);
+    const buy = us.reduce((s, u) => s + (Number(u.purchase_price) || 0), 0), priced = us.filter(u => u.purchase_price != null).length;
+    const rep = S.maint.filter(l => ids.has(l.unit_id)).reduce((s, l) => s + (Number(l.cost) || 0), 0);
+    let rent = 0; if (m.owner && Number(m.rent_cost) > 0) S.projects.forEach(p => { if (['cancelled', 'draft', 'quoted'].includes(p.status) || new Date(p.ends_at) > Date.now()) return; rent += (projectQty(p).get(m.id) || 0) * Number(m.rent_cost) * rentalDays(p); });
+    const net = st.income - rep - rent;
+    return {m, units:us.length, priced, shows:st.shows, income:st.income, buy, rep, rent, net, paid:buy > 0 ? net / buy : null};
+  }).filter(r => r.shows || r.buy || r.rep);
+  const k = S.profitSort; return rows.sort((a, b) => k === 'income' ? b.income - a.income : k === 'paid' ? (b.paid == null ? -1e9 : b.paid) - (a.paid == null ? -1e9 : a.paid) : b.net - a.net);
+}
+function profitView(){
+  const rows = profitRows(), t = rows.reduce((o, r) => ({income:o.income + r.income, cost:o.cost + r.rep + r.rent, net:o.net + r.net, buy:o.buy + r.buy}), {income:0, cost:0, net:0, buy:0});
+  const seg = (k, l) => `<button class="${S.profitSort === k ? 'on' : ''}" onclick="S.profitSort='${k}';render()">${l}</button>`;
+  return bar('Rentabilidad', {back:true}) + `<div class="info"><div><b>${eur(t.net)}</b> de beneficio sobre equipos</div><div class="sub">Ingresos ${eur(t.income)} · reparaciones y alquileres a terceros ${eur(t.cost)}${t.buy ? ' · compras ' + eur(t.buy) : ''}</div><div class="sub">Solo ${esc(W.p)} ya terminados y no cancelados. Los ingresos llevan el descuento del ${esc(W.s)}.</div></div>
+    <div class="pad"><div class="seg">${seg('net', 'Beneficio')}${seg('income', 'Ingresos')}${seg('paid', 'Amortizado')}</div></div>
+    ${rows.length ? `<div class="list">${rows.map(r => `<div class="row tap" onclick="openView('model','${r.m.id}')"><div class="grow"><b>${colorDot(r.m)}${esc(r.m.name)}</b><div class="sub">${r.shows} ${esc(W.s)}${r.shows === 1 ? '' : 's'} · ingresos ${eur(r.income)}${r.rep || r.rent ? ' · costes ' + eur(r.rep + r.rent) : ''}</div>
+      <div class="mline" style="margin-top:4px">${r.paid == null ? `<span class="badge">Sin precio de compra</span>` : r.paid >= 1 ? '<span class="badge ok">Amortizado</span>' : `<span class="badge warn">Amortizado al ${Math.max(0, Math.round(r.paid * 100))}%</span>`}${r.buy && r.priced < r.units ? `<span class="badge">Faltan ${r.units - r.priced} precios</span>` : ''}</div></div><div class="count" style="font-size:16px">${eur(r.net)}</div></div>`).join('')}</div>` : '<div class="empty">Aún no hay datos: hacen falta shows terminados con material con tarifa.</div>'}`;
+}
+// ---- contrato de alquiler (60) ----
+const CONTRACT_DEFAULT = `## CONTRATO DE ALQUILER DE EQUIPOS
+En _______________, a {fecha}.
+
+## PARTES
+Arrendador: {empresa} {nif_empresa}.
+Arrendatario: {cliente} {nif_cliente} {direccion_cliente}.
+
+## OBJETO
+El arrendador cede en alquiler al arrendatario el material relacionado a continuación para «{show}», que se celebrará en {lugar}.
+{material}
+
+## DURACIÓN
+El alquiler comprende desde el {desde} hasta el {hasta} ({dias} días).
+
+## PRECIO Y FORMA DE PAGO
+El precio total es de {total} (IVA incluido).
+{condiciones_pago}
+
+## ENTREGA Y DEVOLUCIÓN
+El arrendatario recibe el material en buen estado y se obliga a devolverlo en el mismo estado y en la fecha pactada. Cada día de retraso se facturará como un día adicional de alquiler.
+
+## USO Y RESPONSABILIDAD
+El material se utilizará conforme a su finalidad y por personal competente. El arrendatario responde de la pérdida, el robo o el daño del material desde su recogida hasta su devolución, y abonará su reparación o su valor de reposición.
+
+## CANCELACIÓN
+La cancelación con menos de 7 días de antelación podrá dar lugar a la facturación de hasta el 50 % del importe.
+
+## JURISDICCIÓN
+Para cualquier controversia, las partes se someten a los juzgados y tribunales del domicilio del arrendador.`;
+function contractHtml(p){
+  const b = S.settings || {}, c = p.client_id ? clientById(p.client_id) : null, q = quoteCalc(p);
+  const V = {empresa:b.business_name || '', nif_empresa:b.tax_id ? 'NIF ' + b.tax_id : '', cliente:(c && c.name) || p.client || '', nif_cliente:c && c.tax_id ? 'NIF ' + c.tax_id : '', direccion_cliente:((c && c.address) || '').replace(/\n/g, ', '), show:p.name, lugar:p.venue || '', desde:fmtFull(p.starts_at), hasta:fmtFull(p.ends_at), dias:String(q.days), total:eur(projectTotal(p)), condiciones_pago:b.payment_terms || '', fecha:new Date().toLocaleDateString('es-ES')};
+  const mat = `<table><tr><th>Material</th><th class="r">Cant.</th></tr>${q.lines.map(l => `<tr><td>${esc(l.m ? l.m.name : '')}</td><td class="r">${l.qty}</td></tr>`).join('')}</table>`;
+  const fill = s => esc(s).replace(/\{(\w+)\}/g, (m, k) => k in V ? esc(V[k]) : m), out = []; let para = [];
+  const flush = () => { if (para.length){ out.push('<p>' + para.join('<br>') + '</p>'); para = []; } };
+  (appCfg().contractTemplate || CONTRACT_DEFAULT).split('\n').forEach(l => { const t = l.trim(); if (t.startsWith('## ')){ flush(); out.push('<h2>' + fill(t.slice(3)) + '</h2>'); } else if (t === '{material}'){ flush(); out.push(mat); } else if (!t) flush(); else para.push(fill(l)); });
+  flush();
+  return bizHeader() + out.join('') + `<div style="display:flex;justify-content:space-between;margin-top:16mm"><div>Firma del arrendador<div style="height:18mm"></div>__________________</div><div>Firma del arrendatario<div style="height:18mm"></div>__________________</div></div>`;
+}
+function printContract(pid){ const p = projById(pid); if (!p) return; printDoc('doc', contractHtml(p)); }
+function openContractEditor(){
+  openModal(`<h2>Contrato de alquiler</h2><div class="info" style="margin:8px 0"><b style="color:var(--warn)">Plantilla orientativa, no asesoramiento legal.</b><div class="sub">Antes de usarla con clientes, haz que la revise un abogado o gestor y adáptala a tu caso (fianza, seguros, cancelación…).</div></div>
+    <label for="ct-t">Texto (los títulos empiezan por «## »)</label><textarea id="ct-t" style="min-height:260px;font-size:13px">${esc(appCfg().contractTemplate || CONTRACT_DEFAULT)}</textarea>
+    <div class="sub" style="margin-top:6px">Se rellenan solos: {empresa} {nif_empresa} {cliente} {nif_cliente} {direccion_cliente} {show} {lugar} {desde} {hasta} {dias} {total} {material} {condiciones_pago} {fecha}. Al final se añaden los espacios de firma.</div>
+    <button class="btn primary block" style="margin-top:10px" onclick="saveContract()">Guardar</button><button class="btn block" onclick="$('#ct-t').value=CONTRACT_DEFAULT">Restaurar el texto original</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
+}
+async function saveContract(){ const c = Object.assign({}, appCfg()); c.contractTemplate = $('#ct-t').value.trim() === CONTRACT_DEFAULT.trim() ? undefined : $('#ct-t').value; if (c.contractTemplate === undefined) delete c.contractTemplate; S.settings.app_config = c; if (await persistConfig()){ closeModal(); toast('Contrato guardado'); } }
+
+/* ============ ETIQUETAS II V1.08: rollos Brother/Dymo, diseño editable, perfiles y PDF ============ */
+const labelRot = c => c.rot != null ? !!c.rot : c.h > c.w * 1.3;      // etiquetas estrechas y largas: el diseño se gira 90°
+function labelInner(d, cfg){
+  if (!labelRot(cfg)) return labelBoxHtml(d, cfg);
+  return `<div class="lrot" style="width:${cfg.h}mm;height:${cfg.w}mm">${labelBoxHtml(d, Object.assign({}, cfg, {w:cfg.h, h:cfg.w}))}</div>`;
+}
+const labelHelp = c => {
+  const p = LABEL_PRESETS.find(x => x.id === c.preset) || {};
+  if (p.printer === 'ql') return `Brother QL: en el cuadro de impresión elige el papel «${c.w} mm x ${c.h} mm» (el de tu rollo DK), márgenes «ninguno» y escala 100 %. Instala el controlador oficial de Brother: con el genérico suele salir cortado. Imprime antes la hoja de prueba.`;
+  if (p.printer === 'dymo') return `Dymo LabelWriter: en el cuadro de impresión elige el tamaño de papel de tu rollo, márgenes «ninguno» y escala 100 %. Instala el software oficial de Dymo. Imprime antes la hoja de prueba.`;
+  return '';
+};
+const presetGroup = p => p.printer === 'ql' ? 'Brother QL (rollo)' : p.printer === 'dymo' ? 'Dymo LabelWriter (rollo)' : p.id === 'custom' ? 'Otra' : 'Hojas A4';
+// ---- perfiles de impresión (115) ----
+const profList = () => appCfg().labelProfiles || [];
+const kindProf = () => appCfg().kindProfiles || {};
+const profByName = n => profList().find(p => p.name === n);
+const KIND_ES = {unit:'Etiquetas de equipos', kit:'Etiquetas de kits', kitlist:'Lista de contenido de kits', custom:'Pegatinas personalizadas'};
+function defaultProfileFor(items){
+  const kinds = [...new Set(items.map(i => i.kind))], n = kinds.length === 1 ? kindProf()[kinds[0]] : null;
+  return n && profByName(n) ? n : '__current';
+}
+function lpCfg(){ const p = LP.profile && LP.profile !== '__current' ? profByName(LP.profile) : null; return p ? normLabelCfg(p.cfg) : labelCfg(); }
+function lpProfile(v){ LP.profile = v; LP.start = 1; drawPrintDialog(); }
+function profilesHtml(){
+  const pl = profList();
+  return `<div class="group">Perfiles de impresión</div><div class="sub" style="margin:0 18px 8px">Un perfil guarda la hoja o el rollo, el diseño y la barra de marca. Sirve, por ejemplo, para imprimir los equipos en hojas A4 y los kits en el rollo de la Brother.</div>
+    ${pl.length ? `<div class="list">${pl.map((p, i) => `<div class="row urow"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(labelPresetName(normLabelCfg(p.cfg)))} · ${p.cfg.w}×${p.cfg.h} mm</div></div><button class="btn small" onclick="useProfile(${i})">Usar</button><button class="btn small" aria-label="Borrar perfil" onclick="delProfile(${i})">✕</button></div>`).join('')}</div>` : ''}
+    <div class="actions"><button class="btn small" onclick="saveProfileAsk()">Guardar la configuración actual como perfil</button>${pl.length ? '<button class="btn small" onclick="openKindProfiles()">Qué perfil usa cada tipo</button>' : ''}</div>`;
+}
+async function saveProfileAsk(){
+  const nm = prompt('Nombre del perfil (por ejemplo: Rollo Brother 62×29)'); if (!nm || !nm.trim()) return; const n = nm.trim();
+  const c = Object.assign({}, appCfg()); c.labelProfiles = [...profList().filter(p => p.name !== n), {name:n, cfg:Object.assign({}, labelCfg())}];
+  S.settings.app_config = c; if (await persistConfig()){ toast('Perfil guardado'); render(); }
+}
+async function useProfile(i){
+  const p = profList()[i]; if (!p) return;
+  await db(sb.from('settings').upsert({id:1, label_config:p.cfg, updated_at:new Date().toISOString()})); await loadAll(); toast(`Hoja y diseño de «${p.name}» activados`);
+}
+async function delProfile(i){
+  const p = profList()[i]; if (!p || !confirm(`¿Borrar el perfil «${p.name}»?`)) return;
+  const c = Object.assign({}, appCfg()); c.labelProfiles = profList().filter((_, j) => j !== i); const kp = Object.assign({}, kindProf()); Object.keys(kp).forEach(k => { if (kp[k] === p.name) delete kp[k]; }); c.kindProfiles = kp;
+  S.settings.app_config = c; if (await persistConfig()) render();
+}
+function openKindProfiles(){
+  const kp = kindProf();
+  openModal(`<h2>Qué perfil usa cada tipo</h2><div class="sub">Al imprimir un solo tipo de etiqueta se elige este perfil automáticamente (puedes cambiarlo en el cuadro de impresión).</div>
+    ${Object.entries(KIND_ES).map(([k, l]) => `<label for="kp-${k}">${esc(l)}</label><select id="kp-${k}"><option value="">La hoja actual</option>${profList().map(p => `<option ${kp[k] === p.name ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>`).join('')}
+    <button class="btn primary block" style="margin-top:12px" onclick="saveKindProfiles()">Guardar</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
+}
+async function saveKindProfiles(){
+  const kp = {}; Object.keys(KIND_ES).forEach(k => { const v = $('#kp-' + k).value; if (v) kp[k] = v; });
+  const c = Object.assign({}, appCfg()); c.kindProfiles = kp; S.settings.app_config = c; if (await persistConfig()){ closeModal(); toast('Guardado'); }
+}
+// ---- diseño editable (114) ----
+const DESIGN_DEFAULT = {qrSide:'left', name:true, serial:true, code:true, kitContent:true, extra:''};
+let DSK = 'unit';
+function openDesign(){ SC = labelCfg(); SC.fromPrint = false; SC.design = Object.assign({}, DESIGN_DEFAULT, SC.design || {}); DSK = 'unit'; drawDesign(); }
+function drawDesign(){
+  const d = SC.design, chk = (k, l) => `<label class="chkrow"><input type="checkbox" id="ds-${k}" ${d[k] !== false ? 'checked' : ''} onchange="dsSet('${k}',this.checked)"><span>${l}</span></label>`;
+  openModal(`<h2>Diseño de la etiqueta</h2><div class="sub">Elige qué sale en las pegatinas. Se guarda junto con la hoja o el rollo (${esc(labelPresetName(SC))}).</div>
+    <div class="seg" style="margin:10px 0"><button id="ds-k-unit" class="${DSK === 'unit' ? 'on' : ''}" onclick="DSK='unit';dsRefresh()">Equipo</button><button id="ds-k-kit" class="${DSK === 'kit' ? 'on' : ''}" onclick="DSK='kit';dsRefresh()">Kit</button></div>
+    <div id="ds-prev" style="margin:10px 0"></div>
+    <label for="ds-side">El QR va a la</label><select id="ds-side" onchange="dsSet('qrSide',this.value)"><option value="left" ${d.qrSide !== 'right' ? 'selected' : ''}>Izquierda</option><option value="right" ${d.qrSide === 'right' ? 'selected' : ''}>Derecha</option></select>
+    ${chk('name', 'Nombre del modelo junto al número (pegatina grande)')}${chk('serial', 'Número de serie')}${chk('code', 'Código interno pequeño')}${chk('kitContent', 'Contenido del kit (pegatina grande)')}
+    <label for="ds-extra">Texto extra bajo el equipo (solo pegatina grande)</label><input id="ds-extra" maxlength="40" value="${esc(d.extra || '')}" placeholder="Ej. Si lo encuentras: 600 000 000" oninput="dsSet('extra',this.value)">
+    <button class="btn primary block" style="margin-top:12px" onclick="saveSheetCfg()">Guardar diseño</button><button class="btn block" onclick="SC.design=Object.assign({},DESIGN_DEFAULT);drawDesign()">Restaurar el diseño original</button><button class="btn block" onclick="closeSheetCfg()">Cerrar</button>`);
+  dsRefresh();
+}
+function dsSet(k, v){ SC.design[k] = v; dsRefresh(); }
+function dsRefresh(){
+  const box = $('#ds-prev'); if (!box) return;
+  ['unit', 'kit'].forEach(k => { const b = $('#ds-k-' + k); if (b) b.classList.toggle('on', DSK === k); });
+  const u = S.units.find(x => x.serial_number && nominalNumber(x) != null) || S.units[0], k = S.kits[0];
+  const d = DSK === 'kit' ? (k ? {kind:'kit', id:k.id} : null) : (u ? {kind:'unit', id:u.id} : null);
+  if (!d){ box.innerHTML = `<div class="sub">No hay ${DSK === 'kit' ? 'ningún kit' : 'ningún equipo'} para la vista previa.</div>`; return; }
+  const c = Object.assign({}, SC, {border:true}), z = Math.min(1.6, 330 / (c.w * 3.7795));
+  box.innerHTML = `<div style="width:${(c.w * 3.7795 * z).toFixed(0)}px;height:${(c.h * 3.7795 * z).toFixed(0)}px;margin:0 auto"><div class="lcell bd" style="position:relative;width:${c.w}mm;height:${c.h}mm;transform:scale(${z.toFixed(3)});transform-origin:top left">${labelInner(d, c)}</div></div>`;
+}
+// ---- hoja en PDF (111): se dibuja la hoja tal y como se imprime y se guarda como imagen de 300 ppp dentro de un PDF ----
+function labelCssText(){
+  let out = '';
+  for (const sh of document.styleSheets){ let rules; try { rules = sh.cssRules; } catch (e) { continue; }
+    for (const r of rules) if (r.selectorText && /\.(lsheet|lcell|lbox|label|lrot|klist|kl|kcont|atest|an)\b/.test(r.selectorText)) out += r.cssText + '\n'; }
+  return out;
+}
+function sheetToCanvas(sheetEl, cfg, css, dpi){
+  const holder = document.createElement('div'); holder.appendChild(sheetEl.cloneNode(true));
+  const xml = new XMLSerializer().serializeToString(holder), pxW = cfg.pw * 96 / 25.4, pxH = cfg.ph * 96 / 25.4;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${pxW.toFixed(2)}" height="${pxH.toFixed(2)}"><foreignObject x="0" y="0" width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="width:${cfg.pw}mm;height:${cfg.ph}mm;background:#fff;position:relative;overflow:hidden;font-family:Arial,Helvetica,sans-serif"><style>${css.replace(/</g, '&lt;')}</style>${xml.replace(/^<div[^>]*>/, '').replace(/<\/div>$/, '')}</div></foreignObject></svg>`;
+  return new Promise((res, rej) => {
+    const img = new Image(); img.onload = () => { const c = document.createElement('canvas'); c.width = Math.round(cfg.pw / 25.4 * dpi); c.height = Math.round(cfg.ph / 25.4 * dpi); const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height); res(c); };
+    img.onerror = () => rej(new Error('No se pudo dibujar la hoja')); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  });
+}
+function buildPdf(pages, ptW, ptH){
+  const enc = new TextEncoder(), parts = []; let len = 0; const offs = [];
+  const push = b => { const u = typeof b === 'string' ? enc.encode(b) : b; parts.push(u); len += u.length; };
+  push('%PDF-1.4\n'); push(new Uint8Array([0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A]));
+  const n = pages.length, total = 2 + 3 * n;
+  offs[1] = len; push('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+  offs[2] = len; push(`2 0 obj\n<< /Type /Pages /Count ${n} /Kids [${pages.map((_, i) => `${3 + 3 * i} 0 R`).join(' ')}] >>\nendobj\n`);
+  pages.forEach((p, i) => {
+    const pg = 3 + 3 * i, ct = pg + 1, im = pg + 2, content = `q ${ptW.toFixed(3)} 0 0 ${ptH.toFixed(3)} 0 0 cm /Im0 Do Q`;
+    offs[pg] = len; push(`${pg} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${ptW.toFixed(3)} ${ptH.toFixed(3)}] /Resources << /XObject << /Im0 ${im} 0 R >> >> /Contents ${ct} 0 R >>\nendobj\n`);
+    offs[ct] = len; push(`${ct} 0 obj\n<< /Length ${content.length} >>\nstream\n${content}\nendstream\nendobj\n`);
+    offs[im] = len; push(`${im} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${p.w} /Height ${p.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.bytes.length} >>\nstream\n`); push(p.bytes); push('\nendstream\nendobj\n');
+  });
+  const xref = len; push(`xref\n0 ${total + 1}\n0000000000 65535 f \n`); for (let i = 1; i <= total; i++) push(String(offs[i]).padStart(10, '0') + ' 00000 n \n');
+  push(`trailer\n<< /Size ${total + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+  return new Blob(parts, {type:'application/pdf'});
+}
+async function labelsPdfBlob(items, cfg, start, dpi){
+  const css = labelCssText(), holder = document.createElement('div'); holder.innerHTML = labelSheetsHtml(items, cfg, start);
+  const pages = [];
+  for (const sh of holder.children){ const cv = await sheetToCanvas(sh, cfg, css, dpi || 300), blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.95)); pages.push({bytes:new Uint8Array(await blob.arrayBuffer()), w:cv.width, h:cv.height}); }
+  return buildPdf(pages, cfg.pw * 72 / 25.4, cfg.ph * 72 / 25.4);
+}
+async function lpPdf(share){
+  toast('Creando el PDF…');
+  let blob; try { blob = await labelsPdfBlob(LP.items, lpCfg(), LP.start, 300); } catch (e) { return toast('Este navegador no puede crear el PDF aquí. Usa Imprimir y elige «Guardar como PDF».', true); }
+  const name = `etiquetas-${todayStr()}.pdf`, file = new File([blob], name, {type:'application/pdf'});
+  if (share && navigator.canShare && navigator.canShare({files:[file]})){ try { await navigator.share({files:[file], title:name}); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  toast('PDF creado: ' + name);
+}
+/* ============ USO DIARIO V1.09: Hoy, buscador, favoritos, notas, tour, gestos y atajos ============ */
+S.notes = []; S.favOnly = false;
+const navTabs = () => whMode() ? [['scan', 'Escanear'], ['shows', 'Carga'], ['more', 'Más']] : [['today', 'Hoy'], ['material', 'Material'], ['shows', '' + W.P], ['scan', 'Escanear'], ['more', 'Más']];
+const DAY_MS = 864e5, tdStart = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+const tdDiff = iso => Math.round((tdStart(iso) - tdStart(Date.now())) / DAY_MS);
+const tdTime = iso => new Date(iso).toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+function dayLabel(iso){ const d = tdDiff(iso); return d === 0 ? 'Hoy' : d === 1 ? 'Mañana' : d === -1 ? 'Ayer' : new Date(iso).toLocaleDateString('es-ES', {weekday:'short', day:'numeric', month:'short'}); }
+// ---- favoritos (109) ----
+const favs = () => appCfg().favorites || [];
+const isFav = (t, id) => favs().includes(t + ':' + id);
+const favCount = () => favs().length;
+const favBtn = (t, id) => `<button class="btn small" aria-pressed="${isFav(t, id)}" onclick="toggleFav('${t}','${id}')">${isFav(t, id) ? '★ Favorito' : '☆ Favorito'}</button>`;
+async function toggleFav(t, id){
+  const k = t + ':' + id, c = Object.assign({}, appCfg()); c.favorites = isFav(t, id) ? favs().filter(x => x !== k) : [...favs(), k];
+  S.settings.app_config = c; if (await persistConfig()) render();
+}
+function toggleFavOnly(){ S.favOnly = !S.favOnly; render(); }
+function favItem(k){
+  const [t, id] = [k.slice(0, k.indexOf(':')), k.slice(k.indexOf(':') + 1)];
+  const o = t === 'model' ? modelById(id) : t === 'kit' ? kitById(id) : t === 'project' ? projById(id) : t === 'client' ? clientById(id) : null;
+  return o ? {t, id, label:o.name, kind:{model:'Equipo', kit:'Kit', project:W.S, client:'Cliente'}[t]} : null;
+}
+function favGo(t, id){
+  if (t === 'model'){ go('material'); setMat('equipos'); openView('model', id); } else if (t === 'kit'){ go('material'); setMat('kits'); openView('kit', id); }
+  else if (t === 'project'){ go('shows'); openView('project', id); } else if (t === 'client'){ go('more'); openView('client', id); }
+}
+// ---- notas y recordatorios (110) ----
+const notesOpen = () => S.notes.filter(n => !n.done).sort((a, b) => (a.due_date || '9999').localeCompare(b.due_date || '9999') || String(a.created_at).localeCompare(String(b.created_at)));
+const noteDue = n => n.due_date ? Math.round((tdStart(n.due_date + 'T12:00:00') - tdStart(Date.now())) / DAY_MS) : null;     // días hasta el vencimiento (negativo = vencida)
+function noteRefLabel(n){
+  const t = n.ref_type, id = n.ref_id; if (!t) return '';
+  const o = t === 'project' ? projById(id) : t === 'model' ? modelById(id) : t === 'kit' ? kitById(id) : t === 'client' ? clientById(id) : t === 'unit' ? unitById(id) : null;
+  return o ? (t === 'unit' ? unitLabel(o) : o.name) : '';
+}
+function noteGo(id){
+  const n = S.notes.find(x => x.id === id); if (!n || !n.ref_type) return; closeModal();
+  if (n.ref_type === 'unit') return openUnit(n.ref_id);
+  favGo(n.ref_type, n.ref_id);
+}
+const noteDueTxt = n => { const d = noteDue(n); return d == null ? '' : d < 0 ? `Vencida hace ${-d} día${d === -1 ? '' : 's'}` : d === 0 ? 'Hoy' : d === 1 ? 'Mañana' : fmtDay(n.due_date); };
+function noteRow(n){
+  const d = noteDue(n), ref = noteRefLabel(n);
+  return `<div class="row urow"><div class="grow"><div>${esc(n.text)}</div><div class="sub">${d != null ? `<b style="color:${d < 0 ? 'var(--bad)' : d === 0 ? 'var(--warn)' : 'inherit'}">${esc(noteDueTxt(n))}</b>` : 'Sin fecha'}${ref ? ` · <a href="#" onclick="noteGo('${n.id}');return false" style="color:var(--accent)">${esc(ref)}</a>` : ''}</div></div><button class="btn small" aria-label="Marcar hecha" onclick="toggleNote('${n.id}',true)">Hecha</button></div>`;
+}
+let NOTE_REF = null;
+function openNote(ref){
+  NOTE_REF = ref || null; const lab = ref ? noteRefLabel({ref_type:ref.t, ref_id:ref.id}) : '';
+  openModal(`<h2>Nueva nota</h2>${lab ? `<div class="sub">Enlazada a: <b>${esc(lab)}</b></div>` : ''}
+    <label for="nt-text">Qué quieres recordar</label><textarea id="nt-text" style="min-height:80px" placeholder="Ej. Llamar al cliente para confirmar el rider"></textarea>
+    <label for="nt-due">Fecha (opcional)</label><input id="nt-due" type="date">
+    <div class="legend compact" style="margin:6px 0"><button type="button" class="chip" onclick="ntDue(0)">Hoy</button><button type="button" class="chip" onclick="ntDue(1)">Mañana</button><button type="button" class="chip" onclick="ntDue(7)">En una semana</button><button type="button" class="chip" onclick="ntDue(null)">Sin fecha</button></div>
+    <button class="btn primary block" style="margin-top:8px" onclick="saveNote()">Guardar nota</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
+  setTimeout(() => { const t = $('#nt-text'); if (t) t.focus(); }, 50);
+}
+function ntDue(d){ const i = $('#nt-due'); if (!i) return; if (d == null){ i.value = ''; return; } const x = new Date(); x.setDate(x.getDate() + d); i.value = toLocalInput(x.toISOString()).slice(0, 10); }
+async function saveNote(){
+  const text = $('#nt-text').value.trim(); if (!text) return toast('Escribe la nota', true);
+  await db(sb.from('notes').insert(Object.assign({text, due_date:$('#nt-due').value || null}, NOTE_REF ? {ref_type:NOTE_REF.t, ref_id:NOTE_REF.id} : {})));
+  closeModal(); await loadAll(false); render(); toast('Nota guardada');
+}
+async function toggleNote(id, done){ await db(sb.from('notes').update({done, done_at:done ? new Date().toISOString() : null}).eq('id', id)); await loadAll(false); if ($('#modal').classList.contains('open') && $('#sheet').querySelector('[data-notes]')) openNotes(); render(); }
+async function delNote(id){ await db(sb.from('notes').delete().eq('id', id)); await loadAll(false); openNotes(); render(); }
+function openNotes(showDone){
+  const op = notesOpen(), dn = S.notes.filter(n => n.done).sort((a, b) => String(b.done_at).localeCompare(String(a.done_at)));
+  const grp = (t, arr) => arr.length ? `<div class="group" style="margin:12px 0 6px">${t} (${arr.length})</div><div class="list" style="margin:0">${arr.map(noteRow).join('')}</div>` : '';
+  openModal(`<div data-notes="1"><h2>Notas y recordatorios</h2>${op.length || dn.length ? '' : '<div class="empty" style="margin:20px 0">No hay notas. Escribe lo que no quieras olvidar y, si quieres, ponle fecha.</div>'}
+    ${grp('Vencidas', op.filter(n => noteDue(n) != null && noteDue(n) < 0))}${grp('Hoy', op.filter(n => noteDue(n) === 0))}${grp('Próximas', op.filter(n => noteDue(n) != null && noteDue(n) > 0))}${grp('Sin fecha', op.filter(n => noteDue(n) == null))}
+    ${dn.length ? `<div class="actions" style="margin-top:10px"><button class="btn small" onclick="openNotes(${!showDone})">${showDone ? 'Ocultar' : 'Ver'} hechas (${dn.length})</button></div>` : ''}
+    ${showDone ? `<div class="list" style="margin:8px 0 0">${dn.slice(0, 30).map(n => `<div class="row urow"><div class="grow"><div class="sub" style="text-decoration:line-through">${esc(n.text)}</div></div><button class="btn small" onclick="toggleNote('${n.id}',false)">Reabrir</button><button class="btn small" aria-label="Borrar nota" onclick="delNote('${n.id}')">✕</button></div>`).join('')}</div>` : ''}
+    <button class="btn primary block" style="margin-top:12px" onclick="openNote()">+ Nueva nota</button><button class="btn block" onclick="closeModal()">Cerrar</button></div>`);
+}
+function notesHtml(t, id){
+  const ns = notesOpen().filter(n => n.ref_type === t && n.ref_id === id);
+  return `<div class="group">Notas y recordatorios${ns.length ? ` (${ns.length})` : ''}</div>${ns.length ? `<div class="list">${ns.map(noteRow).join('')}</div>` : ''}<div class="actions"><button class="btn small" onclick="openNote({t:'${t}',id:'${id}'})">+ Nota</button></div>`;
+}
+// ---- pantalla Hoy (90) ----
+function showProgress(p){
+  const rs = S.reservations.filter(r => r.project_id === p.id), bs = S.bulkRes.filter(b => b.project_id === p.id), c = {planned:0, out:0, returned:0};
+  rs.forEach(r => c[r.state] = (c[r.state] || 0) + 1); bs.forEach(b => c[b.state] = (c[b.state] || 0) + b.qty);
+  return {total:c.planned + c.out + c.returned, planned:c.planned, out:c.out, ret:c.returned};
+}
+const progTxt = p => { const s = showProgress(p); return s.total ? [`${s.total} pieza${s.total === 1 ? '' : 's'}`, s.planned ? `${s.planned} por sacar` : '', s.out ? `${s.out} fuera` : '', s.ret ? `${s.ret} devuelta${s.ret === 1 ? '' : 's'}` : ''].filter(Boolean).join(' · ') : 'Sin material reservado'; };
+function todayShows(){ const t0 = tdStart(Date.now()).getTime(), t1 = t0 + 8 * DAY_MS; return S.projects.filter(p => ['draft', 'quoted', 'confirmed'].includes(p.status) && new Date(p.ends_at) >= t0 && new Date(p.starts_at) < t1).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at)); }
+const lateShows = () => S.projects.filter(p => p.status !== 'cancelled' && new Date(p.ends_at) < Date.now() && (S.reservations.some(r => r.project_id === p.id && r.state === 'out') || S.bulkRes.some(b => b.project_id === p.id && b.state === 'out')));
+const tourSeen = () => { try { return localStorage.getItem('tourSeen') === '1'; } catch (e) { return true; } };
+function todayView(){
+  const shows = todayShows(), late = lateShows(), ns = notesOpen().filter(n => noteDue(n) != null && noteDue(n) <= 7), pay = payBuckets(), al = maintAlerts();
+  const showRow = p => { const d = tdDiff(p.starts_at), on = new Date(p.starts_at) <= Date.now() && new Date(p.ends_at) >= Date.now(), s = showProgress(p);
+    return `<div class="row tap" onclick="go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${on ? 'En curso · hasta ' + esc(dayLabel(p.ends_at)) : esc(dayLabel(p.starts_at)) + ' · ' + esc(tdTime(p.starts_at))}${p.venue ? ' · ' + esc(p.venue) : ''}</div><div class="sub">${esc(progTxt(p))}</div></div>
+      ${p.status !== 'confirmed' ? `<span class="badge">${esc(PROJ_STATUS[p.status])}</span>` : ''}${d <= 1 && s.planned ? `<button class="btn small primary" onclick="event.stopPropagation();go('shows');openView('load','${p.id}')">Cargar</button>` : ''}</div>`; };
+  const crew = shows.flatMap(p => S.assigns.filter(a => a.project_id === p.id).map(a => ({a, p, t:techById(a.technician_id)}))).filter(x => x.t).sort((x, y) => new Date(x.a.call_time || x.p.starts_at) - new Date(y.a.call_time || y.p.starts_at)).slice(0, 8);
+  const fl = favs().map(favItem).filter(Boolean);
+  return bar('Hoy', {actions:`<button class="btn small" onclick="openSearch()">Buscar</button><button class="btn primary small" onclick="openNote()">+ Nota</button>`})
+    + `<div class="sub" style="margin:10px 18px 0;text-transform:capitalize">${esc(new Date().toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'long'}))}</div>`
+    + (!tourSeen() ? `<div class="info"><b>¿Un paseo rápido por la app?</b><div class="sub">Un minuto para ver dónde está cada cosa.</div><div class="actions" style="margin:8px 0 0"><button class="btn small primary" onclick="openTour(0)">Ver el paseo</button><button class="btn small" onclick="tourDone()">No, gracias</button></div></div>` : '')
+    + `<div class="actions"><button class="btn" onclick="go('scan')">Escanear</button><button class="btn" onclick="go('shows');openProjectForm()">+ ${esc(W.S)}</button>${S.notes.some(n => !n.done) ? `<button class="btn" onclick="openNotes()">Notas (${S.notes.filter(n => !n.done).length})</button>` : ''}</div>`
+    + (late.length ? `<div class="group" style="color:var(--bad)">Material sin devolver</div><div class="list">${late.map(p => `<div class="row tap" onclick="go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub" style="color:var(--bad);font-weight:600">Debía volver el ${esc(fmtD(p.ends_at))} · ${esc(progTxt(p))}</div></div></div>`).join('')}</div>` : '')
+    + `<div class="group">${esc(W.P[0].toUpperCase() + W.P.slice(1))} de hoy y de los próximos 7 días</div>${shows.length ? `<div class="list">${shows.map(showRow).join('')}</div>` : `<div class="empty" style="margin:16px 24px">No hay ${esc(W.p)} en los próximos 7 días.</div>`}`
+    + (ns.length ? `<div class="group">Recordatorios</div><div class="list">${ns.slice(0, 5).map(noteRow).join('')}</div>${ns.length > 5 ? `<div class="actions"><button class="btn small" onclick="openNotes()">Ver las ${ns.length}</button></div>` : ''}` : '')
+    + (crew.length ? `<div class="group">Técnicos de estos días</div><div class="list">${crew.map(x => `<div class="row tap" onclick="go('techs');openView('tech','${x.t.id}')"><div class="grow"><b>${esc(x.t.name)}</b><div class="sub">${esc([x.a.role, x.a.call_time ? 'Llamada ' + dayLabel(x.a.call_time) + ' ' + tdTime(x.a.call_time) : dayLabel(x.p.starts_at)].filter(Boolean).join(' · '))} · ${esc(x.p.name)}</div></div></div>`).join('')}</div>` : '')
+    + ((al.length || incidenceStats().total || pay.inv.length) ? `<div class="group">Pendiente</div><div class="actions">${al.length ? `<button class="btn" style="color:var(--warn)" onclick="openAlerts()">Mantenimiento: ${al.length} aviso${al.length === 1 ? '' : 's'}</button>` : ''}${pay.inv.length ? `<button class="btn" onclick="openPayments()">${esc(payHeadline())}</button>` : ''}</div>` : '')
+    + (fl.length ? `<div class="group">Favoritos</div><div class="pad"><div class="legend compact">${fl.map(f => `<button type="button" class="chip" onclick="favGo('${f.t}','${f.id}')">★ ${esc(f.label)} <span class="sub">${esc(f.kind)}</span></button>`).join('')}</div></div>` : '')
+    + `<div style="height:16px"></div>`;
+}
+// ---- buscador global (97) ----
+function searchAll(q){
+  const k = norm(q), hit = (...a) => a.some(x => x != null && norm(String(x)).includes(k)), out = [], F = (t, id) => isFav(t, id) ? 0 : 1;
+  const add = (g, arr) => { if (arr.length) out.push({g, items:arr.sort((a, b) => a.f - b.f).slice(0, 8)}); };
+  add('Modelos', S.models.filter(m => hit(m.name, m.brand, (m.tags || []).join(' '), m.owner, m.notes)).map(m => ({t:'model', id:m.id, title:m.name, sub:[m.brand, m.is_bulk ? 'Por cantidad' : (S.units.filter(u => u.model_id === m.id).length + ' equipos')].filter(Boolean).join(' · '), f:F('model', m.id)})));
+  add('Equipos', S.units.filter(u => hit(u.serial_number, u.manufacturer_serial, u.code)).map(u => ({t:'unit', id:u.id, title:unitLabel(u), sub:[u.manufacturer_serial ? 'Fabricante ' + u.manufacturer_serial : '', UNIT_STATUS[u.status]].filter(Boolean).join(' · '), f:1})));
+  add('Kits', S.kits.filter(x => hit(x.name, x.code)).map(x => ({t:'kit', id:x.id, title:x.name, sub:x.code, f:F('kit', x.id)})));
+  add(W.S[0].toUpperCase() + W.S.slice(1) + 's', S.projects.filter(p => hit(p.name, p.client, p.venue)).sort((a, b) => new Date(b.starts_at) - new Date(a.starts_at)).map(p => ({t:'project', id:p.id, title:p.name, sub:[fmtD(p.starts_at), p.client, PROJ_STATUS[p.status]].filter(Boolean).join(' · '), f:F('project', p.id)})));
+  add('Clientes', S.clients.filter(c => hit(c.name, c.tax_id, c.email, c.phone, c.contact_name)).map(c => ({t:'client', id:c.id, title:c.name, sub:[c.tax_id, c.email].filter(Boolean).join(' · '), f:F('client', c.id)})));
+  add('Técnicos', S.techs.filter(t => hit(t.name, t.phone, t.email)).map(t => ({t:'tech', id:t.id, title:t.name, sub:[t.phone, t.email].filter(Boolean).join(' · '), f:1})));
+  add('Notas', S.notes.filter(n => !n.done && hit(n.text)).map(n => ({t:'note', id:n.id, title:n.text, sub:noteDueTxt(n), f:1})));
+  return out;
+}
+function openSearch(){
+  openModal(`<h2>Buscar</h2><input id="gs-q" type="search" placeholder="Nombre, nº de serie, cliente, nota…" autocomplete="off" oninput="gsRun()" onkeydown="gsKey(event)"><div id="gs-res" style="margin-top:8px"></div>`);
+  gsRun(); setTimeout(() => { const i = $('#gs-q'); if (i) i.focus(); }, 60);
+}
+function gsRun(){
+  const q = ($('#gs-q') || {}).value || '', box = $('#gs-res'); if (!box) return;
+  if (norm(q).length < 2){ const fl = favs().map(favItem).filter(Boolean); box.innerHTML = fl.length ? `<div class="group" style="margin:8px 0 6px">Favoritos</div><div class="list" style="margin:0">${fl.map(f => `<div class="row urow tap" onclick="searchGo('${f.t}','${f.id}')"><div class="grow"><b>★ ${esc(f.label)}</b><div class="sub">${esc(f.kind)}</div></div></div>`).join('')}</div>` : '<div class="sub" style="margin:10px 2px">Escribe al menos 2 letras. Busca en material, equipos (por nº de serie o del fabricante), kits, ' + esc(W.p) + ', clientes, técnicos y notas.</div>'; return; }
+  const res = searchAll(q);
+  box.innerHTML = res.length ? res.map(g => `<div class="group" style="margin:12px 0 6px">${esc(g.g)}</div><div class="list" style="margin:0">${g.items.map(i => `<div class="row urow tap" data-sr="1" onclick="searchGo('${i.t}','${i.id}')"><div class="grow"><b>${i.f === 0 ? '★ ' : ''}${esc(i.title)}</b><div class="sub">${esc(i.sub || '')}</div></div></div>`).join('')}</div>`).join('') : '<div class="empty" style="margin:20px 0">No hay nada con «' + esc(q) + '».</div>';
+}
+function gsKey(e){ if (e.key === 'Enter'){ const r = document.querySelector('#gs-res [data-sr]'); if (r) r.click(); } }
+function searchGo(t, id){
+  closeModal();
+  if (t === 'unit') return openUnit(id);
+  if (t === 'tech'){ go('techs'); return openView('tech', id); }
+  if (t === 'note') return openNotes();
+  favGo(t, id);
+}
+// ---- paseo y ayuda (102) ----
+const TOUR = [
+  ['Hoy', 'Tu pantalla de inicio: ' + '{p} de hoy y de la semana, material que sigue fuera, recordatorios, técnicos convocados y lo pendiente. Desde aquí puedes cargar un ' + '{s}, escanear o escribir una nota.'],
+  ['Material', 'Tus modelos y cada equipo con su número de serie y su QR. Hay kits (flight cases), categorías, palabras clave, favoritos (★), fotos, manuales en PDF y la rentabilidad de cada equipo.'],
+  ['{P}', 'Cada ' + '{s}' + ' pasa por Borrador, Presupuestado, Confirmado y Hecho. Al confirmar se avisa de lo que falta. Desde su ficha: lista de carga, presupuesto con versiones, contrato, patch DMX, plantillas y cierre.'],
+  ['Escanear', 'Salida, Devolución, Recuento y Consultar. Funciona sin conexión y se puede deshacer la última lectura. En «Modo almacén» solo quedan Escanear y la carga, con botones grandes.'],
+  ['Etiquetas', 'En Material > Etiquetas: hojas A4, rollos Brother o Dymo, diseño editable, perfiles de impresión y PDF. Imprime siempre antes la hoja de prueba.'],
+  ['Más', 'Clientes, técnicos, cobros, copias de seguridad, papelera, historial, estado del sistema y ajustes. Haz una copia completa de vez en cuando.'],
+  ['Gestos y atajos', 'Desliza desde el borde izquierdo para volver y tira hacia abajo para actualizar. En el ordenador: Ctrl/⌘ + K busca, / también, 1–5 cambian de pestaña y ? muestra todos los atajos.']
+];
+const tourFill = s => s.replace(/\{P\}/g, W.P[0].toUpperCase() + W.P.slice(1)).replace(/\{p\}/g, W.p[0].toUpperCase() + W.p.slice(1)).replace(/\{s\}/g, W.s);
+function openTour(i){
+  i = Math.max(0, Math.min(TOUR.length - 1, i || 0)); const [t, x] = TOUR[i], last = i === TOUR.length - 1;
+  openModal(`<div class="sub">Paso ${i + 1} de ${TOUR.length}</div><div class="prog"><i style="width:${Math.round(100 * (i + 1) / TOUR.length)}%"></i></div><h2 style="margin-top:12px">${esc(tourFill(t))}</h2><p style="font-size:16px;line-height:1.45">${esc(tourFill(x))}</p>
+    <div class="actions" style="margin-top:14px">${i > 0 ? `<button class="btn" onclick="openTour(${i - 1})">Anterior</button>` : ''}${last ? `<button class="btn primary" onclick="tourDone();closeModal()">Terminar</button>` : `<button class="btn primary" onclick="openTour(${i + 1})">Siguiente</button><button class="btn" onclick="tourDone();closeModal()">Saltar</button>`}</div>`);
+}
+function tourDone(){ try { localStorage.setItem('tourSeen', '1'); } catch (e) {} if (S.tab === 'today') render(); }
+const SHORTCUTS = [['Ctrl/⌘ + K  ·  /', 'Buscar en todo'], ['1 · 2 · 3 · 4 · 5', 'Cambiar de pestaña'], ['n', 'Nuevo (modelo, show o nota, según la pestaña)'], ['Esc', 'Cerrar la ventana o volver atrás'], ['?', 'Ver esta lista']];
+function openShortcuts(){ openModal(`<h2>Atajos de teclado</h2><div class="list" style="margin:12px 0">${SHORTCUTS.map(([k, d]) => `<div class="row urow"><div class="grow"><b>${esc(k)}</b><div class="sub">${esc(d)}</div></div></div>`).join('')}</div><div class="sub">No funcionan mientras escribes en un campo.</div><button class="btn block" style="margin-top:12px" onclick="closeModal()">Cerrar</button>`); }
+// ---- gestos (103) ----
+const gesturesOn = () => { try { return localStorage.getItem('gestures') !== '0'; } catch (e) { return true; } };
+function setGestures(on){ try { localStorage.setItem('gestures', on ? '1' : '0'); } catch (e) {} toast(on ? 'Gestos activados' : 'Gestos desactivados'); }
+let TCH = null, REFRESHING = false;
+async function pullRefresh(){ if (REFRESHING) return; REFRESHING = true; toast('Actualizando…'); try { await loadAll(false); render(); toast('Actualizado'); } catch (e) {} REFRESHING = false; }
+document.addEventListener('touchstart', e => {
+  if (!gesturesOn() || e.touches.length !== 1 || !S.session) { TCH = null; return; }
+  const t = e.touches[0], tg = e.target && e.target.closest ? e.target : null;
+  TCH = {x:t.clientX, y:t.clientY, sy:window.scrollY, skip:!tg || !!tg.closest('input,textarea,select,.cam,[type=range]') || modalOpen()};
+}, {passive:true});
+document.addEventListener('touchend', e => {
+  const g = TCH; TCH = null; if (!g || g.skip || !e.changedTouches.length) return;
+  const t = e.changedTouches[0], dx = t.clientX - g.x, dy = t.clientY - g.y;
+  if (g.x < 30 && dx > 90 && Math.abs(dy) < 60 && (S.view || (S.tab === 'techs' && !S.view))) { goBack(); return; }
+  if (g.sy <= 0 && window.scrollY <= 0 && g.y < 260 && dy > 120 && Math.abs(dx) < 70) pullRefresh();
+}, {passive:true});
+// ---- atajos de teclado (106) ----
+document.addEventListener('keydown', e => {
+  if (!S.session) return;
+  const tg = e.target || {}, typing = /^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName) || tg.isContentEditable;
+  if ((e.metaKey || e.ctrlKey) && String(e.key).toLowerCase() === 'k'){ e.preventDefault(); if (!whMode()) openSearch(); return; }
+  if (e.key === 'Escape'){ if (modalOpen()) closeModal(); else if (S.view || S.tab === 'techs') goBack(); return; }
+  if (typing || e.metaKey || e.ctrlKey || e.altKey || modalOpen()) return;
+  if (e.key === '/' && !whMode()){ e.preventDefault(); openSearch(); }
+  else if (e.key === '?'){ openShortcuts(); }
+  else if (/^[1-9]$/.test(e.key) && navTabs()[+e.key - 1]) go(navTabs()[+e.key - 1][0]);
+  else if (e.key === 'n' && !whMode()){ if (S.tab === 'material') openModelForm(); else if (S.tab === 'shows') openProjectForm(); else if (S.tab === 'today') openNote(); }
+});
 
 /* ============ Arranque ============ */
 S.queue = lsGet(QUEUE_KEY, []); S.failed = lsGet(FAIL_KEY, []);
