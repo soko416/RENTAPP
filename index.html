@@ -23,12 +23,24 @@
   --r:10px;
 }
 @media (prefers-color-scheme: dark){
-  :root{
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
     --bg:#14181F; --panel:#1E242E; --ink:#E8ECF2; --muted:#9AA5B8; --line:#2E3644;
     --accent:#6C8DFF; --accent-ink:#0E1320;
     --ok:#5ED08C; --okbg:#173525; --warn:#F0B84A; --warnbg:#3A2E10; --bad:#FF8A78; --badbg:#3E1D18;
   }
 }
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#14181F; --panel:#1E242E; --ink:#E8ECF2; --muted:#9AA5B8; --line:#2E3644;
+  --accent:#6C8DFF; --accent-ink:#0E1320;
+  --ok:#5ED08C; --okbg:#173525; --warn:#F0B84A; --warnbg:#3A2E10; --bad:#FF8A78; --badbg:#3E1D18;
+}
+:root[data-theme="light"]{color-scheme:light}
+.undobar{position:fixed;left:16px;right:16px;bottom:calc(100px + env(safe-area-inset-bottom));z-index:31;max-width:560px;margin:0 auto;background:var(--ink);color:var(--bg);padding:10px 12px 10px 14px;border-radius:12px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.undobar span{flex:1}
+.undobar button{background:transparent;border:1px solid currentColor;color:inherit;border-radius:8px;padding:8px 14px;font:inherit;font-weight:700;cursor:pointer;min-height:40px}
+.toast .toastbtn{pointer-events:auto;margin-left:10px;background:transparent;border:1px solid currentColor;color:inherit;border-radius:8px;padding:4px 10px;font:inherit;font-weight:700;cursor:pointer}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{margin:0;min-height:100%}
@@ -57,7 +69,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .sub.bad{color:var(--bad)}
 .group{margin:22px 16px 0;font-weight:700;font-size:14px;color:var(--muted)}
 .count{font-weight:700;font-size:18px;font-stretch:88%;min-width:28px;text-align:right}
-.badge{display:inline-block;font-size:12.5px;font-weight:600;padding:2px 9px;border-radius:99px;background:var(--line);color:var(--muted);white-space:nowrap}
+.badge{display:inline-block;font-size:12.5px;font-weight:600;padding:2px 9px;border-radius:99px;background:var(--line);color:var(--ink);white-space:nowrap}
 .badge.ok{background:var(--okbg);color:var(--ok)}
 .badge.warn{background:var(--warnbg);color:var(--warn)}
 .badge.bad{background:var(--badbg);color:var(--bad)}
@@ -69,6 +81,8 @@ input[type=checkbox]{width:22px;height:22px;padding:0;flex:none;accent-color:var
 textarea{min-height:84px;resize:vertical}
 .chkrow{display:flex;align-items:center;gap:12px;margin:0;padding:9px 0;font-size:16px;color:var(--ink);cursor:pointer}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.two>*{min-width:0}
+input[type=date]{min-width:0;max-width:100%}
 .info{margin:12px 16px 0;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 16px 0}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--panel);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
@@ -153,21 +167,65 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 .legend.compact{gap:4px;margin:4px 0 6px}
 .legend.compact .chip{font-size:12.5px;padding:1px 8px;gap:5px}
 .legend.compact .chip .sw{width:11px;height:11px}
+/* Recuadro con el número de unidad (propuesta A, en pequeño) */
+.utile{display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;border-radius:8px;background:var(--ink);color:var(--panel);font-weight:800;line-height:1;font-size:15px;font-stretch:100%}
+.utile.d3{font-size:12px}.utile.d4{font-size:9.5px}
+.utile.md{width:42px;height:42px;border-radius:11px;font-size:26px}
+.utile.md.d3{font-size:21px}.utile.md.d4{font-size:16px}
+.utile.none{background:transparent;border:2px solid var(--line);color:var(--muted);font-weight:700}
+.row.urow{padding:6px 12px;gap:10px}
+/* Etiquetas y pegatinas: sirven para la vista previa en pantalla y para las hojas impresas */
+.lcell{position:absolute;overflow:hidden;box-sizing:border-box;background:#fff;color:#000}
+.lcell.bd{border:0.3mm solid #000}
+.lbox{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(var(--k,1));transform-origin:center center}
+.label{display:flex;align-items:center;box-sizing:border-box;color:#000;background:#fff;font-family:Arial,Helvetica,sans-serif;font-stretch:100%;font-weight:400;text-align:left;line-height:1.25}
+.label.full{width:63.3mm;height:26.5mm;gap:2.5mm;padding:0 2.2mm}
+.label.compact{width:38mm;height:19mm;gap:2mm;padding:0 2mm}
+.label .qr{flex:none}
+.label.full .qr{width:22mm;height:22mm}
+.label.compact .qr{width:15mm;height:15mm}
+.label .qr svg{width:100%;height:100%;display:block}
+.label .lt{display:flex;flex-direction:column;flex:1;min-width:0}
+.label.full .lt{height:22mm;font-size:8pt}
+.label.compact .lt{height:15mm;font-size:6pt}
+.label .lrow{display:flex;align-items:center}
+.label .ltile{flex:none;display:inline-flex;align-items:center;justify-content:center;background:#000;color:#fff;font-weight:800;line-height:1;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.label .lname,.label .ctitle,.label .big{font-weight:700;line-height:1.1;overflow-wrap:anywhere}
+.label .mini{color:#222}
+.label .csub,.label .cline{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.label .ctitle{max-height:2.3em;overflow:hidden}
+.label .code{color:#666}
+.label .brand{margin-top:auto;background:#000;color:#fff;border-radius:1mm;text-align:center;font-weight:800;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:uppercase;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.label.full .lt b{font-size:9pt}
+.label.full .big{font-size:10.5pt;margin-bottom:1.2mm}.label.full .big.m{font-size:9.5pt}.label.full .big.s{font-size:8.5pt}
+.label.full .mini{font-size:8.5pt}
+.label.full .lrow{gap:1.8mm;margin-bottom:1.2mm}
+.label.full .ltile{width:7.5mm;height:7.5mm;border-radius:1.6mm;font-size:13pt}.label.full .ltile.d3{font-size:10pt}.label.full .ltile.d4{font-size:8pt}
+.label.full .lname{font-size:9.5pt}.label.full .lname.m{font-size:8.2pt}.label.full .lname.s{font-size:7.5pt}
+.label.full .code{font-size:5.5pt;margin-top:1.2mm}
+.label.full .brand{padding:2mm 1mm;font-size:9pt;letter-spacing:.4pt}
+.label.full .ctitle{font-size:11pt}.label.full .ctitle.m{font-size:9.5pt}.label.full .ctitle.s{font-size:8pt}
+.label.full .csub{font-size:8pt}.label.full .cline{font-size:6.5pt;color:#333}
+.label.compact .lt b{font-size:7pt;max-height:6.4mm;overflow:hidden}
+.label.compact .big{font-size:7.5pt;margin-bottom:.8mm}.label.compact .big.m{font-size:6.5pt}.label.compact .big.s{font-size:5.5pt}
+.label.compact .mini{font-size:6.5pt}
+.label.compact .lrow{gap:1.2mm;margin-bottom:.8mm}
+.label.compact .ltile{width:6mm;height:6mm;border-radius:1.3mm;font-size:10.5pt}.label.compact .ltile.d3{font-size:8pt}.label.compact .ltile.d4{font-size:6.5pt}
+.label.compact .lname{font-size:7pt}
+.label.compact .code{font-size:4.5pt;margin-top:.6mm}
+.label.compact .brand{padding:1.2mm .3mm;font-size:5.5pt;letter-spacing:0}
+.label.compact .ctitle{font-size:7.5pt}.label.compact .ctitle.m{font-size:6.8pt}.label.compact .ctitle.s{font-size:6pt}
+.label.compact .csub{font-size:6.5pt}.label.compact .cline{display:none}
+.atest{display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Arial,Helvetica,sans-serif}
+.atest .an{position:relative;font-weight:700;font-size:14pt;background:#fff;padding:0 1.5mm}
+.atest .as{position:relative;font-size:7pt;background:#fff;padding:0 1mm}
 #print{display:none}
 @media print{
   body>*:not(#print){display:none!important}
   body{background:#fff!important}
-  #print.labels{display:grid!important;grid-template-columns:repeat(3,1fr);gap:4mm;padding:6mm}
-  .label{display:flex;align-items:center;gap:2.5mm;border:0.3mm solid #000;padding:2mm;break-inside:avoid;color:#000;background:#fff}
-  .label .qr{width:22mm;height:22mm;flex:none}
-  .label .qr svg{width:100%;height:100%}
-  .label .lt{display:flex;flex-direction:column;font-size:8pt;line-height:1.25;min-width:0}
-  .label .lt b{font-size:9pt}
-  .label .lt .big{font-size:10.5pt;font-weight:700;line-height:1.1;margin-bottom:1.2mm;overflow-wrap:anywhere}
-  .label .lt .big.m{font-size:9.5pt}
-  .label .lt .big.s{font-size:8.5pt}
-  .label .lt .mini{font-size:8.5pt;color:#222}
-  .label .lt .code{font-size:5.5pt;color:#666;margin-top:1.2mm}
+  #print.labels{display:block!important;padding:0;margin:0}
+  .lsheet{position:relative;break-after:page;page-break-after:always}
+  .lsheet:last-child{break-after:auto;page-break-after:auto}
   #print.doc{display:block!important;padding:12mm;color:#000;background:#fff;font-size:11pt;line-height:1.35;font-family:Arial,Helvetica,sans-serif}
   .doc h1{font-size:20pt;margin:0 0 2mm;white-space:normal;font-stretch:100%}
   .doc h2{font-size:13pt;margin:6mm 0 2mm;border-bottom:.3mm solid #000;padding-bottom:1mm}
@@ -200,7 +258,16 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = 'V1.14';   // siguiente: V1.01, V1.02, V1.03…
+const APP_VERSION = 'V1.03';   // siguiente: V1.04, V1.05, V1.06…
+// Cómo llamas a los shows (Más > Ajustes de la app): Show / Bolo / Evento… Todas las opciones son masculinas y el plural lleva «s».
+const W = {s:'show', p:'shows', S:'Show', P:'Shows'};
+const capFirst = x => x ? x.charAt(0).toUpperCase() + x.slice(1) : x;
+function setShowTerm(sing, plur){
+  sing = String(sing || 'show').trim().toLowerCase() || 'show'; plur = String(plur || '').trim().toLowerCase() || sing + 's';
+  W.s = sing; W.p = plur; W.S = capFirst(sing); W.P = capFirst(plur);
+  try { localStorage.setItem('showTerm', JSON.stringify([sing, plur])); } catch (e) {}
+}
+try { const t = JSON.parse(localStorage.getItem('showTerm') || 'null'); if (t && t[0]) setShowTerm(t[0], t[1]); } catch (e) {}
 const SUPABASE_URL = 'https://akzopqnsrpcwuxaaqkfc.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrem9wcW5zcnBjd3V4YWFxa2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1MzExNjMsImV4cCI6MjEwOTEwNzE2M30.597llIN7plBgQBbueLQOJMKLVDXnzM9ytOg0UEO6DAc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -223,22 +290,33 @@ const RES_STATE = {planned:'Pendiente', out:'Fuera', returned:'Devuelto', mixed:
 const RES_CLASS = {planned:'', out:'warn', returned:'ok', mixed:'warn'};
 
 let toastTimer;
-function toast(msg, bad=false){
-  const t = $('#toast'); t.textContent = msg; t.className = 'toast show' + (bad?' bad':'');
-  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.className='toast', bad?6000:2500);
+function toast(msg, bad=false, diag=false){
+  const t = $('#toast'); t.innerHTML = esc(msg) + (diag ? ' <button class="toastbtn" onclick="copyDiagnostics()">Copiar diagnóstico</button>' : '');
+  t.className = 'toast show' + (bad?' bad':'');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.className='toast', bad?(diag?9000:6000):2500);
 }
 function errMsg(e){
   if (!e) return 'Error desconocido';
-  if (e.code === '23P01') return 'Esa unidad ya está reservada en otro show que se solapa en fechas.';
-  if (e.code === '23505') return 'Ya existe un elemento con ese valor (nombre o código repetido).';
-  if (e.code === '23514') return e.message;
-  if (e.code === 'PGRST205' || e.code === 'PGRST204' || /schema cache/i.test(e.message||'')) return 'Falta ejecutar un script nuevo en Supabase: esquema_v2 a v9 (SQL Editor).';
-  if (/fetch|network/i.test(e.message||'')) return 'Sin conexión. Comprueba tu internet.';
-  return e.message || 'Error';
+  noteError(e);
+  const m = String(e.message || ''), c = e.code;
+  if (c === '23P01') return 'Esa unidad ya está reservada en otro ' + W.s + ' que se solapa en fechas.';
+  if (c === '23505') return 'Ya existe un elemento con ese valor (nombre o código repetido).';
+  if (c === '23514') return m;
+  if (c === 'PGRST205' || c === 'PGRST204' || /schema cache/i.test(m)) return 'Falta ejecutar un script nuevo en Supabase: esquema_v2 a v12 (SQL Editor).';
+  if (/failed to fetch|network|load failed|networkerror/i.test(m)) return navigator.onLine ? 'No hay respuesta del servidor. Si tienes internet, puede que el proyecto de Supabase esté pausado por inactividad: entra en supabase.com y reactívalo.' : 'Sin conexión. Comprueba tu internet.';
+  if (c === 'PGRST301' || /jwt/i.test(m)) return 'La sesión ha caducado. Cierra sesión y vuelve a entrar.';
+  if (c === '42501' || /row-level security|permission denied/i.test(m)) return 'No tienes permiso para hacer eso.';
+  if (c === '23503') return 'No se puede hacer: está en uso en otro sitio (por ejemplo, forma parte de un ' + W.s + ' o de un kit).';
+  if (c === '23502') return 'Falta un dato obligatorio.';
+  if (c === '22P02' || c === '22007' || c === '22003') return 'Hay un dato con un formato o un valor no válido.';
+  if (c === '57014' || /statement timeout/i.test(m)) return 'El servidor tardó demasiado. Inténtalo otra vez.';
+  if (/bucket not found/i.test(m)) return 'Falta crear el almacén de fotos «fotos» en Supabase (se hace con esquema_v3.sql).';
+  if (c === '429' || /rate limit|too many requests/i.test(m)) return 'Demasiadas peticiones seguidas. Espera un momento.';
+  return m ? 'Error: ' + m : 'Error';
 }
 async function db(promise){
   const r = await promise;
-  if (r.error){ toast(errMsg(r.error), true); throw r.error; }
+  if (r.error){ toast(errMsg(r.error), true, true); throw r.error; }
   return r.data;
 }
 function openModal(html){ $('#sheet').innerHTML = html; $('#modal').classList.add('open'); }
@@ -260,7 +338,7 @@ function download(blob, name){
 const S = {
   session:null, tab:'material', view:null, matMode:'equipos', nagged:false,
   categories:[], models:[], units:[], projects:[], reservations:[], techs:[], assigns:[],
-  kits:[], kitItems:[], bulkRes:[], maint:[], settings:{}, clients:[], bulkLogs:[],
+  kits:[], kitItems:[], bulkRes:[], maint:[], settings:{}, clients:[], bulkLogs:[], customLabels:[],
   showsMode:'lista', calMonth:null, calDay:null,
   count:{seen:new Set()}, queue:[], failed:[],
   scan:{project:'', mode:'out', log:[]}
@@ -285,6 +363,13 @@ function unitName(u){
 // Para listas que ya van bajo el nombre del modelo: el nombre con número, o si no hay número, el nº de serie
 const unitTitleHtml = u => nominalNumber(u) != null ? esc(unitName(u)) : (u.serial_number ? esc(u.serial_number) : '<span class="sub">Sin nº de serie</span>');
 const unitLabel = u => unitName(u) + (u.serial_number ? ' · ' + u.serial_number : '');
+const unitModelName = u => (modelById(u && u.model_id) || {}).name || '';
+// Recuadro con el número de unidad: el 6 de «LedBeam 150 6» (size 'md' = el de la ficha). Sin número, un recuadro vacío para que todo quede alineado.
+function unitTile(u, size){
+  const n = nominalNumber(u), d = n == null ? 0 : String(n).length;
+  return n == null ? `<span class="utile none ${size || ''}" role="img" aria-label="Sin número de unidad">–</span>`
+    : `<span class="utile ${size || ''} ${d >= 3 ? 'd' + d : ''}" role="img" aria-label="Unidad ${n}">${n}</span>`;
+}
 // Segunda línea de una unidad en las listas: su nº de serie. El código interno (U-…) solo si no tiene nº de serie, para poder identificarla.
 const unitSub = u => u.serial_number ? esc(u.serial_number) : `<span class="code faint">${esc(u.code)}</span>`;
 // Orden natural: por modelo y por número (LB001, LB002… LB010)
@@ -339,14 +424,15 @@ async function loadAll(draw=true){
     toast(errMsg(bad.error), true); return;
   }
   [S.categories, S.models, S.units, S.projects, S.reservations, S.techs, S.assigns, S.kits, S.kitItems, S.bulkRes, S.maint, S.clients, S.bulkLogs] = rs.map(r => r.data);
+  try { const cl = await fetchAll('custom_labels'); S.customLabels = cl.error ? [] : (cl.data || []).slice().sort(byName); } catch (e) { S.customLabels = []; }      // las pegatinas personalizadas no impiden abrir la app si falta esquema_v10.sql
   S.clients.sort(byName); S.categories.sort(catCmp); S.models.sort(modelCmp); S.techs.sort(byName); S.kits.sort(byName);
   S.units.sort((a,b) => String(a.created_at).localeCompare(String(b.created_at)));
   S.projects.sort((a,b) => new Date(a.starts_at) - new Date(b.starts_at));
-  S.settings = st.data || {};
+  S.settings = st.data || {}; applyAppConfig();
   S.queue.forEach(applyLocal);          // lo que aún no se ha enviado sigue viéndose reflejado
   saveSnapshot(); updateOffBar();
   autoMergeBulk();
-  if (!S.schemaChecked && navigator.onLine){ S.schemaChecked = true; schemaMissing().then(m => { if (m.length) showSchemaHelp(m); }); }
+  if (!S.schemaChecked && navigator.onLine){ S.schemaChecked = true; schemaMissing().then(m => { S.schemaMiss = m; if (m.length) showSchemaHelp(m); }); }
   if (draw) render();
   if (!S.nagged){ S.nagged = true; setTimeout(flushQueue, 300); }
 }
@@ -381,7 +467,7 @@ function bar(title, {back=false, actions=''} = {}){
   return `<header class="bar">${back?`<button class="btn small" onclick="goBack()">‹ Volver</button>`:''}<h1>${esc(title)}</h1>${actions}</header>`;
 }
 function navHTML(){
-  const t = [['material','Material'],['shows','Shows'],['scan','Escanear'],['techs','Técnicos'],['more','Más']];
+  const t = [['material','Material'],['shows',('' + W.P + '')],['scan','Escanear'],['techs','Técnicos'],['more','Más']];
   return `<nav class="tabs">${t.map(([k,l]) => `<button class="${S.tab===k?'on':''}" onclick="go('${k}')">${l}${k === 'more' ? navBadgeHtml() : ''}</button>`).join('')}</nav>`;
 }
 
@@ -393,11 +479,11 @@ function render(){
   const y = key === lastKey ? window.scrollY : 0;
   let body = '';
   const v = S.view && S.view.name;
-  if (S.tab === 'material') body = v === 'model' ? modelView(S.view.id) : v === 'kit' ? kitView(S.view.id) : v === 'repairs' ? repairsView() : materialList();
+  if (S.tab === 'material') body = v === 'model' ? modelView(S.view.id) : v === 'kit' ? kitView(S.view.id) : v === 'repairs' ? repairsView() : v === 'labels' ? labelsView() : v === 'avail' ? availView() : materialList();
   else if (S.tab === 'shows') body = v === 'project' ? projectView(S.view.id) : v === 'load' ? loadView(S.view.id) : showsList();
   else if (S.tab === 'scan') body = scanView();
   else if (S.tab === 'techs') body = v === 'tech' ? techView(S.view.id) : techsList();
-  else if (S.tab === 'more') body = v === 'clients' ? clientsList() : v === 'client' ? clientView(S.view.id) : moreView();
+  else if (S.tab === 'more') body = v === 'clients' ? clientsList() : v === 'client' ? clientView(S.view.id) : v === 'trash' ? trashView() : v === 'history' ? historyView() : v === 'system' ? systemView() : moreView();
   $('#app').innerHTML = body + navHTML();
   lastKey = key;
   if (y) window.scrollTo(0, y);
@@ -504,10 +590,10 @@ function materialList(){
       ${m.photo_url?`<img class="thumb" loading="lazy" src="${esc(m.photo_url)}" alt="">`:''}
       <div class="grow"><div class="mline" style="flex-wrap:nowrap;justify-content:space-between"><b>${colorDot(m)}${esc(m.name)}</b><span class="count">${m.is_bulk ? m.bulk_stock : us.length}</span></div>${subTxt || m.is_bulk || nBad || nInc ? `<div class="mline">${subTxt ? `<span class="sub">${esc(subTxt)}</span>` : ''}${m.is_bulk ? '<span class="badge">Por cantidad</span>' : ''}${nBad ? `<span class="badge warn">${nBad} fuera de servicio</span>` : ''}${nInc ? `<span class="badge warn">${nInc} incompleto${nInc === 1 ? '' : 's'}</span>` : ''}</div>` : ''}</div></div>`;
   }).join(''), /cabl/i.test(n) ? legendChips() : '')).join('') + '</div>';
-  return bar('Material', {actions: `<button class="btn small" onclick="printLabels(S.units.map(u=>u.id))">Etiquetas</button><button class="btn primary small" onclick="openModelForm()">+ Modelo</button>`})
+  return bar('Material', {actions: `<button class="btn small" onclick="openView('labels','')">Etiquetas${labelPendingCount() ? ' (' + labelPendingCount() + ')' : ''}</button><button class="btn primary small" onclick="openModelForm()">+ Modelo</button>`})
     + matSeg()
     + (S.models.length ? `<div class="search"><input type="search" placeholder="Buscar por nombre, marca o nº de serie" oninput="filterRows(this.value)"></div>` : '')
-    + `<div class="actions" style="margin-top:10px"><button class="btn small" onclick="openCategories()">Gestionar categorías</button><button class="btn small" onclick="openLegend()">Leyenda de colores</button>${panelBtns()}</div>${colorFilterBar(groups)}${matPanelHtml()}`
+    + `<div class="actions" style="margin-top:10px"><button class="btn small" onclick="openCategories()">Gestionar categorías</button><button class="btn small" onclick="openBrands()">Gestionar marcas</button><button class="btn small" onclick="openView('avail','')">Disponibilidad</button><button class="btn small" onclick="openLegend()">Leyenda de colores</button>${panelBtns()}</div>${colorFilterBar(groups)}${matPanelHtml()}`
     + (S.models.length ? (names.length || !S.colorFilter.size ? body : '') : `<div class="empty">Aún no hay material.<br>Pulsa «+ Modelo» para añadir el primer equipo.</div>`);
 }
 
@@ -560,8 +646,8 @@ async function deleteCategory(id){
   const n = S.models.filter(m => m.category_id === id).length;
   const aviso = n ? `Los ${n} modelo${n===1?'':'s'} de «${c.name}» pasarán a «Sin categoría». No se borra ningún equipo.` : 'Esta categoría no tiene modelos.';
   if (!confirm(`¿Borrar la categoría «${c.name}»?\n${aviso}`)) return;
-  await db(sb.from('categories').delete().eq('id', id));
-  await loadAll(); openCategories(); toast('Categoría borrada');
+  const tid = await trashRun('category', id, `Categoría «${c.name}»`, () => db(sb.from('categories').delete().eq('id', id)));
+  await loadAll(); openCategories(); undoBar(`Categoría «${c.name}» borrada`, tid);
 }
 
 /* ---- Ficha de modelo ---- */
@@ -581,7 +667,7 @@ function modelView(id){
   const cat = S.categories.find(c => c.id === m.category_id);
   const st = modelStats(m);
   const statTxt = m.day_rate > 0
-    ? `${st.shows} show${st.shows===1?'':'s'} pasado${st.shows===1?'':'s'} · ingresos ${eur(st.income)}`
+    ? `${st.shows} ${W.s}${st.shows===1?'':'s'} pasado${st.shows===1?'':'s'} · ingresos ${eur(st.income)}`
     : 'Pon una tarifa por día (Editar) para ver cuánto factura este equipo.';
   const head = bar(m.name, {back:true})
     + `<div class="info">${m.photo_url?`<img class="hero" src="${esc(m.photo_url)}" alt="">`:''}<div class="sub">${esc([m.brand, cat?cat.name:''].filter(Boolean).join(' · '))}</div>
@@ -593,23 +679,23 @@ function modelView(id){
     const lines = S.bulkRes.filter(b => b.model_id === id).map(b => ({b, p:projById(b.project_id)})).filter(x => x.p && x.b.state !== 'returned')
       .sort((x,y) => new Date(x.p.starts_at) - new Date(y.p.starts_at));
     return head + `<div class="info"><b>${m.bulk_stock}</b> en stock · <span class="sub">por cantidad, sin número de serie</span>${bulkRepair(m) ? ` · <span style="color:var(--warn);font-weight:600">${bulkRepair(m)} en reparación</span>` : ''}</div>
-      <div class="actions"><button class="btn" onclick="openModelForm('${id}')">Editar</button><button class="btn danger" onclick="deleteModel('${id}')">Eliminar</button></div>
-      <div class="group">Reservado en shows</div>
+      <div class="actions"><button class="btn" onclick="openModelForm('${id}')">Editar</button><button class="btn" onclick="openChanges('equipment_models','${id}')">Cambios</button><button class="btn danger" onclick="deleteModel('${id}')">Eliminar</button></div>
+      <div class="group">Reservado en ${W.p}</div>
       ${lines.length ? `<div class="list">${lines.map(({b,p}) => `<div class="row tap" onclick="go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))}</div></div>
         <span class="badge ${RES_CLASS[b.state]}">${RES_STATE[b.state]}</span><div class="count">×${b.qty}</div></div>`).join('')}</div>`
-        : `<div class="empty" style="margin:20px 24px">No está reservado en ningún show.</div>`}`;
+        : `<div class="empty" style="margin:20px 24px">No está reservado en ningún ${W.s}.</div>`}${bulkHistoryHtml(m)}`;
   }
   const us = S.units.filter(u => u.model_id === id).sort(unitCmp);
   return head
     + `<div class="actions">
       <button class="btn" onclick="openModelForm('${id}')">Editar</button>
       <button class="btn" onclick="printLabels(S.units.filter(u=>u.model_id==='${id}').map(u=>u.id))">Etiquetas QR</button>
-      <button class="btn danger" onclick="deleteModel('${id}')">Eliminar</button>
+      <button class="btn" onclick="openChanges('equipment_models','${id}')">Cambios</button><button class="btn danger" onclick="deleteModel('${id}')">Eliminar</button>
     </div>
     <div class="group">Unidades (${us.length})</div>
-    ${us.length ? `<div class="list">${us.map(u => { const w = unitWhere(u), k = unitKit(u); return `<div class="row tap" onclick="openUnit('${u.id}')">
-      <div class="grow"><b>${unitTitleHtml(u)}</b>${nominalNumber(u) != null && u.serial_number ? `<span class="sub" style="display:block">${esc(u.serial_number)}</span>` : ''}
-      <div class="sub">${[u.serial_number ? '' : `<span class="code faint">${esc(u.code)}</span>`, k ? 'Kit ' + esc(k.name) : '', w ? esc(w.t) : '', u.missing_note ? `<span style="color:var(--warn);font-weight:600">Incompleto: ${esc(u.missing_note)}</span>` : ''].filter(Boolean).join(' · ')}</div></div>
+    ${us.length ? `<div class="list">${us.map(u => { const w = unitWhere(u), k = unitKit(u); return `<div class="row tap urow" onclick="openUnit('${u.id}')">${unitTile(u)}
+      <div class="grow"><b>${esc(unitModelName(u))}</b>
+      <div class="sub">${[u.serial_number ? esc(u.serial_number) : `<span class="code faint">${esc(u.code)}</span>`, k ? 'Kit ' + esc(k.name) : '', w ? esc(w.t) : '', u.missing_note ? `<span style="color:var(--warn);font-weight:600">Incompleto: ${esc(u.missing_note)}</span>` : ''].filter(Boolean).join(' · ')}</div></div>
       <span class="badge ${UNIT_CLASS[u.status]}">${UNIT_STATUS[u.status]}</span></div>`; }).join('')}</div>`
       : `<div class="empty">Este modelo aún no tiene unidades.</div>`}
     <div class="actions"><button class="btn primary" onclick="openAddUnits('${id}')">+ Añadir unidades</button></div>`;
@@ -730,9 +816,9 @@ async function saveModel(id){
 }
 async function deleteModel(id){
   const n = S.units.filter(u => u.model_id === id).length;
-  if (!confirm(`¿Eliminar este modelo${n?` y sus ${n} unidades`:''}? También se quitará de los shows y los kits.`)) return;
-  await db(sb.from('equipment_models').delete().eq('id', id));
-  S.view = null; await loadAll(); toast('Eliminado');
+  if (!confirm(`¿Eliminar este modelo${n?` y sus ${n} unidades`:''}? También se quitará de los ${W.p} y los kits.`)) return;
+  const m = modelById(id), tid = await trashRun('model', id, `Modelo «${m.name}»`, () => db(sb.from('equipment_models').delete().eq('id', id)));
+  S.view = null; await loadAll(); undoBar(`Modelo «${m.name}» eliminado`, tid);
 }
 function openAddUnits(modelId){
   openModal(`<h2>Añadir unidades</h2>
@@ -751,11 +837,9 @@ async function saveUnits(modelId){
 }
 function openUnit(id){
   const u = unitById(id), m = modelById(u.model_id);
-  openModal(`<h2>${esc(m.name)}</h2>
-    <div class="qrbox">${qrSvg(u.code)}</div>
-    <div style="text-align:center;font-size:24px;font-weight:700;font-stretch:88%">${esc(unitName(u))}</div>
-    ${u.serial_number ? `<div style="text-align:center;font-size:16px">${esc(u.serial_number)}</div>` : ''}
-    <div class="sub" style="text-align:center">Código interno (el del QR, no se puede cambiar): <span class="code">${esc(u.code)}</span></div>
+  openModal(`<div class="qrbox">${qrSvg(u.code)}</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:8px 0 4px">${unitTile(u, 'md')}<div><h2 style="margin:0;font-size:22px">${esc(m.name)}</h2>${u.serial_number ? `<div style="font-size:16px;color:var(--muted)">${esc(u.serial_number)}</div>` : ''}</div></div>
+    <div class="sub" style="text-align:center">Código interno (el del QR, no se puede cambiar): <span class="code">${esc(u.code)}</span></div>${labelStatusHtml('u', u)}
     <label for="u-serial">Número de serie</label><input id="u-serial" value="${esc(u.serial_number||'')}">
     <label for="u-status">Estado</label><select id="u-status" onchange="unitStateChanged(${u.missing_note ? 'true' : 'false'})">${opts(Object.entries(UNIT_FORM_STATES), u.status === 'ok' && u.missing_note ? 'incomplete' : u.status)}</select>
     <div id="u-missing-box" ${u.missing_note ? '' : 'hidden'}><label for="u-missing">Qué falta</label><input id="u-missing" value="${esc(u.missing_note||'')}" placeholder="Por ejemplo: garra, cable de alimentación…"></div>
@@ -765,7 +849,7 @@ function openUnit(id){
     <label for="u-notes">Notas</label><textarea id="u-notes">${esc(u.notes||'')}</textarea>
     <button class="btn primary block" onclick="saveUnit('${id}')">Guardar</button>
     <div class="actions" style="margin:10px 0 0"><button class="btn" onclick="openUnitHistory('${id}')">Historial</button><button class="btn" onclick="openMaintenance('${id}')">Registrar mantenimiento</button></div>
-    <div class="actions" style="margin:10px 0 0"><button class="btn" onclick="closeModal();printLabels(['${id}'])">Imprimir etiqueta</button><button class="btn danger" onclick="deleteUnit('${id}')">Eliminar</button></div>`);
+    <div class="actions" style="margin:10px 0 0"><button class="btn" onclick="closeModal();printLabels(['${id}'])">Imprimir etiqueta</button><button class="btn" onclick="openChanges('units','${id}')">Cambios</button><button class="btn danger" onclick="deleteUnit('${id}')">Eliminar</button></div>`);
 }
 // Estados que se ven en la ficha. «Incompleto» es un equipo operativo al que le falta algo (se guarda como estado Operativa + qué falta).
 const UNIT_FORM_STATES = {ok:'Operativa', incomplete:'Incompleto', repair:'En reparación', lost:'Perdida', retired:'De baja'};
@@ -789,26 +873,17 @@ async function saveUnit(id){
   closeModal(); await loadAll(); toast('Guardado');
 }
 async function deleteUnit(id){
-  if (!confirm('¿Eliminar esta unidad? También se quitará de los shows y los kits.')) return;
-  await db(sb.from('units').delete().eq('id', id));
-  closeModal(); await loadAll(); toast('Eliminada');
+  if (!confirm(('¿Eliminar esta unidad? También se quitará de los ' + W.p + ' y los kits.'))) return;
+  const u = unitById(id), tid = await trashRun('unit', id, `Unidad «${unitLabel(u)}»`, () => db(sb.from('units').delete().eq('id', id)));
+  closeModal(); await loadAll(); undoBar(`Unidad «${unitLabel(u)}» eliminada`, tid);
 }
 
 /* ---- Impresión ---- */
-function printDoc(cls, html){
+function printDoc(cls, html, pageCss){
   const el = $('#print'); el.className = cls; el.innerHTML = html;
-  setTimeout(() => window.print(), 150);
-}
-function printLabels(ids){
-  if (!ids.length) return toast('No hay unidades para etiquetar', true);
-  printDoc('labels', ids.map(id => {
-    const u = unitById(id), m = modelById(u.model_id);
-    return `<div class="label"><div class="qr">${qrSvg(u.code)}</div><div class="lt"><span class="big ${unitName(u).length <= 13 ? '' : unitName(u).length <= 17 ? 'm' : 's'}">${esc(unitName(u))}</span>${u.serial_number ? `<span class="mini">${esc(u.serial_number)}</span>` : ''}<span class="code">${esc(u.code)}</span></div></div>`;
-  }).join(''));
-}
-function printKitLabel(id){
-  const k = kitById(id);
-  printDoc('labels', `<div class="label"><div class="qr">${qrSvg(k.code)}</div><div class="lt"><b>${esc(k.name)}</b><span>KIT</span><span class="code">${esc(k.code)}</span></div></div>`);
+  let st = $('#page-style'); if (!st){ st = document.createElement('style'); st.id = 'page-style'; document.head.appendChild(st); }
+  st.textContent = pageCss || '';                      // el tamaño de página solo se fija al imprimir pegatinas
+  setTimeout(() => { window.print(); if (cls === 'labels') setTimeout(askMarkPrinted, 400); }, 150);
 }
 
 /* ============ MATERIAL: kits y flight cases ============ */
@@ -827,14 +902,14 @@ function kitView(id){
   if (!k) return bar('Kits', {back:true});
   const us = kitUnits(k), bs = kitBulk(k);
   const unitRows = S.kitItems.filter(i => i.kit_id === id && i.unit_id).map(i => { const u = unitById(i.unit_id); if (!u) return '';
-    return `<div class="row"><div class="grow"><b>${esc(unitName(u))}</b><div class="sub">${unitSub(u)}</div></div>
+    return `<div class="row urow">${unitTile(u)}<div class="grow"><b>${esc(unitModelName(u))}</b><div class="sub">${unitSub(u)}</div></div>
       <button class="btn small" aria-label="Quitar del kit" onclick="removeKitItem('${i.id}')">✕</button></div>`; }).join('');
   const bulkRows = bs.map(({item, model, qty}) => `<div class="row"><div class="grow"><b>${esc(model.name)}</b></div><div class="count">×${qty}</div>
       <button class="btn small" aria-label="Quitar del kit" onclick="removeKitItem('${item.id}')">✕</button></div>`).join('');
   return bar(k.name, {back:true})
-    + `<div class="info" style="text-align:center"><div class="qrbox">${qrSvg(k.code)}</div><div class="sub">Código del kit <span class="code">${esc(k.code)}</span></div>
+    + `<div class="info" style="text-align:center"><div class="qrbox">${qrSvg(k.code)}</div><div class="sub">Código del kit <span class="code">${esc(k.code)}</span></div>${labelStatusHtml('k', k)}
        ${k.notes?`<div style="margin-top:8px;text-align:left">${esc(k.notes)}</div>`:''}${kitSpecs(k)}</div>
-    <div class="actions"><button class="btn" onclick="openKitForm('${id}')">Editar</button><button class="btn" onclick="printKitLabel('${id}')">Imprimir etiqueta</button><button class="btn danger" onclick="deleteKit('${id}')">Eliminar</button></div>
+    <div class="actions"><button class="btn" onclick="openKitForm('${id}')">Editar</button><button class="btn" onclick="printKitLabel('${id}')">Imprimir etiqueta</button><button class="btn" onclick="openChanges('kits','${id}')">Cambios</button><button class="btn danger" onclick="deleteKit('${id}')">Eliminar</button></div>
     <div class="group">Equipos (${us.length})</div>
     ${us.length ? `<div class="list">${unitRows}</div>` : `<div class="empty" style="margin:20px 24px">Sin equipos con número de serie.</div>`}
     <div class="group">Por cantidad (${bs.length})</div>
@@ -861,8 +936,8 @@ async function saveKit(id){
 }
 async function deleteKit(id){
   if (!confirm('¿Eliminar este kit? Los equipos no se borran: solo dejan de estar agrupados.')) return;
-  await db(sb.from('kits').delete().eq('id', id));
-  S.view = null; await loadAll(); toast('Kit eliminado');
+  const k = kitById(id), tid = await trashRun('kit', id, `Kit «${k.name}»`, () => db(sb.from('kits').delete().eq('id', id)));
+  S.view = null; await loadAll(); undoBar(`Kit «${k.name}» eliminado`, tid);
 }
 async function removeKitItem(id){
   await db(sb.from('kit_items').delete().eq('id', id));
@@ -872,7 +947,7 @@ function openKitContents(kid){
   const inKit = new Set(S.kitItems.filter(i => i.unit_id).map(i => i.unit_id));
   const serHtml = S.models.filter(m => !m.is_bulk).map(m => {
     const us = S.units.filter(u => u.model_id === m.id && !inKit.has(u.id)).sort(unitCmp); if (!us.length) return '';
-    return `<div class="group" style="margin:14px 0 2px">${esc(m.name)}</div>` + us.map(u => `<label class="chkrow"><input type="checkbox" data-u="${u.id}">${esc(unitName(u))}${u.serial_number ? ' <span class="sub">· ' + esc(u.serial_number) + '</span>' : ' <span class="code sub">' + esc(u.code) + '</span>'}</label>`).join('');
+    return `<div class="group" style="margin:14px 0 2px">${esc(m.name)}</div>` + us.map(u => `<label class="chkrow"><input type="checkbox" data-u="${u.id}">${unitTile(u)}${u.serial_number ? '<span>' + esc(u.serial_number) + '</span>' : '<span class="code sub">' + esc(u.code) + '</span>'}</label>`).join('');
   }).join('');
   const bulkHtml = S.models.filter(m => m.is_bulk).map(m => { const av = kitBulkAvail(m), inK = kitBulkUsed(m.id);
     return `<div class="row" style="padding-left:0;padding-right:0;border:0"><div class="grow"><b>${colorDot(m)}${esc(m.name)}</b>
@@ -909,8 +984,8 @@ function kitProblem(p, kit){
   if (!us.length && !bs.length) return ['el kit está vacío'];
   us.forEach(u => {
     if (u.status !== 'ok') probs.push(`${unitLabel(u)} está ${UNIT_STATUS[u.status].toLowerCase()}`);
-    else if (busy.has(u.id)) probs.push(`${unitLabel(u)} está en otro show`);
-    else if (mine.has(u.id)) probs.push(`${unitLabel(u)} ya está en este show`);
+    else if (busy.has(u.id)) probs.push(`${unitLabel(u)} está en otro ${W.s}`);
+    else if (mine.has(u.id)) probs.push(`${unitLabel(u)} ya está en este ${W.s}`);
   });
   bs.forEach(b => { const f = bulkFree(p, b.model.id); if (f < b.qty) probs.push(`faltan ${b.model.name}: quedan ${f}, el kit lleva ${b.qty}`); });
   return probs;
@@ -939,10 +1014,10 @@ function showsList(){
       <div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))}${p.venue?' · '+esc(p.venue):''}</div></div>
       ${p.status!=='confirmed'?`<span class="badge ${p.status==='cancelled'?'bad':p.status==='done'?'ok':''}">${PROJ_STATUS[p.status]}</span>`:''}${p.payment_status==='invoiced'?'<span class="badge warn">Facturado</span>':p.payment_status==='paid'?'<span class="badge ok">Cobrado</span>':''}
       <div class="count" title="Piezas reservadas">${pieces(p)}</div></div>`;
-  return bar('Shows', {actions:`<button class="btn primary small" onclick="openProjectForm()">+ Show</button>`}) + showsSeg()
+  return bar(('' + W.P + ''), {actions:`<button class="btn primary small" onclick="openProjectForm()">+ ${W.S}</button>`}) + showsSeg()
     + (S.projects.length ? `${up.length?`<div class="group">Próximos</div><div class="list">${up.map(rowH).join('')}</div>`:''}
        ${past.length?`<div class="group">Pasados</div><div class="list">${past.map(rowH).join('')}</div>`:''}`
-      : `<div class="empty">Aún no hay shows.<br>Pulsa «+ Show» para crear el primero.</div>`);
+      : `<div class="empty">Aún no hay ${W.p}.<br>Pulsa «+ ${W.S}» para crear el primero.</div>`);
 }
 function openProjectForm(id){
   let p = id ? projById(id) : null;
@@ -951,7 +1026,7 @@ function openProjectForm(id){
     const e = new Date(d.getTime() + 14*3600*1000);
     p = {name:'', client:'', venue:'', status:'confirmed', starts_at:d.toISOString(), ends_at:e.toISOString(), notes:''};
   }
-  openModal(`<h2>${id?'Editar show':'Nuevo show'}</h2>
+  openModal(`<h2>${id?('Editar ' + W.s + ''):('Nuevo ' + W.s + '')}</h2>
     <label for="p-name">Nombre</label><input id="p-name" value="${esc(p.name)}" placeholder="Ej. SOKO 2026">
     <label for="p-client">Cliente</label>
     ${clientSelect(p)}
@@ -976,7 +1051,7 @@ async function saveProject(id){
   let pid = id;
   if (id){
     try { await db(sb.from('projects').update(payload).eq('id', id)); }
-    catch(err){ if (err.code === '23P01') toast('No se pueden mover las fechas: alguna unidad ya está reservada en otro show en ese periodo.', true); return; }
+    catch(err){ if (err.code === '23P01') toast(('No se pueden mover las fechas: alguna unidad ya está reservada en otro ' + W.s + ' en ese periodo.'), true); return; }
   } else {
     const row = await db(sb.from('projects').insert(payload).select().single());
     pid = row.id;
@@ -989,13 +1064,13 @@ async function saveProject(id){
   if (!id) openView('project', pid);
 }
 async function deleteProject(id){
-  if (!confirm('¿Eliminar este show y sus reservas?')) return;
-  await db(sb.from('projects').delete().eq('id', id));
-  S.view = null; await loadAll(); toast('Eliminado');
+  if (!confirm(('¿Eliminar este ' + W.s + ' y sus reservas?'))) return;
+  const p = projById(id), tid = await trashRun('project', id, `${W.S} «${p.name}»`, () => db(sb.from('projects').delete().eq('id', id)));
+  S.view = null; await loadAll(); undoBar(`${W.S} «${p.name}» eliminado`, tid);
 }
 function projectView(id){
   const p = projById(id);
-  if (!p) return bar('Shows', {back:true});
+  if (!p) return bar(('' + W.P + ''), {back:true});
   const rs = S.reservations.filter(r => r.project_id === id), bs = S.bulkRes.filter(b => b.project_id === id);
   const kitIds = [...new Set([...rs, ...bs].map(x => x.kit_id).filter(Boolean))];
   const looseR = rs.filter(r => !r.kit_id), looseB = bs.filter(b => !b.kit_id);
@@ -1014,7 +1089,7 @@ function projectView(id){
     const cnt = st => items.filter(x => x.r.state === st).length;
     const sum = [cnt('out') ? `${cnt('out')} fuera` : '', cnt('planned') ? `${cnt('planned')} pendiente${cnt('planned') === 1 ? '' : 's'}` : '', cnt('returned') ? `${cnt('returned')} devuelto${cnt('returned') === 1 ? '' : 's'}` : ''].filter(Boolean).join(' · ');
     return `<div class="row head tap" onclick="toggleCat('${key}')" role="button" aria-expanded="${open}"><span>${open ? '▾' : '▸'}</span><div class="grow"><b>${colorDot(m)}${esc(m?m.name:'')}</b>${m&&m.color?`<div class="sub">${esc(colorText(m))}</div>`:''}${open ? '' : `<div class="sub">${esc(sum)}</div>`}</div><div class="count">×${items.length}</div></div>`
-      + (open ? items.sort((x, y) => unitCmp(x.u, y.u)).map(({r,u}) => `<div class="row"><div class="grow"><b>${esc(unitName(u))}</b><div class="sub">${unitSub(u)}</div>${u.missing_note?`<div class="sub" style="color:var(--warn)">Incompleto: falta ${esc(u.missing_note)}</div>`:''}</div>
+      + (open ? items.sort((x, y) => unitCmp(x.u, y.u)).map(({r,u}) => `<div class="row urow">${unitTile(u)}<div class="grow"><b>${esc(unitModelName(u))}</b><div class="sub">${unitSub(u)}</div>${u.missing_note?`<div class="sub" style="color:var(--warn)">Incompleto: falta ${esc(u.missing_note)}</div>`:''}</div>
         <span class="badge ${RES_CLASS[r.state]}">${RES_STATE[r.state]}</span>
         ${r.state==='planned'?`<button class="btn small" aria-label="Quitar" onclick="removeReservation('${r.id}')">✕</button>`:''}</div>`).join('') : '');
   }).join('');
@@ -1035,14 +1110,14 @@ function projectView(id){
       <button class="btn" onclick="openView('load','${id}')">Lista de carga</button>
       <button class="btn" onclick="openQuote('${id}')">Presupuesto</button>
       <button class="btn" onclick="openDuplicate('${id}')">Duplicar</button>
-      <button class="btn danger" onclick="deleteProject('${id}')">Eliminar</button></div>
+      <button class="btn" onclick="openChanges('projects','${id}')">Cambios</button><button class="btn danger" onclick="deleteProject('${id}')">Eliminar</button></div>
     <div class="actions"><a class="btn" style="text-decoration:none" target="_blank" rel="noopener" href="${esc(gcalUrl(p))}">Añadir a Google Calendar</a><button class="btn" onclick="printRider('${id}')">Rider técnico</button></div>
     ${paymentCard(p)}${loadCard(p)}
     <div class="group" style="display:flex;align-items:center;gap:8px"><span style="flex:1">Material (${total} piezas)</span>${Object.keys(byModel).length > 1 ? `<button class="btn small" onclick="foldShow('${id}')">${Object.keys(byModel).some(mid => S.catOpen[`s:${id}:${mid}`] !== false) ? 'Plegar todo' : 'Desplegar todo'}</button>` : ''}</div>
     ${kitIds.length?`<div class="list">${kitsH}</div>`:''}
     ${looseR.length?`<div class="list">${unitsH}</div>`:''}
     ${looseB.length?`<div class="list">${bulkH}</div>`:''}
-    ${total?'':`<div class="empty" style="margin:20px 24px">Aún no hay material en este show.</div>`}
+    ${total?'':`<div class="empty" style="margin:20px 24px">Aún no hay material en este ${W.s}.</div>`}
     <div class="actions"><button class="btn primary" onclick="openAddMaterial('${id}')">+ Añadir material</button><button class="btn primary" onclick="openAddKit('${id}')">+ Añadir kit</button></div>
     <div class="group">Técnicos (${as.length})</div>
     ${as.length?`<div class="list">${as.map(a => { const t = techById(a.technician_id); if(!t) return '';
@@ -1059,10 +1134,10 @@ function openAddMaterial(pid){
     return `<div class="row" data-s="${esc((m.name+' '+(m.brand||'')).toLowerCase())}"><div class="grow"><b>${colorDot(m)}${esc(m.name)}</b>${m.color?`<div class="sub">${esc(colorText(m))}</div>`:''}<div class="sub">Libres ${free} de ${total}${m.is_bulk?' · por cantidad':''}</div></div>
       <input type="number" min="0" max="${free}" value="0" ${free?'':'disabled'}  data-m="${m.id}" data-bulk="${m.is_bulk?1:0}" oninput="clampQty(this)" style="width:76px" inputmode="numeric" aria-label="Cantidad de ${esc(m.name)}"></div>`;
   }).join('');
-  openModal(`<h2>Añadir material</h2><div class="sub">Solo se cuentan las unidades libres en las fechas de este show.</div>
+  openModal(`<h2>Añadir material</h2><div class="sub">Solo se cuentan las unidades libres en las fechas de este ${W.s}.</div>
     <div class="search" style="margin:10px 0"><input type="search" placeholder="Buscar" oninput="filterRows(this.value)"></div>
     ${S.models.length?`<div class="list" style="margin:0">${rows}</div>`:`<div class="empty">Primero añade material en la pestaña Material.</div>`}
-    <button class="btn primary block" onclick="saveMaterial('${pid}')">Añadir al show</button>`);
+    <button class="btn primary block" onclick="saveMaterial('${pid}')">Añadir al ${W.s}</button>`);
 }
 async function saveMaterial(pid){
   const p = projById(pid), uRows = [], bulk = [];
@@ -1075,7 +1150,7 @@ async function saveMaterial(pid){
   for (const inp of document.querySelectorAll('#sheet input[data-m]')){
     const n = parseInt(inp.value) || 0; if (n <= 0) continue;
     const m = modelById(inp.dataset.m), free = m.is_bulk ? bulkFree(p, m.id) : freeUnits(p, m.id).length;
-    if (n > free) return toast(`No hay tantos «${m.name}»: quedan ${free} libres en las fechas de este show.`, true);
+    if (n > free) return toast(`No hay tantos «${m.name}»: quedan ${free} libres en las fechas de este ${W.s}.`, true);
   }
   if (!uRows.length && !bulk.length) return toast('Indica cuántas unidades quieres añadir', true);
   if (uRows.length) await db(sb.from('reservations').insert(uRows));
@@ -1088,7 +1163,7 @@ async function saveMaterial(pid){
 }
 async function removeReservation(id){
   await db(sb.from('reservations').delete().eq('id', id));
-  await loadAll(); toast('Quitada del show');
+  await loadAll(); toast(('Quitada del ' + W.s + ''));
 }
 function openBulkLine(id){
   const b = S.bulkRes.find(x => x.id === id), m = modelById(b.model_id);
@@ -1096,7 +1171,7 @@ function openBulkLine(id){
     <label for="b-qty">Cantidad</label><input id="b-qty" type="number" min="1" value="${b.qty}" inputmode="numeric">
     <label for="b-state">Estado</label><select id="b-state">${opts([['planned','Pendiente'],['out','Fuera'],['returned','Devuelto']], b.state)}</select>
     <button class="btn primary block" onclick="saveBulkLine('${id}')">Guardar</button>
-    <div class="actions" style="margin:10px 0 0"><button class="btn danger" onclick="deleteBulkLine('${id}')">Quitar del show</button></div>`);
+    <div class="actions" style="margin:10px 0 0"><button class="btn danger" onclick="deleteBulkLine('${id}')">Quitar del ${W.s}</button></div>`);
 }
 async function saveBulkLine(id){
   const qty = parseInt($('#b-qty').value) || 0; if (qty < 1) return toast('La cantidad debe ser al menos 1', true);
@@ -1105,7 +1180,7 @@ async function saveBulkLine(id){
 }
 async function deleteBulkLine(id){
   await db(sb.from('bulk_reservations').delete().eq('id', id));
-  closeModal(); await loadAll(); toast('Quitado del show');
+  closeModal(); await loadAll(); toast(('Quitado del ' + W.s + ''));
 }
 function openAddKit(pid){
   const p = projById(pid);
@@ -1117,21 +1192,21 @@ function openAddKit(pid){
       <button class="btn small primary" ${probs.length?'disabled':''} onclick="saveKitToShow('${pid}','${k.id}')">Añadir</button></div>`;
   }).join('');
   openModal(`<h2>Añadir kit</h2><div class="sub">Se reservan todos sus equipos de una vez.</div>
-    ${rows ? `<div class="list" style="margin:12px 0 0">${rows}</div>` : `<div class="empty" style="margin:24px 0">${S.kits.length?'Todos los kits ya están en este show.':'Aún no hay kits. Créalos en Material > Kits.'}</div>`}`);
+    ${rows ? `<div class="list" style="margin:12px 0 0">${rows}</div>` : `<div class="empty" style="margin:24px 0">${S.kits.length?('Todos los kits ya están en este ' + W.s + '.'):'Aún no hay kits. Créalos en Material > Kits.'}</div>`}`);
 }
 async function saveKitToShow(pid, kid){
   await reserveKit(pid, kid);
-  closeModal(); await loadAll(); toast('Kit añadido al show');
+  closeModal(); await loadAll(); toast(('Kit añadido al ' + W.s + ''));
 }
 async function removeKitFromShow(pid, kid){
   await db(sb.from('reservations').delete().eq('project_id', pid).eq('kit_id', kid));
   await db(sb.from('bulk_reservations').delete().eq('project_id', pid).eq('kit_id', kid));
-  await loadAll(); toast('Kit quitado del show');
+  await loadAll(); toast(('Kit quitado del ' + W.s + ''));
 }
 function openAddAssign(pid){
   const p = projById(pid), taken = new Set(S.assigns.filter(a => a.project_id === pid).map(a => a.technician_id));
   const avail = S.techs.filter(t => !taken.has(t.id));
-  if (!avail.length) return toast(S.techs.length ? 'Todos los técnicos ya están en este show' : 'Primero añade técnicos en la pestaña Técnicos', true);
+  if (!avail.length) return toast(S.techs.length ? ('Todos los técnicos ya están en este ' + W.s + '') : 'Primero añade técnicos en la pestaña Técnicos', true);
   openModal(`<h2>Añadir técnico</h2>
     <label for="a-tech">Técnico</label><select id="a-tech">${opts(avail.map(t=>[t.id,t.name]))}</select>
     <label for="a-role">Función</label><input id="a-role" placeholder="Ej. Operador de luces">
@@ -1145,7 +1220,7 @@ async function saveAssign(pid){
 }
 async function removeAssign(id){
   await db(sb.from('crew_assignments').delete().eq('id', id));
-  await loadAll(); toast('Quitado del show');
+  await loadAll(); toast(('Quitado del ' + W.s + ''));
 }
 // Enlace que abre Google Calendar con el evento ya rellenado (solo hay que pulsar Guardar)
 function gcalUrl(p, opt = {}){
@@ -1158,7 +1233,7 @@ function gcalUrl(p, opt = {}){
 function waLink(t, a, p){
   let ph = (t.phone||'').replace(/\D/g,'');
   if (ph.length === 9) ph = '34' + ph;
-  const txt = [`Show: ${p.name}`, p.venue?`Lugar: ${p.venue}`:'', a.call_time?`Llamada: ${fmtDT(a.call_time)}`:`Inicio: ${fmtDT(p.starts_at)}`, a.role?`Función: ${a.role}`:'', 'Añadir a tu calendario: ' + gcalUrl(p, {start:a.call_time, role:a.role})].filter(Boolean).join('\n');
+  const txt = [`${W.S}: ${p.name}`, p.venue?`Lugar: ${p.venue}`:'', a.call_time?`Llamada: ${fmtDT(a.call_time)}`:`Inicio: ${fmtDT(p.starts_at)}`, a.role?`Función: ${a.role}`:'', 'Añadir a tu calendario: ' + gcalUrl(p, {start:a.call_time, role:a.role})].filter(Boolean).join('\n');
   return `https://wa.me/${ph}?text=${encodeURIComponent(txt)}`;
 }
 
@@ -1166,7 +1241,7 @@ function waLink(t, a, p){
 function printPackingList(pid){
   const p = projById(pid);
   const rs = S.reservations.filter(r => r.project_id === pid), bs = S.bulkRes.filter(b => b.project_id === pid);
-  if (!rs.length && !bs.length) return toast('Este show aún no tiene material', true);
+  if (!rs.length && !bs.length) return toast(('Este ' + W.s + ' aún no tiene material'), true);
   const box = '<span class="box"></span>';
   const row = txt => `<tr><td style="width:12mm">${box}</td><td style="width:12mm">${box}</td><td>${txt}</td></tr>`;
   const head = `<tr><th>Sale</th><th>Vuelve</th><th>Material</th></tr>`;
@@ -1208,7 +1283,7 @@ function readQuoteInputs(){
 function quoteSummary(q){
   const warn = q.lines.filter(l => !(l.rate > 0)).length;
   return `<div class="sum">
-    ${q.lines.map(l => `<div class="row"><div class="grow">${esc(l.m?l.m.name:'')} <span class="sub">×${l.qty}${l.rate>0?` · ${eur(l.rate)}/día`:' · sin tarifa'}</span></div><div>${eur(l.sub)}</div></div>`).join('') || '<div class="row sub">No hay material en este show.</div>'}
+    ${q.lines.map(l => `<div class="row"><div class="grow">${esc(l.m?l.m.name:'')} <span class="sub">×${l.qty}${l.rate>0?` · ${eur(l.rate)}/día`:' · sin tarifa'}</span></div><div>${eur(l.sub)}</div></div>`).join('') || ('<div class="row sub">No hay material en este ' + W.s + '.</div>')}
     <div class="row"><div class="grow sub">Subtotal (${q.days} día${q.days===1?'':'s'})</div><div>${eur(q.subtotal)}</div></div>
     ${q.disc>0?`<div class="row"><div class="grow sub">Descuento ${q.disc}%</div><div>−${eur(q.dAmt)}</div></div>`:''}
     <div class="row"><div class="grow sub">IVA ${q.vat}%</div><div>${eur(q.vatAmt)}</div></div>
@@ -1285,8 +1360,8 @@ async function saveTech(id){
 }
 async function deleteTech(id){
   if (!confirm('¿Eliminar este técnico y sus asignaciones?')) return;
-  await db(sb.from('technicians').delete().eq('id', id));
-  S.view = null; await loadAll(); toast('Eliminado');
+  const t = S.techs.find(x => x.id === id), tid = await trashRun('technician', id, `Técnico «${t.name}»`, () => db(sb.from('technicians').delete().eq('id', id)));
+  S.view = null; await loadAll(); undoBar(`Técnico «${t.name}» eliminado`, tid);
 }
 const calUrl = t => `${SUPABASE_URL}/functions/v1/calendario?token=${t.calendar_token}`;
 function techView(id){
@@ -1296,11 +1371,11 @@ function techView(id){
     .sort((x,y) => new Date(x.p.starts_at) - new Date(y.p.starts_at));
   return bar(t.name, {back:true})
     + `<div class="info"><div>${esc(t.phone||'Sin teléfono')}</div><div class="sub">${esc(t.email||'Sin email')}</div></div>
-    <div class="actions"><button class="btn" onclick="openTechForm('${id}')">Editar</button><button class="btn danger" onclick="deleteTech('${id}')">Eliminar</button></div>
-    <div class="group">Shows asignados (${as.length})</div>
+    <div class="actions"><button class="btn" onclick="openTechForm('${id}')">Editar</button><button class="btn" onclick="openChanges('technicians','${id}')">Cambios</button><button class="btn danger" onclick="deleteTech('${id}')">Eliminar</button></div>
+    <div class="group">${W.P} asignados (${as.length})</div>
     ${as.length?`<div class="list">${as.map(({a,p}) => `<div class="row tap" onclick="go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b>
       <div class="sub">${esc(fmtDT(a.call_time||p.starts_at))}${a.role?' · '+esc(a.role):''}</div></div>
-      ${p.status==='cancelled'?'<span class="badge bad">Cancelado</span>':`<a class="btn small" style="text-decoration:none" target="_blank" rel="noopener" onclick="event.stopPropagation()" href="${esc(gcalUrl(p, {start:a.call_time, role:a.role}))}">Google Calendar</a>`}</div>`).join('')}</div>`:`<div class="empty">Sin shows asignados.</div>`}
+      ${p.status==='cancelled'?'<span class="badge bad">Cancelado</span>':`<a class="btn small" style="text-decoration:none" target="_blank" rel="noopener" onclick="event.stopPropagation()" href="${esc(gcalUrl(p, {start:a.call_time, role:a.role}))}">Google Calendar</a>`}</div>`).join('')}</div>`:`<div class="empty">Sin ${W.p} asignados.</div>`}
     <div class="group">Calendario del técnico</div>
     <div class="info"><div class="sub">Enlace que se actualiza solo. Envíaselo una vez y que lo suscriba en su calendario.</div>
       <div class="linkbox"><input readonly id="cal-url" value="${esc(calUrl(t))}" onclick="this.select()" aria-label="Enlace del calendario"><button class="btn" onclick="copyCal()">Copiar</button></div>
@@ -1317,7 +1392,7 @@ function downloadIcs(id){
   const stamp = d => new Date(d).toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');
   const esc2 = s => String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
   const ev = S.assigns.filter(a => a.technician_id === id).map(a => ({a, p:projById(a.project_id)})).filter(x => x.p && x.p.status !== 'cancelled');
-  if (!ev.length) return toast('Este técnico no tiene shows asignados', true);
+  if (!ev.length) return toast(('Este técnico no tiene ' + W.p + ' asignados'), true);
   const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//RentApp//ES','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
   ev.forEach(({a,p}) => {
     lines.push('BEGIN:VEVENT', 'UID:' + a.id + '@mi-material', 'DTSTAMP:' + stamp(Date.now()),
@@ -1334,27 +1409,6 @@ function downloadIcs(id){
 /* ============ MÁS: copia de seguridad ============ */
 const lastBackup = () => { try { return localStorage.getItem('lastBackup'); } catch(e){ return null; } };
 function markBackup(){ try { localStorage.setItem('lastBackup', new Date().toISOString()); } catch(e){} }
-function moreView(){
-  const l = lastBackup(), al = maintAlerts();
-  return bar('Más')
-    + incidenceCard()
-    + (al.length ? `<div class="group">Avisos</div><div class="actions"><button class="btn" style="color:var(--warn)" onclick="openAlerts()">Mantenimiento: ${al.length} aviso${al.length===1?'':'s'}</button></div>` : '')
-    + (repairCount() ? `<div class="group">Reparaciones</div><div class="actions">${repairBtn()}</div>` : '')
-    + `<div class="group">Clientes</div><div class="actions"><button class="btn" onclick="openView('clients','')">Clientes (${S.clients.length})</button></div>`
-    + `<div class="group">Cobros</div><div class="actions"><button class="btn" onclick="openPayments()">${esc(payHeadline())}</button></div>`
-    + pendingBtn()
-    + `<div class="group">Negocio</div>
-    <div class="actions"><button class="btn" onclick="openBusiness()">Datos del negocio y presupuesto</button></div>
-    <div class="group">Inventario</div>
-    <div class="actions"><button class="btn" onclick="openImport()">Importar desde Excel o CSV</button><button class="btn" onclick="openLegend()">Leyenda de colores</button></div>
-    <div class="group">Copia de seguridad</div>
-    <div class="info"><div>Última copia en este dispositivo: <b>${l ? esc(fmtFull(l)) : 'nunca'}</b></div>
-      <div class="sub" style="margin-top:6px">Descarga tus datos por si algún día pierdes el acceso a Supabase. Guarda el archivo en tu ordenador o en tu nube.</div></div>
-    <div class="actions"><button class="btn primary" onclick="exportExcel()">Descargar Excel</button><button class="btn" onclick="exportJson()">Copia completa (.json)</button><button class="btn" onclick="openRestore()">Restaurar copia</button></div>
-    <div class="group">Cuenta</div>
-    <div class="actions"><button class="btn" onclick="logout()">Cerrar sesión</button></div>
-    <div class="sub" style="margin:28px 16px 0;text-align:center">RentApp · ${APP_VERSION}</div>`;
-}
 const stampName = () => new Date().toISOString().slice(0,10);
 async function exportJson(){
   toast('Preparando la copia…');
@@ -1362,7 +1416,7 @@ async function exportJson(){
   if (ev.error) return toast(errMsg(ev.error), true);
   const data = {exportado: new Date().toISOString(), categories:S.categories, equipment_models:S.models, units:S.units, kits:S.kits, kit_items:S.kitItems,
     projects:S.projects, reservations:S.reservations, bulk_reservations:S.bulkRes, technicians:S.techs, crew_assignments:S.assigns,
-    maintenance_logs:S.maint, bulk_logs:S.bulkLogs, clients:S.clients, scan_events:ev.data, settings:S.settings};
+    maintenance_logs:S.maint, bulk_logs:S.bulkLogs, custom_labels:S.customLabels, clients:S.clients, scan_events:ev.data, settings:S.settings};
   download(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}), `copia-rentapp-${stampName()}.json`);
   markBackup(); render(); toast('Copia descargada');
 }
@@ -1404,8 +1458,8 @@ function scanView(){
   return bar('Escanear')
     + `<div class="pad" style="margin-top:12px">
       <div class="seg"><button id="m-out" onclick="setMode('out')">Salida</button><button id="m-in" onclick="setMode('in')">Devolución</button><button id="m-count" onclick="setMode('count')">Recuento</button></div>
-      <div id="proj-wrap"><label for="scan-proj">Show al que sale el material</label>
-        <select id="scan-proj" onchange="S.scan.project=this.value;updateProgress()">${ps.length?opts(ps.map(p=>[p.id,p.name+' · '+fmtD(p.starts_at)]), S.scan.project):'<option value="">No hay shows confirmados</option>'}</select></div>
+      <div id="proj-wrap"><label for="scan-proj">${W.S} al que sale el material</label>
+        <select id="scan-proj" onchange="S.scan.project=this.value;updateProgress()">${ps.length?opts(ps.map(p=>[p.id,p.name+' · '+fmtD(p.starts_at)]), S.scan.project):('<option value="">No hay ' + W.p + ' confirmados</option>')}</select></div>
       <div class="cam"><video id="cam" playsinline muted></video><div class="frame" id="frame" hidden></div><span id="cam-off">Cámara apagada</span></div>
       <button class="btn primary block" id="cam-btn" onclick="toggleCam()">Abrir cámara</button>
       <div id="scan-msg" class="msg">Escanea la etiqueta QR de un equipo o de un kit.</div>
@@ -1448,7 +1502,7 @@ function updateProgress(){
   if (S.scan.mode !== 'out' || !S.scan.project){ el.textContent = ''; return; }
   const rs = S.reservations.filter(r => r.project_id === S.scan.project);
   const out = rs.filter(r => r.state === 'out').length, ret = rs.filter(r => r.state === 'returned').length;
-  el.textContent = rs.length ? `${out} de ${rs.length} equipos fuera del almacén${ret?` · ${ret} devueltos`:''}` : 'Este show aún no tiene equipos reservados.';
+  el.textContent = rs.length ? `${out} de ${rs.length} equipos fuera del almacén${ret?` · ${ret} devueltos`:''}` : ('Este ' + W.s + ' aún no tiene equipos reservados.');
 }
 function scanMsg(text, kind){
   const m = $('#scan-msg'); if (m){ m.textContent = text; m.className = 'msg ' + kind; }
@@ -1514,13 +1568,13 @@ async function handleCode(raw){
     const label = unitLabel(u), off = !navigator.onLine, pend = off ? ' (pendiente de enviar)' : '';
     if (S.scan.mode === 'out'){
       const pid = S.scan.project;
-      if (!pid) return scanMsg('Elige primero el show', 'bad');
+      if (!pid) return scanMsg(('Elige primero el ' + W.s + ''), 'bad');
       const res = S.reservations.find(r => r.unit_id === u.id && r.project_id === pid && r.state !== 'returned');
       if (res && res.state === 'out') return scanMsg('Ya estaba marcada como fuera: ' + label, 'warn');
       if (u.status !== 'ok') return scanMsg(label + ' está ' + UNIT_STATUS[u.status].toLowerCase() + '. No se puede sacar.', 'bad');
       if (!res){
-        if (off) return scanMsg(label + ' no está reservada en este show y sin conexión no se puede añadir.', 'bad');
-        if (!confirm(label + ' no está reservada en este show. ¿Añadirla ahora?')) return;
+        if (off) return scanMsg(label + (' no está reservada en este ' + W.s + ' y sin conexión no se puede añadir.'), 'bad');
+        if (!confirm(label + (' no está reservada en este ' + W.s + '. ¿Añadirla ahora?'))) return;
         const r = await sb.from('reservations').insert({project_id:pid, unit_id:u.id, state:'planned'}).select().single();
         if (r.error) return scanMsg(errMsg(r.error), 'bad');
         S.reservations.push(r.data);
@@ -1537,7 +1591,7 @@ async function handleCode(raw){
         if (!r) return scanMsg('Devolución cancelada: ' + label, 'warn');
         c = r[0];
       }
-      enqueue({t:'in', unit_id:u.id, cond:c.cond, note:c.note.trim(), clear:c.cond === 'ok' && !!u.missing_note});
+      enqueue({t:'in', unit_id:u.id, cond:c.cond, note:c.note.trim(), clear:c.cond === 'ok' && !!u.missing_note, photo:c.photo || null});
       scanMsg('Devuelta: ' + label + (c.cond !== 'ok' ? ' · ' + COND[c.cond] + (c.note.trim() ? ': ' + c.note.trim() : '') : '') + pend, c.cond === 'ok' ? 'ok' : 'warn');
     }
   } finally { scanBusy = false; }
@@ -1549,14 +1603,14 @@ async function handleKit(code){
   const off = !navigator.onLine, pend = off ? ' (pendiente de enviar)' : '';
   if (S.scan.mode === 'out'){
     const pid = S.scan.project;
-    if (!pid) return scanMsg('Elige primero el show', 'bad');
+    if (!pid) return scanMsg(('Elige primero el ' + W.s + ''), 'bad');
     const mine = () => ({rs:S.reservations.filter(r => r.project_id === pid && r.kit_id === kit.id), bs:S.bulkRes.filter(b => b.project_id === pid && b.kit_id === kit.id)});
     let {rs, bs} = mine();
     if (!rs.length && !bs.length){
-      if (off) return scanMsg(`El kit «${kit.name}» no está reservado en este show y sin conexión no se puede añadir.`, 'bad');
+      if (off) return scanMsg(`El kit «${kit.name}» no está reservado en este ${W.s} y sin conexión no se puede añadir.`, 'bad');
       const probs = kitProblem(projById(pid), kit);
       if (probs.length) return scanMsg(`No se puede añadir el kit «${kit.name}»: ${probs[0]}.`, 'bad');
-      if (!confirm(`El kit «${kit.name}» no está reservado en este show. ¿Añadirlo ahora?`)) return;
+      if (!confirm(`El kit «${kit.name}» no está reservado en este ${W.s}. ¿Añadirlo ahora?`)) return;
       await reserveKit(pid, kit.id); await loadAll(false); ({rs, bs} = mine());
     }
     const pendR = rs.filter(r => r.state === 'planned'), pendB = bs.filter(b => b.state === 'planned');
@@ -1570,14 +1624,15 @@ async function handleKit(code){
   } else {
     const rs = S.reservations.filter(r => r.kit_id === kit.id && r.state === 'out'), bs = S.bulkRes.filter(b => b.kit_id === kit.id && b.state === 'out');
     if (!rs.length && !bs.length) return scanMsg(`El kit «${kit.name}» no consta como fuera del almacén.`, 'warn');
-    let items = rs.map(r => ({unit_id:r.unit_id, cond:'ok', note:'', clear:false}));
-    if (rs.length && !quickReturn()){
-      const r = await askCondition(rs.map(x => unitById(x.unit_id)).filter(Boolean), 'Kit «' + kit.name + '»');
+    let items = rs.map(r => ({unit_id:r.unit_id, cond:'ok', note:'', clear:false})), bulkOps = [], skipBulk = false, bBad = 0;
+    if ((rs.length || bs.length) && !quickReturn()){
+      const r = await askConditionEx(rs.map(x => unitById(x.unit_id)).filter(Boolean), bs.map(b => ({b, qty:b.qty})), 'Kit «' + kit.name + '»');
       if (!r) return scanMsg(`Devolución del kit «${kit.name}» cancelada.`, 'warn');
-      items = r.map(x => ({unit_id:x.unit_id, cond:x.cond, note:x.note.trim(), clear:x.cond === 'ok' && !!(unitById(x.unit_id) || {}).missing_note}));
+      items = r.units.map(x => ({unit_id:x.unit_id, cond:x.cond, note:x.note.trim(), clear:x.cond === 'ok' && !!(unitById(x.unit_id) || {}).missing_note, photo:x.photo || null}));
+      if (bs.length){ skipBulk = true; bulkOps = bulkReturnOps(bs, r.bulks, b => b.qty); bBad = r.bulks.filter(x => x.cond !== 'ok').length; }
     }
-    enqueue({t:'kin', kit_id:kit.id, items});
-    const inc = items.filter(i => i.cond !== 'ok').length;
+    enqueueMany([{t:'kin', kit_id:kit.id, items, skipBulk}, ...bulkOps]);
+    const inc = items.filter(i => i.cond !== 'ok').length + bBad;
     scanMsg(`Devuelto el kit «${kit.name}»: ${rs.length} equipos${bs.length ? ` y ${bs.length} línea${bs.length===1?'':'s'} por cantidad` : ''}${inc ? ` · ${inc} con incidencia` : ''}${pend}`, inc ? 'warn' : 'ok');
   }
 }
@@ -1629,8 +1684,8 @@ async function openUnitHistory(id){
   openModal(`<h2>Historial</h2><div class="sub">${esc(unitLabel(u))} · <span class="code">${esc(u.code)}</span></div>
     ${u.purchase_date ? `<div class="sub">Comprada el ${esc(fmtDay(u.purchase_date))}</div>` : ''}
     ${sec('Mantenimiento' + (cost > 0 ? ' · ' + eur(cost) + ' en total' : ''), logs.map(l => `<div class="row"><div class="grow"><b>${esc(MAINT_KIND[l.kind])}</b>
-      <div class="sub">${esc(fmtDay(l.done_on))}${l.hours != null ? ' · ' + l.hours + ' h' : ''}${l.cost > 0 ? ' · ' + eur(l.cost) : ''}</div>${l.description ? `<div>${esc(l.description)}</div>` : ''}</div></div>`).join(''), 'Sin registros todavía.')}
-    ${sec(`Shows (${res.length})`, res.map(({r,p}) => `<div class="row"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtD(p.starts_at))} → ${esc(fmtD(p.ends_at))}</div></div><span class="badge ${RES_CLASS[r.state]}">${RES_STATE[r.state]}</span></div>`).join(''), 'Todavía no ha estado en ningún show.')}
+      <div class="sub">${esc(fmtDay(l.done_on))}${l.hours != null ? ' · ' + l.hours + ' h' : ''}${l.cost > 0 ? ' · ' + eur(l.cost) : ''}</div>${l.description ? `<div>${esc(l.description)}</div>` : ''}${l.photo_url ? photoThumb(l.photo_url) : ''}</div></div>`).join(''), 'Sin registros todavía.')}
+    ${sec(`${W.P} (${res.length})`, res.map(({r,p}) => `<div class="row"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtD(p.starts_at))} → ${esc(fmtD(p.ends_at))}</div></div><span class="badge ${RES_CLASS[r.state]}">${RES_STATE[r.state]}</span></div>`).join(''), ('Todavía no ha estado en ningún ' + W.s + '.'))}
     ${sec('Salidas y entradas', ev.data.map(e => { const p = projById(e.project_id); return `<div class="row"><div class="grow"><b>${e.action === 'out' ? 'Salida' : 'Entrada'}</b><div class="sub">${esc(fmtFull(e.at))}${p ? ' · ' + esc(p.name) : ''}</div>${e.condition && e.condition !== 'ok' ? `<div class="sub" style="color:var(--warn)">${esc(COND[e.condition])}${e.note ? ': ' + esc(e.note) : ''}</div>` : ''}</div></div>`; }).join(''), 'Sin escaneos registrados.')}
     <div class="actions" style="margin:16px 0 0"><button class="btn" onclick="openUnit('${id}')">‹ Volver a la ficha</button><button class="btn primary" onclick="openMaintenance('${id}')">+ Mantenimiento</button></div>`);
 }
@@ -1643,12 +1698,15 @@ function openMaintenance(id){
     <div id="mt-next" hidden><label for="mt-nextdate">Próxima revisión (opcional)</label><input id="mt-nextdate" type="date"></div>
     <label for="mt-desc">Qué se hizo</label><textarea id="mt-desc"></textarea>
     <label for="mt-cost">Coste (€, opcional)</label><input id="mt-cost" type="number" min="0" step="0.01" inputmode="decimal">
+    <label for="mt-photo">Foto (opcional)</label><input id="mt-photo" type="file" accept="image/*" capture="environment">
     <button class="btn primary block" onclick="saveMaintenance('${id}')">Guardar registro</button>`);
 }
 function maintKind(){ const k = $('#mt-kind').value; $('#mt-lamp').hidden = k !== 'lamp'; $('#mt-next').hidden = k !== 'service'; }
 async function saveMaintenance(id){
   const kind = $('#mt-kind').value, cost = parseFloat($('#mt-cost').value), hours = kind === 'lamp' ? (parseFloat($('#mt-hours').value) || 0) : null;
-  await db(sb.from('maintenance_logs').insert({unit_id:id, kind, done_on:$('#mt-date').value || todayStr(), hours, description:$('#mt-desc').value.trim() || null, cost:isNaN(cost) ? null : cost}));
+  let photoUrl = null; const pf = $('#mt-photo') && $('#mt-photo').files[0];
+  if (pf){ try { photoUrl = await uploadIncidentPhoto(await resizeImage(pf, 1000, 'image/jpeg', 0.75), 'unidad-' + id); } catch (e){ return toast('No se pudo subir la foto: ' + (e.message || e), true); } }
+  await db(sb.from('maintenance_logs').insert(Object.assign({unit_id:id, kind, done_on:$('#mt-date').value || todayStr(), hours, description:$('#mt-desc').value.trim() || null, cost:isNaN(cost) ? null : cost}, photoUrl ? {photo_url:photoUrl} : {})));
   const up = {};
   if (kind === 'lamp') up.lamp_hours = hours;
   if (kind === 'service' && $('#mt-nextdate').value) up.next_service = $('#mt-nextdate').value;
@@ -1684,10 +1742,10 @@ function openCountResult(){
   missing.forEach(u => (byModel[u.model_id] = byModel[u.model_id] || []).push(u));
   const miss = Object.keys(byModel).sort((a,b) => modelById(a).name.localeCompare(modelById(b).name, 'es')).map(mid =>
     `<div class="row head"><div class="grow"><b>${esc(modelById(mid).name)}</b></div><div class="count">${byModel[mid].length}</div></div>` +
-    byModel[mid].map(u => `<div class="row"><div class="grow">${unitTitleHtml(u)}${nominalNumber(u) != null && u.serial_number ? ' <span class="sub">· ' + esc(u.serial_number) + '</span>' : ''}${u.serial_number ? '' : ' <span class="code sub">' + esc(u.code) + '</span>'}</div></div>`).join('')).join('');
+    byModel[mid].map(u => `<div class="row urow">${unitTile(u)}<div class="grow">${u.serial_number ? '<b>' + esc(u.serial_number) + '</b>' : '<span class="code sub">' + esc(u.code) + '</span>'}</div></div>`).join('')).join('');
   openModal(`<h2>Resultado del recuento</h2>
     <div class="info" style="margin:10px 0 0"><b>${counted}</b> de <b>${exp.length}</b> equipos contados${missing.length ? ` · <span style="color:var(--bad);font-weight:600">faltan ${missing.length}</span>` : ' · <span style="color:var(--ok);font-weight:600">no falta ninguno</span>'}
-      <div class="sub" style="margin-top:4px">El material por cantidad no se cuenta aquí. Los equipos que están fuera en un show no se esperan en el almacén.</div></div>
+      <div class="sub" style="margin-top:4px">El material por cantidad no se cuenta aquí. Los equipos que están fuera en un ${W.s} no se esperan en el almacén.</div></div>
     ${missing.length ? `<div class="group" style="margin:16px 0 6px">Faltan</div><div class="list" style="margin:0">${miss}</div>` : ''}
     ${outButHere.length ? `<div class="group" style="margin:16px 0 6px">Constaban fuera, pero están aquí</div><div class="list" style="margin:0">${outButHere.map(u => `<div class="row"><div class="grow">${esc(unitLabel(u))}</div></div>`).join('')}
       </div><div class="sub" style="margin-top:6px">Si ya volvieron, escanéalos en modo Devolución para actualizar su estado.</div>` : ''}`);
@@ -1714,7 +1772,7 @@ function calendarView(){
   const cells = info.map(({d, ps, pc}) => {
     const k = ymd(d);
     return `<button class="cal-day ${d.getMonth()!==mo?'off':''} ${k===todayK?'today':''} ${k===S.calDay?'sel':''}" onclick="selDay('${k}')"
-      style="${pc?`background:color-mix(in srgb, var(--accent) ${Math.round(pc/max*38)}%, var(--panel))`:''}" aria-label="${d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}: ${ps.length} show${ps.length===1?'':'s'}">
+      style="${pc?`background:color-mix(in srgb, var(--accent) ${Math.round(pc/max*38)}%, var(--panel))`:''}" aria-label="${d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}: ${ps.length} ${W.s}${ps.length===1?'':'s'}">
       <span class="n">${d.getDate()}</span>
       <span class="dots">${ps.slice(0,3).map(p => `<i class="dot ${p.status==='draft'?'draft':p.status==='done'?'done':''}"></i>`).join('')}</span>
       ${pc?`<span class="pc">${pc}</span>`:''}</button>`;
@@ -1724,9 +1782,9 @@ function calendarView(){
     const d = new Date(S.calDay + 'T00:00:00'), x = info.find(i => ymd(i.d) === S.calDay) || {ps:projsOn(d), pc:0};
     detail = `<div class="group">${esc(d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'}))}${x.pc?` · ${x.pc} piezas en uso`:''}</div>`
       + (x.ps.length ? `<div class="list">${x.ps.map(p => `<div class="row tap" onclick="openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))} → ${esc(fmtDT(p.ends_at))}</div></div><div class="count">${pieces(p)}</div></div>`).join('')}</div>`
-        : `<div class="empty" style="margin:20px 24px">No hay shows este día.</div>`);
+        : `<div class="empty" style="margin:20px 24px">No hay ${W.p} este día.</div>`);
   }
-  return bar('Shows', {actions:`<button class="btn primary small" onclick="openProjectForm()">+ Show</button>`}) + showsSeg()
+  return bar(('' + W.P + ''), {actions:`<button class="btn primary small" onclick="openProjectForm()">+ ${W.S}</button>`}) + showsSeg()
     + `<div class="cal"><div class="cal-head"><button class="btn small" onclick="calNav(-1)" aria-label="Mes anterior">‹</button>
         <h2>${esc(first.toLocaleDateString('es-ES',{month:'long',year:'numeric'}).replace(/^./, c => c.toUpperCase()))}</h2>
         <button class="btn small" onclick="calToday()">Hoy</button><button class="btn small" onclick="calNav(1)" aria-label="Mes siguiente">›</button></div>
@@ -1735,7 +1793,7 @@ function calendarView(){
 }
 function openDuplicate(pid){
   const p = projById(pid), d = new Date(p.starts_at); d.setDate(d.getDate() + 7);
-  openModal(`<h2>Duplicar show</h2><div class="sub">Se copia con la misma duración. Si una unidad está ocupada en las nuevas fechas, se sustituye por otra libre del mismo modelo.</div>
+  openModal(`<h2>Duplicar ${W.s}</h2><div class="sub">Se copia con la misma duración. Si una unidad está ocupada en las nuevas fechas, se sustituye por otra libre del mismo modelo.</div>
     <label for="d-name">Nombre</label><input id="d-name" value="${esc(p.name)} (copia)">
     <label for="d-start">Nueva fecha de inicio</label><input id="d-start" type="datetime-local" value="${toLocalInput(d.toISOString())}">
     <label class="chkrow"><input type="checkbox" id="d-mat" checked>Copiar el material</label>
@@ -1782,10 +1840,10 @@ async function duplicateProject(pid){
   }
   await loadAll();
   if (report.length){
-    openModal(`<h2>Show duplicado</h2><div class="sub">Se ha copiado todo, salvo:</div>
+    openModal(`<h2>${W.S} duplicado</h2><div class="sub">Se ha copiado todo, salvo:</div>
       <div class="list" style="margin:12px 0">${report.map(t => `<div class="row">${esc(t)}</div>`).join('')}</div>
-      <button class="btn primary block" onclick="closeModal();openView('project','${np.id}')">Ver el show</button>`);
-  } else { closeModal(); openView('project', np.id); toast('Show duplicado'); }
+      <button class="btn primary block" onclick="closeModal();openView('project','${np.id}')">Ver el ${W.s}</button>`);
+  } else { closeModal(); openView('project', np.id); toast(('' + W.S + ' duplicado')); }
 }
 
 /* ============ DATOS DEL NEGOCIO ============ */
@@ -1810,7 +1868,7 @@ function openBusiness(){
     <label for="s-terms">Condiciones de pago (puedes poner aquí tu IBAN)</label><textarea id="s-terms">${esc(b.payment_terms||'')}</textarea>
     <label for="s-notes">Notas del presupuesto</label><textarea id="s-notes">${esc(b.quote_notes||'')}</textarea>
     <label for="s-valid">Validez del presupuesto (días)</label><input id="s-valid" type="number" min="1" value="${b.quote_validity_days||30}" inputmode="numeric">
-    <div class="group" style="margin:18px 0 0">Tu furgoneta (opcional)</div><div class="sub">Sirve para ver qué porcentaje de la carga ocupa cada show.</div>
+    <div class="group" style="margin:18px 0 0">Tu furgoneta (opcional)</div><div class="sub">Sirve para ver qué porcentaje de la carga ocupa cada ${W.s}.</div>
     <div class="two"><div><label for="s-vanv">Volumen útil (m³)</label><input id="s-vanv" type="number" min="0" step="0.1" value="${b.van_volume_m3!=null?b.van_volume_m3:''}" inputmode="decimal"></div>
     <div><label for="s-vanw">Carga máxima (kg)</label><input id="s-vanw" type="number" min="0" step="1" value="${b.van_payload_kg!=null?b.van_payload_kg:''}" inputmode="numeric"></div></div>
     <button class="btn primary block" onclick="saveBusiness()">Guardar</button>`);
@@ -1945,7 +2003,7 @@ async function runImport(){
 
 /* ============ RESTAURAR COPIA ============ */
 let restoreData = null;
-const RESTORE_ORDER = ['categories','equipment_models','units','kits','kit_items','clients','projects','technicians','reservations','bulk_reservations','crew_assignments','maintenance_logs','bulk_logs','scan_events'];
+const RESTORE_ORDER = ['categories','equipment_models','units','kits','kit_items','clients','projects','technicians','reservations','bulk_reservations','crew_assignments','maintenance_logs','bulk_logs','custom_labels','scan_events'];
 function openRestore(){
   restoreData = null;
   openModal(`<h2>Restaurar copia</h2>
@@ -2101,21 +2159,26 @@ function applyLocal(op){
       if (op.qty >= b.qty) b.state = 'returned';
       else { b.qty -= op.qty; S.bulkRes.push({...b, id:'tmp-' + op.qid, qty:op.qty, state:'returned'}); }
       if (op.cond === 'repair' && op.n > 0){ const m = modelById(b.model_id); if (m) m.bulk_repair = bulkRepair(m) + op.n; }
+      if ((op.cond === 'lost' || (op.cond === 'incomplete' && op.baja)) && op.n > 0){      // dados de baja: se cierran y se restan del stock
+        if (op.cond === 'incomplete') b.state = 'returned';
+        const m = modelById(b.model_id); if (m) m.bulk_stock = Math.max(0, (m.bulk_stock || 0) - op.n);
+      }
     }
   } else if (op.t === 'kin'){
     S.reservations.filter(x => x.kit_id === op.kit_id && x.state === 'out').forEach(x => x.state = 'returned');
-    S.bulkRes.filter(x => x.kit_id === op.kit_id && x.state === 'out').forEach(x => x.state = 'returned');
+    if (!op.skipBulk) S.bulkRes.filter(x => x.kit_id === op.kit_id && x.state === 'out').forEach(x => x.state = 'returned');
     (op.items || []).forEach(i => localCond(i.unit_id, i.cond, i.note, i.clear));
   }
 }
 const must = r => { if (r.error) throw r.error; return r.data; };
-async function syncCondition(unitId, cond, note, clear, at){
+async function syncCondition(unitId, cond, note, clear, at, photo){
+  const url = (cond === 'repair' || cond === 'incomplete') && photo ? await uploadIncidentPhoto(photo, 'unidad-' + unitId) : null, ph = url ? {photo_url:url} : {};
   if (cond === 'repair'){
     must(await sb.from('units').update({status:'repair'}).eq('id', unitId));
-    must(await sb.from('maintenance_logs').insert({unit_id:unitId, kind:'repair', done_on:at.slice(0, 10), description:note || 'Devuelta con daños'}));
+    must(await sb.from('maintenance_logs').insert(Object.assign({unit_id:unitId, kind:'repair', done_on:at.slice(0, 10), description:note || 'Devuelta con daños'}, ph)));
   } else if (cond === 'incomplete'){
     must(await sb.from('units').update({missing_note:note || 'Incompleto'}).eq('id', unitId));
-    must(await sb.from('maintenance_logs').insert({unit_id:unitId, kind:'missing', done_on:at.slice(0, 10), description:note || 'Devuelta incompleta'}));
+    must(await sb.from('maintenance_logs').insert(Object.assign({unit_id:unitId, kind:'missing', done_on:at.slice(0, 10), description:note || 'Devuelta incompleta'}, ph)));
   } else if (clear){
     must(await sb.from('units').update({missing_note:null}).eq('id', unitId));
   }
@@ -2126,6 +2189,19 @@ async function deleteLastOutEvent(unitId, projectId){
   const ev = must(await sb.from('scan_events').select('id').eq('unit_id', unitId).eq('project_id', projectId).eq('action', 'out').order('at', {ascending:false}).limit(1));
   if (ev.length) must(await sb.from('scan_events').delete().eq('id', ev[0].id));
 }
+// Operaciones de devolución de líneas de cables según lo elegido en la hoja de estado (Completo / Reparación / Incompleto, con o sin baja)
+function bulkReturnOps(lines, bconds, qtyOf){
+  const byId = {}; (bconds || []).forEach(x => byId[x.bulk_id] = x);
+  return lines.map(b => {
+    const c = byId[b.id] || {cond:'ok', n:0, note:'', baja:false}, n = c.cond === 'ok' ? 0 : (parseInt(c.n) || 0);
+    const q = c.cond === 'incomplete' ? b.qty - n : qtyOf(b);       // si faltan n, vuelven las demás
+    return {t:'bin', bulk_id:b.id, qty:q, expect:b.qty, model_id:b.model_id, project_id:b.project_id, cond:c.cond, n, note:(c.note || '').trim(), baja:c.cond === 'incomplete' && !!c.baja, photo:c.photo || null};
+  });
+}
+async function bulkAdjustStock(modelId, delta){
+  const rows = must(await sb.from('equipment_models').select('bulk_stock').eq('id', modelId).limit(1));
+  if (rows.length) must(await sb.from('equipment_models').update({bulk_stock:Math.max(0, (rows[0].bulk_stock || 0) + delta)}).eq('id', modelId));
+}
 async function bulkAdjustRepair(modelId, delta){
   const rows = must(await sb.from('equipment_models').select('bulk_repair').eq('id', modelId).limit(1));
   if (rows.length) must(await sb.from('equipment_models').update({bulk_repair:Math.max(0, (rows[0].bulk_repair || 0) + delta)}).eq('id', modelId));
@@ -2133,7 +2209,7 @@ async function bulkAdjustRepair(modelId, delta){
 async function syncOp(op){
   if (op.t === 'out'){
     const rs = must(await sb.from('reservations').select('id,state').eq('unit_id', op.unit_id).eq('project_id', op.project_id).neq('state', 'returned').limit(1));
-    if (!rs.length) throw {message:'la unidad ya no estaba reservada en ese show'};
+    if (!rs.length) throw {message:('la unidad ya no estaba reservada en ese ' + W.s + '')};
     if (rs[0].state === 'planned') must(await sb.from('reservations').update({state:'out'}).eq('id', rs[0].id));
     must(await sb.from('scan_events').insert({unit_id:op.unit_id, project_id:op.project_id, action:'out', at:op.at}));
   } else if (op.t === 'in'){
@@ -2142,7 +2218,7 @@ async function syncOp(op){
       must(await sb.from('reservations').update({state:'returned'}).eq('id', rs[0].id));
       must(await sb.from('scan_events').insert({unit_id:op.unit_id, project_id:rs[0].project_id, action:'in', at:op.at, condition:op.cond, note:op.note || null}));
     }
-    await syncCondition(op.unit_id, op.cond, op.note, op.clear, op.at);
+    await syncCondition(op.unit_id, op.cond, op.note, op.clear, op.at, op.photo);
   } else if (op.t === 'kout'){
     const rs = must(await sb.from('reservations').select('id,unit_id').eq('project_id', op.project_id).eq('kit_id', op.kit_id).eq('state', 'planned'));
     if (rs.length){
@@ -2175,7 +2251,8 @@ async function syncOp(op){
     must(await sb.from('bulk_reservations').update({state:'planned'}).eq('id', op.bulk_id).eq('state', 'out'));
   } else if (op.t === 'bin'){
     const keep = () => lsSet(QUEUE_KEY, S.queue);            // se recuerda por qué paso va, por si se corta la conexión a medias
-    if (!(op.step >= 1)){
+    const falta = k => (op.step || 0) < k, hecho = k => { op.step = k; keep(); };
+    if (falta(1)){
       const rows = must(await sb.from('bulk_reservations').select('*').eq('id', op.bulk_id).limit(1));
       if (!rows.length || rows[0].state !== 'out') return;          // ya no existe o ya estaba devuelta
       const b = rows[0];
@@ -2185,14 +2262,24 @@ async function syncOp(op){
         must(await sb.from('bulk_reservations').insert({project_id:b.project_id, model_id:b.model_id, qty:op.qty, state:'returned', kit_id:b.kit_id}));
         must(await sb.from('bulk_reservations').update({qty:b.qty - op.qty}).eq('id', b.id));
       }
-      op.step = 1; keep();
+      hecho(1);
     }
+    const log = async kind => {
+      if (op.photo && !op.photoUrl){ op.photoUrl = await uploadIncidentPhoto(op.photo, 'cable-' + op.model_id); op.photo = null; keep(); }      // la foto se sube una sola vez, aunque se reintente
+      return sb.from('bulk_logs').insert(Object.assign({model_id:op.model_id, project_id:op.project_id || null, kind, qty:op.n, note:op.note || null}, op.photoUrl ? {photo_url:op.photoUrl} : {}));
+    };
     if (op.cond === 'repair' && op.n > 0){
-      if (!(op.step >= 2)){ await bulkAdjustRepair(op.model_id, op.n); op.step = 2; keep(); }      // cada paso se anota al acabar: si se corta aquí, al reintentar no se repite
-      if (!(op.step >= 3)){ must(await sb.from('bulk_logs').insert({model_id:op.model_id, project_id:op.project_id || null, kind:'repair', qty:op.n, note:op.note || null})); op.step = 3; keep(); }
-    } else if (op.cond === 'incomplete' && op.n > 0 && !(op.step >= 2)){
-      must(await sb.from('bulk_logs').insert({model_id:op.model_id, project_id:op.project_id || null, kind:'missing', qty:op.n, note:op.note || null}));
-      op.step = 2; keep();
+      if (falta(2)){ await bulkAdjustRepair(op.model_id, op.n); hecho(2); }
+      if (falta(3)){ must(await log('repair')); hecho(3); }
+    } else if (op.cond === 'lost' && op.n > 0){                     // dado de baja desde la lista: se resta del stock
+      if (falta(2)){ await bulkAdjustStock(op.model_id, -op.n); hecho(2); }
+      if (falta(3)){ must(await log('lost')); hecho(3); }
+    } else if (op.cond === 'incomplete' && op.n > 0){
+      if (op.baja){                                                 // los que faltan no volverán: se cierran y se restan del stock
+        if (falta(2)){ must(await sb.from('bulk_reservations').update({state:'returned'}).eq('id', op.bulk_id).eq('state', 'out')); hecho(2); }
+        if (falta(3)){ await bulkAdjustStock(op.model_id, -op.n); hecho(3); }
+        if (falta(4)){ must(await log('lost')); hecho(4); }
+      } else if (falta(2)){ must(await log('missing')); hecho(2); }
     }
   } else if (op.t === 'kin'){
     const rs = must(await sb.from('reservations').select('id,unit_id,project_id').eq('kit_id', op.kit_id).eq('state', 'out'));
@@ -2201,8 +2288,8 @@ async function syncOp(op){
       const by = {}; (op.items || []).forEach(i => by[i.unit_id] = i);
       must(await sb.from('scan_events').insert(rs.map(r => { const i = by[r.unit_id] || {}; return {unit_id:r.unit_id, project_id:r.project_id, action:'in', at:op.at, condition:i.cond || 'ok', note:i.note || null}; })));
     }
-    must(await sb.from('bulk_reservations').update({state:'returned'}).eq('kit_id', op.kit_id).eq('state', 'out'));
-    for (const i of (op.items || [])) await syncCondition(i.unit_id, i.cond, i.note, i.clear, op.at);
+    if (!op.skipBulk) must(await sb.from('bulk_reservations').update({state:'returned'}).eq('kit_id', op.kit_id).eq('state', 'out'));
+    for (const i of (op.items || [])) await syncCondition(i.unit_id, i.cond, i.note, i.clear, op.at, i.photo);
   }
 }
 function enqueueMany(ops){
@@ -2265,18 +2352,19 @@ let condBulk = [];
 function askConditionEx(units, bulks, title){
   return new Promise(resolve => {
     condState = units.map(u => ({unit_id:u.id, cond:'ok', note:''}));
-    condBulk = bulks.map(x => ({bulk_id:x.b.id, cond:'ok', n:'', note:'', qty:x.qty, max:x.b.qty}));
+    condBulk = bulks.map(x => ({bulk_id:x.b.id, cond:'ok', n:'', note:'', qty:x.qty, max:x.b.qty, baja:false}));
     condResolve = resolve;
     const chips = (fn, i) => ['ok','repair','incomplete'].map(c => `<button type="button" class="chip ${c==='ok'?'sel':''}" data-c="${c}" onclick="${fn}(${i},'${c}')">${COND[c]}</button>`).join('');
     openModal(`<h2>Estado al devolver</h2><div class="sub">${esc(title)}</div>
       ${units.map((u, i) => `<div class="info" style="margin:10px 0 0" id="cb-${i}"><b>${esc(unitLabel(u))}</b>${u.missing_note ? `<div class="sub bad">Salió incompleto: ${esc(u.missing_note)}</div>` : ''}
         <div class="legend" style="margin:8px 0 0">${chips('setCond', i)}</div>
-        <div id="cn-${i}" hidden><label for="cnt-${i}" id="cnl-${i}">Qué falta</label><textarea id="cnt-${i}" style="min-height:60px" oninput="condState[${i}].note=this.value"></textarea></div></div>`).join('')}
+        <div id="cn-${i}" hidden><label for="cnt-${i}" id="cnl-${i}">Qué falta</label><textarea id="cnt-${i}" style="min-height:60px" oninput="condState[${i}].note=this.value"></textarea>${photoField('u', i)}</div></div>`).join('')}
       ${bulks.map((x, j) => { const m = modelById(x.b.model_id) || {};
-        return `<div class="info" style="margin:10px 0 0" id="bb-${j}"><b>${colorDot(m)}${esc(m.name || '')}</b><div class="sub">Vuelven ${x.qty} de ${x.b.qty}</div>
+        return `<div class="info" style="margin:10px 0 0" id="bb-${j}"><b>${colorDot(m)}${esc(m.name || '')}</b><div class="sub">Vuelven ${x.qty} de ${x.b.qty}${x.b.kit_id ? ' · Kit «' + esc((kitById(x.b.kit_id) || {}).name || '') + '»' : ''}</div>
           <div class="legend" style="margin:8px 0 0">${chips('setCondB', j)}</div>
           <div id="bn-${j}" hidden><label for="bnc-${j}" id="bnl-${j}">¿Cuántos faltan?</label><input id="bnc-${j}" type="number" min="1" inputmode="numeric" oninput="condBulk[${j}].n=this.value">
-            <label for="bnt-${j}">Nota (opcional)</label><textarea id="bnt-${j}" style="min-height:60px" oninput="condBulk[${j}].note=this.value"></textarea></div></div>`; }).join('')}
+            <label class="chkrow" id="bbjl-${j}" hidden style="margin-top:6px"><input type="checkbox" id="bbj-${j}" onchange="condBulk[${j}].baja=this.checked"><span>Dar de baja los que faltan (ya no volverán: se restan del stock)</span></label>
+            <label for="bnt-${j}">Nota (opcional)</label><textarea id="bnt-${j}" style="min-height:60px" oninput="condBulk[${j}].note=this.value"></textarea>${photoField('b', j)}</div></div>`; }).join('')}
       <button class="btn primary block" onclick="confirmCond()">Confirmar devolución</button>
       <button class="btn block" onclick="closeModal()">Cancelar</button>`);
   });
@@ -2284,14 +2372,15 @@ function askConditionEx(units, bulks, title){
 // Solo equipos (escaneo de un QR): devuelve la lista de equipos o null
 function askCondition(units, title){ return askConditionEx(units, [], title).then(r => r ? r.units : null); }
 function setCond(i, c){
-  condState[i].cond = c;
+  condState[i].cond = c; if (c === 'ok') condPhotoClear('u', i);
   document.querySelectorAll(`#cb-${i} .chip`).forEach(b => b.classList.toggle('sel', b.dataset.c === c));
   const box = $('#cn-' + i); box.hidden = c === 'ok';
   $('#cnl-' + i).textContent = c === 'incomplete' ? 'Qué falta' : 'Qué le pasa (opcional)';
   if (!box.hidden) $('#cnt-' + i).focus();
 }
 function setCondB(j, c){
-  const b = condBulk[j]; b.cond = c;
+  const b = condBulk[j]; b.cond = c; b.baja = false; if (c === 'ok') condPhotoClear('b', j);
+  const bj = $('#bbj-' + j); if (bj) bj.checked = false; const bjl = $('#bbjl-' + j); if (bjl) bjl.hidden = c !== 'incomplete';
   document.querySelectorAll(`#bb-${j} .chip`).forEach(x => x.classList.toggle('sel', x.dataset.c === c));
   const box = $('#bn-' + j); box.hidden = c === 'ok'; if (c === 'ok') return;
   const inp = $('#bnc-' + j);
@@ -2411,14 +2500,14 @@ function openPayments(){
     const sub = [p.client, p.invoice_number ? 'Factura ' + p.invoice_number : '', p.payment_status === 'invoiced' && p.due_date ? (late > 0 ? `vencida hace ${late} día${late === 1 ? '' : 's'}` : 'vence ' + fmtDay(p.due_date)) : '', p.payment_status === 'paid' && p.paid_date ? 'cobrado el ' + fmtDay(p.paid_date) : ''].filter(Boolean).join(' · ');
     return `<div class="row tap" onclick="closeModal();go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub ${late > 0 ? 'bad' : ''}">${esc(sub)}</div></div><b>${eur(projectTotal(p))}</b></div>`; };
   const sec = (title, arr) => `<div class="group" style="margin:16px 0 6px">${title} · ${eur(sum(arr))}</div>` + (arr.length ? `<div class="list" style="margin:0">${arr.map(row).join('')}</div>` : '<div class="sub">Ninguno.</div>');
-  openModal(`<h2>Cobros</h2><div class="sub">Los importes salen del presupuesto de cada show, o del importe pactado si lo has puesto. Incluyen IVA.</div>
+  openModal(`<h2>Cobros</h2><div class="sub">Los importes salen del presupuesto de cada ${W.s}, o del importe pactado si lo has puesto. Incluyen IVA.</div>
     ${sec('Pendiente de cobrar (facturado)', b.inv)}${sec('Por facturar (aceptado)', b.acc)}${sec('Presupuestado, sin aceptar', b.quo)}${sec('Cobrado en ' + year, paidYear)}`);
 }
 
 /* ============ RIDER TÉCNICO ============ */
 function printRider(pid){
   const p = projById(pid), qty = projectQty(p);
-  if (!qty.size) return toast('Este show aún no tiene material', true);
+  if (!qty.size) return toast(('Este ' + W.s + ' aún no tiene material'), true);
   const s = loadStats(p), byCat = {};
   [...qty].forEach(([mid, n]) => { const m = modelById(mid); if (!m) return; const c = S.categories.find(x => x.id === m.category_id), k = c ? c.name : 'Otros'; (byCat[k] = byCat[k] || []).push({m, n}); });
   const cats = Object.keys(byCat).sort((a, b) => a === 'Otros' ? 1 : b === 'Otros' ? -1 : a.localeCompare(b, 'es'));
@@ -2453,7 +2542,14 @@ async function schemaMissing(){
     ['esquema_v7.sql', typeof sb.rpc === 'function' ? sb.rpc('merge_bulk_lines') : Promise.resolve({})],
     ['esquema_v8.sql', sb.from('bulk_logs').select('id').limit(1)],
     ['esquema_v8.sql', sb.from('equipment_models').select('bulk_repair').limit(1)],
-    ['esquema_v9.sql', sb.from('categories').select('sort_order').limit(1)]
+    ['esquema_v9.sql', sb.from('categories').select('sort_order').limit(1)],
+    ['esquema_v10.sql', sb.from('custom_labels').select('id').limit(1)],
+    ['esquema_v10.sql', sb.from('settings').select('label_config').limit(1)],
+    ['esquema_v11.sql', sb.from('units').select('label_printed_at').limit(1)],
+    ['esquema_v11.sql', sb.from('maintenance_logs').select('photo_url').limit(1)],
+    ['esquema_v12.sql', sb.from('trash').select('id').limit(1)],
+    ['esquema_v12.sql', sb.from('audit_log').select('id').limit(1)],
+    ['esquema_v12.sql', sb.from('settings').select('app_config').limit(1)]
   ];
   const rs = await Promise.all(probes.map(p => Promise.resolve(p[1]).then(r => r, e => ({error:e}))));
   return [...new Set(probes.filter((p, i) => rs[i].error && isSchemaErr(rs[i].error)).map(p => p[0]))];
@@ -2507,9 +2603,9 @@ function clientsList(){
       <div class="list">${S.clients.map(c => { const n = showsOf(c).length;
         return `<div class="row tap" data-s="${esc((c.name + ' ' + (c.contact_name || '') + ' ' + (c.email || '') + ' ' + (c.phone || '')).toLowerCase())}" onclick="openView('client','${c.id}')">
           <div class="grow"><b>${esc(c.name)}</b><div class="sub">${esc([c.contact_name, c.phone].filter(Boolean).join(' · '))}</div></div>
-          <div class="sub">${n} show${n === 1 ? '' : 's'}</div></div>`; }).join('')}</div>`
-      : `<div class="empty">Aún no hay clientes.<br>Pulsa «+ Cliente» para añadir el primero, o créalos al vuelo al crear un show.</div>`)
-    + (legacy ? `<div class="info"><div class="sub">Tienes ${legacy} show${legacy === 1 ? '' : 's'} con el nombre del cliente escrito a mano y sin ficha.</div><div class="actions" style="margin:8px 0 0"><button class="btn" onclick="importClientsFromShows()">Crear clientes a partir de mis shows</button></div></div>` : '');
+          <div class="sub">${n} ${W.s}${n === 1 ? '' : 's'}</div></div>`; }).join('')}</div>`
+      : `<div class="empty">Aún no hay clientes.<br>Pulsa «+ Cliente» para añadir el primero, o créalos al vuelo al crear un ${W.s}.</div>`)
+    + (legacy ? `<div class="info"><div class="sub">Tienes ${legacy} ${W.s}${legacy === 1 ? '' : 's'} con el nombre del cliente escrito a mano y sin ficha.</div><div class="actions" style="margin:8px 0 0"><button class="btn" onclick="importClientsFromShows()">Crear clientes a partir de mis ${W.p}</button></div></div>` : '');
 }
 const phoneDigits = t => { let d = String(t || '').replace(/\D/g, ''); return d.length === 9 ? '34' + d : d; };
 function clientView(id){
@@ -2528,14 +2624,14 @@ function clientView(id){
     <div class="actions">
       ${tel ? `<a class="btn" style="text-decoration:none" href="tel:${esc(tel)}">Llamar</a><a class="btn" style="text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/${phoneDigits(c.phone)}">WhatsApp</a>` : ''}
       ${c.email ? `<a class="btn" style="text-decoration:none" href="mailto:${esc(c.email)}">Email</a>` : ''}
-      <button class="btn" onclick="openClientForm('${id}')">Editar</button><button class="btn danger" onclick="deleteClient('${id}')">Eliminar</button></div>
+      <button class="btn" onclick="openClientForm('${id}')">Editar</button><button class="btn" onclick="openChanges('clients','${id}')">Cambios</button><button class="btn danger" onclick="deleteClient('${id}')">Eliminar</button></div>
     <div class="info"><b>Cobros de este cliente</b>
       <div style="margin-top:6px">Pendiente de cobrar: <b>${eur(sum('invoiced'))}</b></div>
       <div class="sub">Aceptado sin facturar: ${eur(sum('accepted'))} · Presupuestado: ${eur(sum('quoted'))} · Cobrado: ${eur(sum('paid'))}</div></div>
-    <div class="group">Shows (${ps.length})</div>
+    <div class="group">${W.P} (${ps.length})</div>
     ${ps.length ? `<div class="list">${ps.map(p => `<div class="row tap" onclick="go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))}${p.venue ? ' · ' + esc(p.venue) : ''}</div></div>
       ${p.payment_status === 'invoiced' ? '<span class="badge warn">Facturado</span>' : p.payment_status === 'paid' ? '<span class="badge ok">Cobrado</span>' : ''}${p.status === 'cancelled' ? '<span class="badge bad">Cancelado</span>' : ''}</div>`).join('')}</div>`
-      : `<div class="empty" style="margin:20px 24px">Este cliente aún no tiene shows. Al crear un show, elígelo en el campo Cliente.</div>`}`;
+      : `<div class="empty" style="margin:20px 24px">Este cliente aún no tiene ${W.p}. Al crear un ${W.s}, elígelo en el campo Cliente.</div>`}`;
 }
 function openClientForm(id){
   const c = id ? clientById(id) : {};
@@ -2566,16 +2662,16 @@ async function saveClient(id){
 }
 async function deleteClient(id){
   const c = clientById(id), n = showsOf(c).length;
-  if (!confirm(`¿Eliminar a «${c.name}»?${n ? `\nSus ${n} show${n === 1 ? '' : 's'} se conservan con el nombre escrito, pero dejan de estar enlazados a la ficha.` : ''}`)) return;
-  await db(sb.from('clients').delete().eq('id', id));
-  S.view = {name:'clients', id:''}; await loadAll(); toast('Cliente eliminado');
+  if (!confirm(`¿Eliminar a «${c.name}»?${n ? `\nSus ${n} ${W.s}${n === 1 ? '' : 's'} se conservan con el nombre escrito, pero dejan de estar enlazados a la ficha.` : ''}`)) return;
+  const tid = await trashRun('client', id, `Cliente «${c.name}»`, () => db(sb.from('clients').delete().eq('id', id)));
+  S.view = {name:'clients', id:''}; await loadAll(); undoBar(`Cliente «${c.name}» eliminado`, tid);
 }
 // Convierte en fichas los nombres de cliente que ya tenías escritos a mano en los shows
 async function importClientsFromShows(){
   const legacy = S.projects.filter(p => p.client && !p.client_id), groups = new Map();
   legacy.forEach(p => { const k = norm(p.client); const g = groups.get(k) || {name:p.client.trim(), ids:[]}; g.ids.push(p.id); groups.set(k, g); });
   const fresh = [...groups.entries()].filter(([k]) => !S.clients.some(c => norm(c.name) === k));
-  if (!confirm(`Se van a crear ${fresh.length} cliente${fresh.length === 1 ? '' : 's'} nuevo${fresh.length === 1 ? '' : 's'} y se enlazarán ${legacy.length} show${legacy.length === 1 ? '' : 's'}. ¿Continuar?`)) return;
+  if (!confirm(`Se van a crear ${fresh.length} cliente${fresh.length === 1 ? '' : 's'} nuevo${fresh.length === 1 ? '' : 's'} y se enlazarán ${legacy.length} ${W.s}${legacy.length === 1 ? '' : 's'}. ¿Continuar?`)) return;
   const made = fresh.length ? await db(sb.from('clients').insert(fresh.map(([k, g]) => ({name:g.name}))).select()) : [];
   const byKey = {}; S.clients.concat(made).forEach(c => byKey[norm(c.name)] = c.id);
   for (const [k, g] of groups) if (byKey[k]) await db(sb.from('projects').update({client_id:byKey[k]}).in('id', g.ids));
@@ -2620,24 +2716,25 @@ function renderOutList(){
   const groups = outGroups(), valid = new Set(groups.flatMap(outKeys));
   [...S.outSel].forEach(k => { if (!valid.has(k)) S.outSel.delete(k); });          // lo que ya no está fuera se desmarca
   if (!groups.length){ el.innerHTML = '<div class="sub" style="margin-top:12px">No hay nada fuera del almacén.</div>'; return; }
-  const row = (key, title, sub, extra, search) => { const sel = S.outSel.has(key);
-    return `<div class="row ${sel ? 'done' : ''}" data-s="${esc(search.toLowerCase())}"><label class="chkrow grow" style="padding:0"><input type="checkbox" data-key="${key}" ${sel ? 'checked' : ''} onchange="toggleOut('${key}',this.checked)"><span class="grow"><b>${title}</b><span class="sub" style="display:block">${sub}</span></span></label>${extra || ''}</div>`; };
+  const row = (key, title, sub, extra, search, lead) => { const sel = S.outSel.has(key);
+    return `<div class="row ${sel ? 'done' : ''}" data-s="${esc(search.toLowerCase())}"><label class="chkrow grow" style="padding:0"><input type="checkbox" data-key="${key}" ${sel ? 'checked' : ''} onchange="toggleOut('${key}',this.checked)">${lead || ''}<span class="grow"><b>${title}</b><span class="sub" style="display:block">${sub}</span></span></label>${extra || ''}</div>`; };
   el.innerHTML = `<div class="search" style="margin:10px 0 0"><input type="search" placeholder="Buscar en lo que está fuera" oninput="filterRows(this.value)"></div>`
     + groups.map(g => {
       const all = outKeys(g).every(k => S.outSel.has(k)), cats = {};
       const add = (cat, key, html) => (cats[cat] = cats[cat] || []).push({key, html});
       [...g.kits].forEach(([kid, e]) => add('Kits', `k:${g.p.id}:${kid}`, row(`k:${g.p.id}:${kid}`, esc(e.kit.name), `Kit · ${e.units.length} equipo${e.units.length === 1 ? '' : 's'}${e.bulks.length ? ` + ${e.bulks.length} línea${e.bulks.length === 1 ? '' : 's'} por cantidad` : ''}`, '', e.kit.name)));
-      [...g.units].sort((x, y) => unitCmp(x.u, y.u)).forEach(({r, u}) => { const m = modelById(u.model_id) || {}; add(catName(m), 'r:' + r.id, row('r:' + r.id, colorDot(m) + esc(unitName(u)), esc(u.serial_number || u.code) + (u.missing_note ? ` · <span style="color:var(--warn)">Incompleto</span>` : ''), '', `${m.name} ${u.serial_number || ''} ${u.code}`)); });
+      [...g.units].sort((x, y) => unitCmp(x.u, y.u)).forEach(({r, u}) => { const m = modelById(u.model_id) || {}; add(catName(m), 'r:' + r.id, row('r:' + r.id, colorDot(m) + esc(m.name || ''), esc(u.serial_number || u.code) + (u.missing_note ? ` · <span style="color:var(--warn)">Incompleto</span>` : ''), '', `${m.name} ${u.serial_number || ''} ${u.code}`, unitTile(u))); });
       g.bulks.forEach(b => { const m = modelById(b.model_id) || {}, v = S.outQty[b.id] != null ? S.outQty[b.id] : b.qty;
         add(catName(m), 'b:' + b.id, row('b:' + b.id, colorDot(m) + esc(m.name || ''), `Fuera: ${b.qty}${colorText(m) ? ' · ' + esc(colorText(m)) : ''}`,
           `<div style="width:84px"><div class="sub" style="font-size:12px">Vuelven</div><input type="number" min="1" max="${b.qty}" value="${v}" inputmode="numeric" oninput="clampQty(this);setOutQty('${b.id}',this.value)" aria-label="Cantidad que vuelve de ${esc(m.name || '')}"></div>`, m.name || '')); });
       return `<div class="group" style="margin:16px 0 0;display:flex;align-items:center;gap:8px"><span style="flex:1">${esc(g.p.name)}</span><button class="btn small" onclick="selectShowOut('${g.p.id}',${!all})">${all ? 'Quitar marcas' : 'Marcar todo'}</button></div>`
         + Object.keys(cats).sort(catOrder).map(c => catSection(`o:${g.p.id}:${catKey(c)}`, c, `${cats[c].filter(x => S.outSel.has(x.key)).length}/${cats[c].length} marcados`, cats[c].map(x => x.html).join(''))).join('');
     }).join('')
-    + `<button class="btn primary block" id="out-go" onclick="returnSelected()"></button>`;
+    + `<button class="btn primary block" id="out-go" onclick="returnSelected()"></button><button class="btn block" id="out-baja" onclick="openBaja()" hidden></button>`;
   updateOutGo();
 }
-function updateOutGo(){ const b = $('#out-go'); if (!b) return; const n = S.outSel.size; b.textContent = n ? `Marcar como devuelto (${n})` : 'Marca lo que ha vuelto'; b.disabled = !n; }
+function updateOutGo(){ const bj = $('#out-baja'); if (bj){ const nb = outBajaLines().length; bj.hidden = !nb; bj.textContent = `Dar de baja lo marcado (${nb})…`; }
+  const b = $('#out-go'); if (!b) return; const n = S.outSel.size; b.textContent = n ? `Marcar como devuelto (${n})` : 'Marca lo que ha vuelto'; b.disabled = !n; }
 function toggleOut(key, on){ if (on) S.outSel.add(key); else S.outSel.delete(key); renderOutList(); }
 function setOutQty(id, v){ const n = parseInt(v); if (!isNaN(n)) S.outQty[id] = n; }
 function selectShowOut(pid, on){ const g = outGroups().find(x => x.p.id === pid); if (!g) return; outKeys(g).forEach(k => on ? S.outSel.add(k) : S.outSel.delete(k)); renderOutList(); }
@@ -2648,29 +2745,27 @@ async function returnSelected(){
   try {
     const looseR = S.reservations.filter(r => sel.has('r:' + r.id) && r.state === 'out');
     const kitSel = [...sel].filter(k => k.startsWith('k:')).map(k => { const [, pid, kid] = k.split(':'); return {pid, kid}; });
-    const kitRes = kitSel.map(k => ({...k, rs:S.reservations.filter(r => r.kit_id === k.kid && r.project_id === k.pid && r.state === 'out')}));
-    const bulks = S.bulkRes.filter(b => sel.has('b:' + b.id) && b.state === 'out');
+    const kitRes = kitSel.map(k => ({...k, rs:S.reservations.filter(r => r.kit_id === k.kid && r.project_id === k.pid && r.state === 'out'), bs:S.bulkRes.filter(b => b.kit_id === k.kid && b.project_id === k.pid && b.state === 'out')}));
+    const bulks = S.bulkRes.filter(b => sel.has('b:' + b.id) && b.state === 'out'), kitBulks = kitRes.flatMap(k => k.bs), allBulks = [...bulks, ...kitBulks];
     const bq = b => Math.min(b.qty, Math.max(1, parseInt(S.outQty[b.id] != null ? S.outQty[b.id] : b.qty) || b.qty));
+    const qtyOf = b => b.kit_id ? b.qty : bq(b);            // las líneas de un kit vuelven enteras; las sueltas, lo que pone en «Vuelven»
     // estado de cada equipo y de cada línea de cables (Completo / Reparación / Incompleto), salvo en devolución rápida
-    const units = [...looseR, ...kitRes.flatMap(k => k.rs)].map(r => unitById(r.unit_id)).filter(Boolean), conds = {}, bconds = {};
-    if ((units.length || bulks.length) && !quickReturn()){
-      const r = await askConditionEx(units, bulks.map(b => ({b, qty:bq(b)})), 'Devolución desde la lista');
+    const units = [...looseR, ...kitRes.flatMap(k => k.rs)].map(r => unitById(r.unit_id)).filter(Boolean), conds = {}, sheet = (units.length || allBulks.length) && !quickReturn();
+    let bconds = [];
+    if (sheet){
+      const r = await askConditionEx(units, allBulks.map(b => ({b, qty:qtyOf(b)})), 'Devolución desde la lista');
       if (!r) return;
-      r.units.forEach(x => conds[x.unit_id] = x); r.bulks.forEach(x => bconds[x.bulk_id] = x);
+      r.units.forEach(x => conds[x.unit_id] = x); bconds = r.bulks;
     }
     const cond = uid => conds[uid] || {cond:'ok', note:''};
     const ops = [];
-    looseR.forEach(r => { const c = cond(r.unit_id), u = unitById(r.unit_id) || {}; ops.push({t:'in', unit_id:r.unit_id, cond:c.cond, note:(c.note || '').trim(), clear:c.cond === 'ok' && !!u.missing_note}); });
-    kitRes.forEach(k => ops.push({t:'kin', kit_id:k.kid, items:k.rs.map(r => { const c = cond(r.unit_id), u = unitById(r.unit_id) || {}; return {unit_id:r.unit_id, cond:c.cond, note:(c.note || '').trim(), clear:c.cond === 'ok' && !!u.missing_note}; })}));
-    let pcs = 0, bBad = 0;
-    bulks.forEach(b => {
-      const c = bconds[b.id] || {cond:'ok', n:0, note:''}, n = c.cond === 'ok' ? 0 : (parseInt(c.n) || 0);
-      const q = c.cond === 'incomplete' ? b.qty - n : bq(b);       // si faltan n, vuelven las demás
-      pcs += q; if (c.cond !== 'ok') bBad++;
-      ops.push({t:'bin', bulk_id:b.id, qty:q, expect:b.qty, model_id:b.model_id, project_id:b.project_id, cond:c.cond, n, note:(c.note || '').trim()});
-      delete S.outQty[b.id];
-    });
+    looseR.forEach(r => { const c = cond(r.unit_id), u = unitById(r.unit_id) || {}; ops.push({t:'in', unit_id:r.unit_id, cond:c.cond, note:(c.note || '').trim(), clear:c.cond === 'ok' && !!u.missing_note, photo:c.photo || null}); });
+    kitRes.forEach(k => ops.push({t:'kin', kit_id:k.kid, skipBulk:sheet && k.bs.length > 0, items:k.rs.map(r => { const c = cond(r.unit_id), u = unitById(r.unit_id) || {}; return {unit_id:r.unit_id, cond:c.cond, note:(c.note || '').trim(), clear:c.cond === 'ok' && !!u.missing_note, photo:c.photo || null}; })}));
+    const bops = bulkReturnOps(sheet ? allBulks : bulks, bconds, qtyOf);
+    ops.push(...bops);
+    bulks.forEach(b => { delete S.outQty[b.id]; });
     enqueueMany(ops);
+    const pcs = bops.reduce((s, o) => s + o.qty, 0), bBad = bops.filter(o => o.cond !== 'ok').length;
     const nEq = units.length, bad = units.filter(u => cond(u.id).cond !== 'ok').length + bBad;
     sel.clear(); renderOutList(); updateProgress();
     scanMsg(`Devuelto desde la lista: ${nEq} equipo${nEq === 1 ? '' : 's'}${pcs ? ` y ${pcs} pieza${pcs === 1 ? '' : 's'} por cantidad` : ''}${bad ? ` · ${bad} con incidencia` : ''}${navigator.onLine ? '' : ' (pendiente de enviar)'}`, bad ? 'warn' : 'ok');
@@ -2709,7 +2804,7 @@ function loadView(pid){
   const L = loadModel(p), cats = {};
   let total = 0, done = 0;
   const add = (cat, html, pcs, dpcs) => { const c = cats[cat] = cats[cat] || {rows:[], pcs:0, done:0}; c.rows.push(html); c.pcs += pcs; c.done += dpcs; total += pcs; done += dpcs; };
-  const row = o => `<div class="row ${o.doneRow ? 'done' : ''}" data-s="${esc(o.search.toLowerCase())}"><label class="chkrow grow" style="padding:0"><input type="checkbox" ${o.checked ? 'checked' : ''} ${o.ind ? 'data-ind="1"' : ''} ${o.disabled ? 'disabled' : ''} onchange="toggleLoad('${o.kind}','${o.id}',this.checked)"><span class="grow"><b>${o.title}</b><span class="sub" style="display:block">${o.sub}</span></span></label>${o.extra || ''}</div>`;
+  const row = o => `<div class="row ${o.doneRow ? 'done' : ''}" data-s="${esc(o.search.toLowerCase())}"><label class="chkrow grow" style="padding:0"><input type="checkbox" ${o.checked ? 'checked' : ''} ${o.ind ? 'data-ind="1"' : ''} ${o.disabled ? 'disabled' : ''} onchange="toggleLoad('${o.kind}','${o.id}',this.checked)">${o.lead || ''}<span class="grow"><b>${o.title}</b><span class="sub" style="display:block">${o.sub}</span></span></label>${o.extra || ''}</div>`;
   L.kits.forEach(e => {
     const all = [...e.rs, ...e.bs], st = aggState(all), pcs = e.rs.length + e.bs.reduce((s, b) => s + b.qty, 0);
     const dpcs = e.rs.filter(r => isDone(r.state)).length + e.bs.filter(b => isDone(b.state)).reduce((s, b) => s + b.qty, 0);
@@ -2719,7 +2814,7 @@ function loadView(pid){
   [...L.units].sort((x, y) => unitCmp(x.u, y.u)).forEach(({r, u, m}) => {
     const blocked = r.state === 'planned' && u.status !== 'ok';
     add(catName(m), row({kind:'u', id:r.id, checked:isDone(r.state), disabled:r.state === 'returned' || blocked, doneRow:isDone(r.state),
-      title:colorDot(m) + esc(unitName(u)), sub:esc(u.serial_number || u.code) + (r.state === 'returned' ? ' · devuelto' : '') + (blocked ? ` · <span style="color:var(--bad)">${esc(UNIT_STATUS[u.status])}: no se puede cargar</span>` : '') + (u.missing_note ? ` · <span style="color:var(--warn)">Incompleto: falta ${esc(u.missing_note)}</span>` : ''),
+      lead:unitTile(u), title:colorDot(m) + esc(m.name || ''), sub:esc(u.serial_number || u.code) + (r.state === 'returned' ? ' · devuelto' : '') + (blocked ? ` · <span style="color:var(--bad)">${esc(UNIT_STATUS[u.status])}: no se puede cargar</span>` : '') + (u.missing_note ? ` · <span style="color:var(--warn)">Incompleto: falta ${esc(u.missing_note)}</span>` : ''),
       search:`${(m || {}).name} ${u.serial_number || ''} ${u.code}`}), 1, isDone(r.state) ? 1 : 0);
   });
   L.bulks.forEach(({b, m}) => {
@@ -2734,7 +2829,7 @@ function loadView(pid){
     ${total ? `<div class="actions"><button class="btn" onclick="loadAllMark('${pid}',true)">Marcar todo</button><button class="btn" onclick="loadAllMark('${pid}',false)">Desmarcar todo</button><button class="btn" onclick="printPackingList('${pid}')">Imprimir</button></div>
     <div class="search"><input type="search" placeholder="Buscar en la lista de carga" oninput="filterRows(this.value)"></div><div class="pad">`
       + Object.keys(cats).sort(catOrder).map(c => catSection(`l:${pid}:${catKey(c)}`, c, `${cats[c].done}/${cats[c].pcs}`, cats[c].rows.join(''))).join('') + '</div>'
-      : `<div class="empty">Este show aún no tiene material. Añádelo desde la ficha del show.</div>`}`;
+      : `<div class="empty">Este ${W.s} aún no tiene material. Añádelo desde la ficha del ${W.s}.</div>`}`;
 }
 function toggleLoad(kind, id, on){
   const pid = S.view && S.view.id; if (!projById(pid)) return;
@@ -2846,11 +2941,11 @@ function foldShow(pid){
 function repairsBodyHtml(){
   const units = S.units.filter(u => u.status === 'repair').sort(unitCmp), cables = S.models.filter(m => m.is_bulk && bulkRepair(m) > 0).sort(modelCmp);
   const unitRows = units.map(u => { const l = repairLog(u);
-    return `<div class="row"><div class="grow"><b>${esc(unitName(u))}</b><div class="sub">${unitSub(u)}${l ? ' · ' + esc(fmtDay(l.done_on)) : ''}</div>${l && l.description ? `<div style="margin-top:4px">${esc(l.description)}</div>` : ''}</div>
+    return `<div class="row urow">${unitTile(u)}<div class="grow"><b>${esc(unitModelName(u))}</b><div class="sub">${unitSub(u)}${l ? ' · ' + esc(fmtDay(l.done_on)) : ''}</div>${l && l.description ? `<div style="margin-top:4px">${esc(l.description)}</div>` : ''}${l && l.photo_url ? photoThumb(l.photo_url) : ''}</div>
       <div style="display:flex;flex-direction:column;gap:6px"><button class="btn small primary" onclick="markRepaired('${u.id}')">Reparado</button><button class="btn small" onclick="openUnit('${u.id}')">Ficha</button></div></div>`; }).join('');
   const cableRows = cables.map(m => { const logs = S.bulkLogs.filter(l => l.model_id === m.id && l.kind === 'repair').sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0, 3);
     return `<div class="row"><div class="grow"><b>${colorDot(m)}${esc(m.name)}</b><div class="sub">${bulkRepair(m)} en reparación · stock ${m.bulk_stock}</div>
-      ${logs.map(l => `<div class="sub">${esc(fmtDay(String(l.created_at || '').slice(0, 10) || todayStr()))} · ${l.qty} ud${l.note ? ': ' + esc(l.note) : ''}</div>`).join('')}</div>
+      ${logs.map(l => `<div class="sub">${esc(fmtDay(String(l.created_at || '').slice(0, 10) || todayStr()))} · ${l.qty} ud${l.note ? ': ' + esc(l.note) : ''}</div>${l.photo_url ? photoThumb(l.photo_url) : ''}`).join('')}</div>
       <div style="width:150px"><div class="sub" style="font-size:12px">Ya reparados</div><div style="display:flex;gap:6px"><input id="fix-${m.id}" type="number" min="1" max="${bulkRepair(m)}" value="${bulkRepair(m)}" inputmode="numeric" oninput="clampQty(this)" aria-label="Cuántos ${esc(m.name)} están reparados"><button class="btn small primary" onclick="markBulkFixed('${m.id}')">OK</button></div></div></div>`; }).join('');
   return (units.length ? `<div class="group">Equipos (${units.length})</div><div class="list">${unitRows}</div>` : '')
     + (cables.length ? `<div class="group">Cableado y material por cantidad (${cables.reduce((s, m) => s + bulkRepair(m), 0)})</div><div class="list">${cableRows}</div>` : '')
@@ -2858,14 +2953,14 @@ function repairsBodyHtml(){
 }
 function repairsView(){
   return bar('En reparación', {back:true})
-    + `<div class="sub" style="margin:12px 16px 0">Aquí queda todo lo que has devuelto como «Reparación». Mientras esté aquí no se puede cargar en ningún show. Cuando vuelva arreglado, márcalo como reparado.</div>`
+    + `<div class="sub" style="margin:12px 16px 0">Aquí queda todo lo que has devuelto como «Reparación». Mientras esté aquí no se puede cargar en ningún ${W.s}. Cuando vuelva arreglado, márcalo como reparado.</div>`
     + repairsBodyHtml();
 }
 // Contenido de «Incompletos»: equipos marcados como incompletos y lo que les falta
 const incompleteUnits = () => S.units.filter(u => u.missing_note);
 function incompleteBodyHtml(){
   const us = incompleteUnits().sort(unitCmp);
-  return us.length ? `<div class="group">Equipos incompletos (${us.length})</div><div class="list">${us.map(u => `<div class="row"><div class="grow"><b>${esc(unitName(u))}</b><div class="sub">${unitSub(u)}</div><div style="margin-top:4px;color:var(--warn);font-weight:600">Falta: ${esc(u.missing_note)}</div></div>
+  return us.length ? `<div class="group">Equipos incompletos (${us.length})</div><div class="list">${us.map(u => `<div class="row urow">${unitTile(u)}<div class="grow"><b>${esc(unitModelName(u))}</b><div class="sub">${unitSub(u)}</div><div style="margin-top:4px;color:var(--warn);font-weight:600">Falta: ${esc(u.missing_note)}</div>${missingPhoto(u)}</div>
       <div style="display:flex;flex-direction:column;gap:6px"><button class="btn small primary" onclick="markComplete('${u.id}')">Completo</button><button class="btn small" onclick="openUnit('${u.id}')">Ficha</button></div></div>`).join('')}</div>`
     : `<div class="empty">No hay equipos incompletos.</div>`;
 }
@@ -2954,6 +3049,743 @@ function colorFilterBar(groups){
   const names = [...S.colorFilter].map(k => { const e = legendList().find(x => String(x.hex).toLowerCase() === k); return e ? entryText(e) : colorName(k); });
   const n = Object.values(groups).reduce((s, g) => s + g.length, 0);
   return `<div class="info" style="display:flex;align-items:center;gap:10px"><div class="grow"><b>Filtrando por color</b><div class="sub">${esc(names.join(', '))} · ${n} modelo${n === 1 ? '' : 's'}</div></div><button class="btn small" onclick="clearColorFilter()">Quitar filtro</button></div>`;
+}
+
+/* ============ DAR DE BAJA CABLES (material por cantidad) ============ */
+const outBajaLines = () => S.bulkRes.filter(b => S.outSel.has('b:' + b.id) && b.state === 'out');
+function openBaja(){
+  const ls = outBajaLines(); if (!ls.length) return toast('Marca primero los cables o el material por cantidad que quieres dar de baja', true);
+  openModal(`<h2>Dar de baja</h2><div class="sub">Lo que des de baja deja de contar en el stock y no vuelve. Queda anotado en el historial de cada material.</div>
+    ${ls.map((b, i) => { const m = modelById(b.model_id) || {}, v = Math.min(b.qty, Math.max(1, parseInt(S.outQty[b.id] != null ? S.outQty[b.id] : b.qty) || b.qty));
+      return `<div class="info" style="margin:10px 0 0"><b>${colorDot(m)}${esc(m.name || '')}</b><div class="sub">Fuera: ${b.qty} · stock ahora: ${m.bulk_stock}</div>
+        <label for="baja-q-${i}">¿Cuántos se dan de baja?</label><input id="baja-q-${i}" type="number" min="1" max="${b.qty}" value="${v}" inputmode="numeric" oninput="clampQty(this)"></div>`; }).join('')}
+    <label for="baja-note">Motivo (opcional)</label><textarea id="baja-note" style="min-height:60px" placeholder="Por ejemplo: perdidos en el montaje"></textarea>
+    <button class="btn danger block" onclick="confirmBaja()">Dar de baja</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
+}
+function confirmBaja(){
+  const ls = outBajaLines(), note = $('#baja-note').value.trim(), ops = []; let tot = 0;
+  ls.forEach((b, i) => { const n = Math.min(b.qty, Math.max(0, parseInt($('#baja-q-' + i).value) || 0)); if (n < 1) return; tot += n;
+    ops.push({t:'bin', bulk_id:b.id, qty:n, expect:b.qty, model_id:b.model_id, project_id:b.project_id, cond:'lost', n, note}); });
+  if (!ops.length) return toast('Escribe cuántos se dan de baja', true);
+  ls.forEach(b => { delete S.outQty[b.id]; });
+  closeModal(); enqueueMany(ops); S.outSel.clear(); renderOutList(); updateProgress();
+  scanMsg(`Dados de baja: ${tot} pieza${tot === 1 ? '' : 's'} por cantidad${navigator.onLine ? '' : ' (pendiente de enviar)'}`, 'warn');
+}
+
+/* ============ HISTORIAL DE INCIDENCIAS DE UN MATERIAL POR CANTIDAD ============ */
+const BULK_LOG = {repair:'En reparación', missing:'Faltaron', fixed:'Reparados', lost:'Dados de baja'};
+function bulkHistoryHtml(m){
+  const ls = S.bulkLogs.filter(l => l.model_id === m.id).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0, 15);
+  if (!ls.length) return '';
+  return `<div class="group">Historial de incidencias</div><div class="list">${ls.map(l => { const p = l.project_id ? projById(l.project_id) : null;
+    return `<div class="row urow"><div class="grow"><b>${esc(BULK_LOG[l.kind] || l.kind)} · ${l.qty} ud</b><div class="sub">${esc(fmtDay(String(l.created_at || '').slice(0, 10) || todayStr()))}${p ? ' · ' + esc(p.name) : ''}${l.note ? ' · ' + esc(l.note) : ''}</div>${l.photo_url ? photoThumb(l.photo_url) : ''}</div></div>`; }).join('')}</div>`;
+}
+
+/* ============ GESTIONAR MARCAS ============ */
+// Marcas agrupadas sin distinguir mayúsculas ni acentos: «Thomann» y «thomann» son la misma marca escrita de dos formas
+function brandGroups(){
+  const g = new Map();
+  S.models.forEach(m => { const b = String(m.brand || '').trim(); if (!b) return; const k = norm(b); const e = g.get(k) || {key:k, variants:new Map(), ids:[]};
+    e.variants.set(b, (e.variants.get(b) || 0) + 1); e.ids.push(m.id); g.set(k, e); });
+  return [...g.values()].map(e => { const cap = v => /^[A-ZÁÉÍÓÚÑ]/.test(v) && v !== v.toUpperCase() ? 0 : 1;          // en un empate gana «Thomann» sobre «thomann» y «THOMANN»
+    const vs = [...e.variants.entries()].sort((a, b) => b[1] - a[1] || cap(a[0]) - cap(b[0]) || a[0].localeCompare(b[0], 'es')); return {key:e.key, name:vs[0][0], variants:vs.map(v => v[0]), ids:e.ids}; })
+    .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+}
+function openBrands(){
+  const g = brandGroups();
+  openModal(`<h2>Marcas</h2><div class="sub">Renombra una marca o únela con otra: el cambio se aplica a todos los modelos que la usan. Si una marca está escrita de varias formas, puedes unificarla.</div>
+    ${g.length ? `<div class="list" style="margin:10px 0">${g.map((x, i) => `<div class="row"><div class="grow"><b>${esc(x.name)}</b><div class="sub">${x.ids.length} modelo${x.ids.length === 1 ? '' : 's'}</div>${x.variants.length > 1 ? `<div class="sub" style="color:var(--warn);font-weight:600">Escrita de ${x.variants.length} formas: ${esc(x.variants.join(', '))}</div>` : ''}</div>
+      <div style="display:flex;flex-direction:column;gap:4px">${x.variants.length > 1 ? `<button class="btn small primary" onclick="unifyBrand(${i})">Unificar</button>` : ''}<button class="btn small" onclick="renameBrand(${i})">Renombrar</button></div></div>`).join('')}</div>`
+      : `<div class="empty" style="margin:20px 0">Aún no hay marcas.</div>`}`);
+}
+async function unifyBrand(i){
+  const x = brandGroups()[i]; if (!x) return;
+  await db(sb.from('equipment_models').update({brand:x.name}).in('id', x.ids));
+  await loadAll(); openBrands(); toast(`«${x.name}» unificada`);
+}
+async function renameBrand(i){
+  const g = brandGroups(), x = g[i]; if (!x) return;
+  const n = prompt(`Nuevo nombre de la marca «${x.name}»`, x.name); if (n == null) return;
+  const nn = n.trim(); if (!nn) return toast('Escribe un nombre', true);
+  const other = g.find((y, j) => j !== i && y.key === norm(nn));
+  let target = nn, ids = x.ids;
+  if (other){
+    if (!confirm(`Ya existe la marca «${other.name}». ¿Unir «${x.name}» con ella? Quedarán ${x.ids.length + other.ids.length} modelos con «${other.name}».`)) return;
+    target = other.name; ids = [...x.ids, ...other.ids];
+  } else if (target === x.name && x.variants.length === 1) return;
+  await db(sb.from('equipment_models').update({brand:target}).in('id', ids));
+  await loadAll(); openBrands(); toast(other ? `Unidas en «${target}»` : `Renombrada a «${target}»`);
+}
+
+/* ============ GESTOR DE ETIQUETAS ============ */
+// Tamaño «de diseño» de cada tipo de etiqueta (mm). El contenido se escala para que quepa en la pegatina de la hoja que elijas.
+const LABEL_BASE = {full:{w:63.3, h:26.5}, compact:{w:38, h:19}};
+// Medidas orientativas de hojas habituales: hay que comprobarlas con la hoja de prueba
+const LABEL_PRESETS = [
+  {id:'rentapp', name:'Estándar RentApp · A4, 3 columnas', pw:210, ph:297, cols:3, rows:9, w:63.3, h:26.5, gx:4, gy:4, mt:6, ml:6, border:true},
+  {id:'a4-3x10', name:'A4 · 3×10 pegatinas · 70×29,7 mm (sin márgenes)', pw:210, ph:297, cols:3, rows:10, w:70, h:29.7, gx:0, gy:0, mt:0, ml:0, border:false},
+  {id:'a4-3x8', name:'A4 · 3×8 pegatinas · 70×37,1 mm (sin márgenes)', pw:210, ph:297, cols:3, rows:8, w:70, h:37.125, gx:0, gy:0, mt:0, ml:0, border:false},
+  {id:'a4-3x7', name:'A4 · 3×7 pegatinas · 63,5×38,1 mm', pw:210, ph:297, cols:3, rows:7, w:63.5, h:38.1, gx:2.5, gy:0, mt:15.15, ml:7.2, border:false},
+  {id:'a4-2x7', name:'A4 · 2×7 pegatinas · 99,1×38,1 mm', pw:210, ph:297, cols:2, rows:7, w:99.1, h:38.1, gx:2.5, gy:0, mt:15.15, ml:4.65, border:false},
+  {id:'a4-5x13', name:'A4 · 5×13 pegatinas · 38,1×21,2 mm', pw:210, ph:297, cols:5, rows:13, w:38.1, h:21.2, gx:2.5, gy:0, mt:10.7, ml:4.7, border:false},
+  {id:'roll-62x29', name:'Impresora de etiquetas · 62×29 mm, una por página', pw:62, ph:29, cols:1, rows:1, w:62, h:29, gx:0, gy:0, mt:0, ml:0, border:false},
+  {id:'custom', name:'Personalizada (escribo las medidas)'}
+];
+const LABEL_DEFAULT = Object.assign({}, LABEL_PRESETS[0], {brand:'RENTFORSHOW', showBrand:true, preset:'rentapp'});
+function labelCfg(){
+  const c = Object.assign({}, LABEL_DEFAULT, (S.settings && S.settings.label_config) || {});
+  ['pw','ph','w','h','gx','gy','mt','ml'].forEach(k => { c[k] = Number(c[k]); if (!isFinite(c[k]) || c[k] < 0) c[k] = LABEL_DEFAULT[k]; });
+  ['cols','rows'].forEach(k => { c[k] = Math.max(1, Math.round(Number(c[k]) || LABEL_DEFAULT[k])); });
+  c.pw = Math.max(20, c.pw); c.ph = Math.max(20, c.ph); c.w = Math.max(8, c.w); c.h = Math.max(8, c.h);
+  c.brand = String(c.brand == null ? LABEL_DEFAULT.brand : c.brand).trim(); c.showBrand = c.showBrand !== false; c.border = !!c.border;
+  return c;
+}
+const labelPresetName = c => (LABEL_PRESETS.find(p => p.id === c.preset) || LABEL_PRESETS[LABEL_PRESETS.length - 1]).name;
+// Pegatinas grandes: diseño completo. Pegatinas pequeñas: diseño compacto (QR + número).
+const labelLayout = c => (c.w >= 55 && c.h >= 22) ? 'full' : 'compact';
+const labelScale = c => { const b = LABEL_BASE[labelLayout(c)], bd = c.border ? 0.6 : 0; return Math.max(0.1, Math.min((c.w - bd) / b.w, (c.h - bd) / b.h)); };
+const labelsPerSheet = c => c.cols * c.rows;
+
+// Si el texto de la barra es largo, se reduce la letra para que quepa dentro de la barra negra
+function brandFs(txt, lay){
+  const base = lay === 'full' ? 9 : 5.5, avail = lay === 'full' ? 33 : 16, fs = Math.min(base, avail / (Math.max(1, String(txt).length) * 0.265));
+  return fs < base ? ` style="font-size:${Math.max(3.5, fs).toFixed(1)}pt"` : '';
+}
+// Contenido de una pegatina. d = {kind:'unit', id} | {kind:'kit', id} | {kind:'custom', title, sub, line3, tile, qr, brand}
+function labelBoxHtml(d, cfg){
+  const lay = labelLayout(cfg), k = labelScale(cfg);
+  const brand = cfg.showBrand && cfg.brand && d.brand !== false ? `<div class="brand"${brandFs(cfg.brand, lay)}>${esc(cfg.brand)}</div>` : '';
+  const tileCls = s => String(s).length >= 4 ? 'd4' : String(s).length === 3 ? 'd3' : '';
+  let qr = '', lt = '';
+  if (d.kind === 'unit'){
+    const u = unitById(d.id); if (!u) return '';
+    const m = modelById(u.model_id) || {}, nn = nominalNumber(u), nm = m.name || '', sz = nm.length <= 10 ? '' : nm.length <= 14 ? 'm' : 's';
+    qr = qrSvg(u.code);
+    const head = nn == null ? `<span class="big ${unitName(u).length <= 13 ? '' : unitName(u).length <= 17 ? 'm' : 's'}">${esc(unitName(u))}</span>`
+      : `<div class="lrow"><span class="ltile ${tileCls(nn)}">${nn}</span>${lay === 'full' ? `<span class="lname ${sz}">${esc(nm)}</span>` : ''}</div>`;
+    lt = head + (u.serial_number ? `<span class="mini">${esc(u.serial_number)}</span>` : `<span class="code">${esc(u.code)}</span>`) + brand;
+  } else if (d.kind === 'kit'){
+    const kt = kitById(d.id); if (!kt) return '';
+    qr = qrSvg(kt.code);
+    lt = `<b>${esc(kt.name)}</b>${lay === 'full' ? '<span>KIT</span>' : ''}<span class="code">${esc(kt.code)}</span>` + brand;
+  } else {
+    qr = d.qr ? qrSvg(d.qr) : '';
+    const tl = d.title || '', ts = tl.length <= (d.tile ? 9 : 14) ? '' : tl.length <= (d.tile ? 16 : 24) ? 'm' : 's';
+    const row = (d.tile || tl) ? `<div class="lrow">${d.tile ? `<span class="ltile ${tileCls(d.tile)}">${esc(d.tile)}</span>` : ''}${tl ? `<span class="ctitle ${ts}">${esc(tl)}</span>` : ''}</div>` : '';
+    lt = row + (d.sub ? `<span class="csub">${esc(d.sub)}</span>` : '') + (d.line3 ? `<span class="cline">${esc(d.line3)}</span>` : '') + brand;
+  }
+  return `<div class="lbox label ${lay}" style="--k:${k.toFixed(4)}">${qr ? `<div class="qr">${qr}</div>` : ''}<div class="lt">${lt}</div></div>`;
+}
+const labelPos = (cfg, col, row) => `left:${(cfg.ml + col * (cfg.w + cfg.gx)).toFixed(3)}mm;top:${(cfg.mt + row * (cfg.h + cfg.gy)).toFixed(3)}mm;width:${cfg.w}mm;height:${cfg.h}mm`;
+const labelCellHtml = (d, cfg, col, row) => `<div class="lcell${cfg.border ? ' bd' : ''}" style="${labelPos(cfg, col, row)}">${labelBoxHtml(d, cfg)}</div>`;
+// Hojas: cada pegatina va en su sitio exacto; «start» es la primera casilla libre de la primera hoja (para hojas ya empezadas)
+function labelSheetsHtml(items, cfg, start){
+  const per = labelsPerSheet(cfg), pages = [[]]; let slot = Math.max(1, Math.min(per, parseInt(start) || 1)) - 1;
+  items.forEach(it => { if (slot >= per){ pages.push([]); slot = 0; } pages[pages.length - 1].push([slot, it]); slot++; });
+  return pages.map(pg => `<div class="lsheet" style="width:${cfg.pw}mm;height:${(cfg.ph - 0.6).toFixed(2)}mm">${pg.map(([s, it]) => labelCellHtml(it, cfg, s % cfg.cols, Math.floor(s / cfg.cols))).join('')}</div>`).join('');
+}
+const labelPageCss = cfg => `@page{size:${cfg.pw}mm ${cfg.ph}mm;margin:0}`;
+function printLabelItems(items, start){
+  if (!items.length) return toast('No hay nada que imprimir', true);
+  const cfg = labelCfg();
+  S.markPending = {units:items.filter(i => i.kind === 'unit').map(i => i.id), kits:items.filter(i => i.kind === 'kit').map(i => i.id)};      // luego se pregunta si salieron bien
+  printDoc('labels', labelSheetsHtml(items, cfg, start), labelPageCss(cfg));
+}
+function labelPagesCount(n, start, cfg){ const per = labelsPerSheet(cfg); return Math.max(1, Math.ceil(((Math.max(1, Math.min(per, start)) - 1) + n) / per)); }
+// Dibujo de la hoja: oscuro = se imprime, gris = ya usada (se salta), vacío = libre
+function sheetSvg(c, start, n){
+  const per = labelsPerSheet(c), s0 = Math.max(0, Math.min(per - 1, (parseInt(start) || 1) - 1)), used = Math.min(per - s0, n), sc = 130 / c.pw;
+  let cells = '';
+  for (let i = 0; i < per; i++){
+    const col = i % c.cols, row = Math.floor(i / c.cols), x = c.ml + col * (c.w + c.gx), y = c.mt + row * (c.h + c.gy), on = i >= s0 && i < s0 + used;
+    cells += `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${c.w}" height="${c.h}" rx="1.2" fill="${on ? '#1B1F27' : i < s0 ? '#C4CAD4' : 'none'}" stroke="#657084" stroke-width="0.4"/>`;
+  }
+  return `<svg viewBox="0 0 ${c.pw} ${c.ph}" width="${Math.round(c.pw * sc)}" height="${Math.round(c.ph * sc)}" role="img" aria-label="Vista previa de la hoja"><rect width="${c.pw}" height="${c.ph}" fill="#fff" stroke="#657084" stroke-width="0.6"/>${cells}</svg>`;
+}
+// Hoja de prueba: cada casilla con su número y sus diagonales, para comprobar la alineación sobre la hoja real
+function printAlignment(c){
+  c = c || labelCfg();
+  const cells = Array.from({length:labelsPerSheet(c)}, (_, i) => `<div class="lcell bd atest" style="${labelPos(c, i % c.cols, Math.floor(i / c.cols))}"><svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%"><path d="M0 0L100 100M100 0L0 100" stroke="#000" stroke-width="0.4" vector-effect="non-scaling-stroke" fill="none"/></svg><div class="an">${i + 1}</div><div class="as">${c.w}×${c.h} mm</div></div>`).join('');
+  S.markPending = null;
+  printDoc('labels', `<div class="lsheet" style="width:${c.pw}mm;height:${(c.ph - 0.6).toFixed(2)}mm">${cells}</div>`, labelPageCss(c));
+}
+
+/* ---- Diálogo de impresión ---- */
+let LP = {items:[], title:'', start:1};
+function openPrintLabels(items, title){
+  if (!items.length) return toast('No hay nada que imprimir', true);
+  LP = {items, title:title || 'Etiquetas', start:1}; drawPrintDialog();
+}
+function drawPrintDialog(){
+  const c = labelCfg(), per = labelsPerSheet(c), n = LP.items.length;
+  openModal(`<h2>Imprimir ${n} pegatina${n === 1 ? '' : 's'}</h2><div class="sub">${esc(LP.title)}</div>
+    <div class="info" style="margin:10px 0;display:flex;align-items:center;gap:10px"><div class="grow"><b>${esc(labelPresetName(c))}</b><div class="sub">${c.cols}×${c.rows} · ${c.w}×${c.h} mm · ${per} por hoja</div></div><button class="btn small" onclick="openSheetCfg(true)">Cambiar hoja</button></div>
+    <label for="lp-start">Empezar en la pegatina nº <span class="sub">(si la hoja ya está empezada)</span></label>
+    <input id="lp-start" type="number" min="1" max="${per}" value="${LP.start}" inputmode="numeric" oninput="lpStart(this.value)">
+    <div id="lp-info" class="sub" style="margin-top:6px"></div><div id="lp-prev" style="text-align:center;margin:10px 0"></div>
+    <div class="sub">En el cuadro de impresión pon escala 100% (no «ajustar a la página») y sin márgenes.</div>
+    <button class="btn primary block" onclick="lpPrint()">Imprimir</button><button class="btn block" onclick="printAlignment()">Imprimir hoja de prueba</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
+  lpUpdate();
+}
+function lpStart(v){ const c = labelCfg(); LP.start = Math.max(1, Math.min(labelsPerSheet(c), parseInt(v) || 1)); lpUpdate(); }
+function lpUpdate(){
+  const c = labelCfg(), n = LP.items.length, pages = labelPagesCount(n, LP.start, c);
+  $('#lp-info').innerHTML = `Ocupará <b>${pages} hoja${pages === 1 ? '' : 's'}</b>${LP.start > 1 ? ` · empieza en la pegatina ${LP.start} de la primera` : ''}.<br><span style="font-size:13px">Oscuro = se imprime · gris = ya usada, se salta · vacío = libre</span>`;
+  $('#lp-prev').innerHTML = sheetSvg(c, LP.start, n) + (pages > 1 ? `<div class="sub">Primera hoja de ${pages}</div>` : '');
+}
+function lpPrint(){ const st = LP.start; closeModal(); printLabelItems(LP.items, st); }
+
+/* ---- Configurar la hoja ---- */
+let SC = null;
+function openSheetCfg(fromPrint){ SC = labelCfg(); SC.fromPrint = !!fromPrint; drawSheetCfg(); }
+function drawSheetCfg(){
+  const c = SC, num = (k, lab, step) => `<div><label for="sc-${k}">${lab}</label><input id="sc-${k}" type="number" step="${step || 0.1}" min="0" value="${c[k]}" inputmode="decimal" oninput="scSet('${k}',this.value)"></div>`;
+  openModal(`<h2>Hoja de pegatinas</h2><div class="sub">Elige tu hoja o escribe las medidas. Imprime la hoja de prueba en papel normal y ponla a contraluz contra tu hoja de pegatinas para comprobar que coincide.</div>
+    <label for="sc-preset">Tipo de hoja</label><select id="sc-preset" onchange="scPreset(this.value)">${LABEL_PRESETS.map(p => `<option value="${p.id}" ${p.id === c.preset ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>
+    <div class="sub">Las medidas de las hojas comerciales son orientativas: comprueba siempre la tuya con la hoja de prueba.</div>
+    <div class="two">${num('pw', 'Ancho de la página (mm)')}${num('ph', 'Alto de la página (mm)')}${num('cols', 'Columnas', 1)}${num('rows', 'Filas', 1)}${num('w', 'Ancho de cada pegatina (mm)')}${num('h', 'Alto de cada pegatina (mm)')}${num('ml', 'Margen izquierdo (mm)')}${num('mt', 'Margen superior (mm)')}${num('gx', 'Hueco entre columnas (mm)')}${num('gy', 'Hueco entre filas (mm)')}</div>
+    <label class="chkrow"><input type="checkbox" id="sc-border" ${c.border ? 'checked' : ''} onchange="scSet('border',this.checked)"><span>Dibujar el borde de cada pegatina (para papel normal)</span></label>
+    <label class="chkrow"><input type="checkbox" id="sc-showBrand" ${c.showBrand ? 'checked' : ''} onchange="scSet('showBrand',this.checked)"><span>Poner la barra negra con el nombre de la empresa</span></label>
+    <label for="sc-brand">Texto de la barra negra</label><input id="sc-brand" value="${esc(c.brand)}" oninput="scSet('brand',this.value)">
+    <div id="sc-msg" style="margin-top:8px"></div><div id="sc-prev" style="text-align:center;margin:10px 0"></div>
+    <button class="btn primary block" onclick="saveSheetCfg()">Guardar</button><button class="btn block" onclick="printAlignment(SC)">Imprimir hoja de prueba</button><button class="btn block" onclick="closeSheetCfg()">Cerrar</button>`);
+  scRefresh();
+}
+function scPreset(id){
+  const p = LABEL_PRESETS.find(x => x.id === id); if (!p) return;
+  if (id !== 'custom') Object.assign(SC, p, {fromPrint:SC.fromPrint}); else SC.preset = 'custom';
+  drawSheetCfg();
+}
+function scSet(k, v){
+  if (['border', 'showBrand'].includes(k)) SC[k] = !!v;
+  else if (k === 'brand') SC.brand = String(v);
+  else { const n = parseFloat(String(v).replace(',', '.')); SC[k] = isNaN(n) ? 0 : n; if (SC.preset !== 'custom'){ SC.preset = 'custom'; const s = $('#sc-preset'); if (s) s.value = 'custom'; } }
+  scRefresh();
+}
+// ¿Caben las pegatinas en la página?
+function scProblem(c){
+  if (!(c.pw > 0 && c.ph > 0 && c.w > 0 && c.h > 0 && c.cols >= 1 && c.rows >= 1)) return 'Todas las medidas tienen que ser mayores que 0.';
+  const needW = c.ml + c.cols * c.w + (c.cols - 1) * c.gx, needH = c.mt + c.rows * c.h + (c.rows - 1) * c.gy;
+  if (needW > c.pw + 0.5 || needH > c.ph + 0.5) return `No caben: con estas medidas la hoja necesita ${needW.toFixed(1)} × ${needH.toFixed(1)} mm y la página mide ${c.pw} × ${c.ph} mm.`;
+  return '';
+}
+function scRefresh(){
+  const c = Object.assign({}, labelCfg(), SC), pr = scProblem(c), box = $('#sc-msg'); if (!box) return;
+  const okc = Object.assign({}, c); ['cols', 'rows'].forEach(k => okc[k] = Math.max(1, Math.round(okc[k] || 1)));
+  const longBrand = !pr && okc.showBrand && labelLayout(okc) === 'compact' && String(okc.brand || '').length > 14;
+  box.innerHTML = pr ? `<div class="info" style="color:var(--bad);font-weight:600">${esc(pr)}</div>` : `<div class="sub">${okc.cols * okc.rows} pegatinas por hoja · diseño ${labelLayout(okc) === 'full' ? 'completo' : 'compacto (pegatina pequeña)'}</div>${longBrand ? `<div class="sub" style="color:var(--warn);font-weight:600">El texto de la barra negra es largo para pegatinas pequeñas: se recortará con «…».</div>` : ''}`;
+  $('#sc-prev').innerHTML = pr ? '' : sheetSvg(okc, 1, 0);
+}
+async function saveSheetCfg(){
+  const c = Object.assign({}, SC); delete c.fromPrint; c.cols = Math.max(1, Math.round(c.cols)); c.rows = Math.max(1, Math.round(c.rows)); c.brand = c.brand.trim();
+  const pr = scProblem(c); if (pr && !confirm(pr + '\n\n¿Guardar de todos modos?')) return;
+  await db(sb.from('settings').upsert({id:1, label_config:c, updated_at:new Date().toISOString()}));
+  await loadAll(); closeSheetCfg(); toast('Hoja guardada');
+}
+function closeSheetCfg(){ const back = SC && SC.fromPrint && LP.items.length; closeModal(); if (back) drawPrintDialog(); else if (S.view && S.view.name === 'labels') render(); }
+
+/* ---- Pegatinas personalizadas ---- */
+let CL = null;
+const clFill = (s, n) => String(s == null ? '' : s).replace(/\{n\}/gi, n);
+const customItem = (d, n) => ({kind:'custom', title:clFill(d.title, n), sub:clFill(d.sub, n), line3:clFill(d.line3, n), tile:clFill(d.tile, n), qr:clFill(d.qr, n), brand:d.brand !== false});
+const customItems = d => { const c = Math.max(1, Math.min(500, parseInt(d.copies) || 1)), s = parseInt(d.start); const st = isNaN(s) ? 1 : s; return Array.from({length:c}, (_, i) => customItem(d, st + i)); };
+function openCustomLabel(id){
+  const saved = id ? S.customLabels.find(x => x.id === id) : null;
+  CL = Object.assign({id:saved ? saved.id : null, name:saved ? saved.name : '', title:'', sub:'', line3:'', tile:'', qr:'', brand:true, start:1, copies:1}, saved ? saved.data : {});
+  drawCustomLabel();
+}
+function drawCustomLabel(){
+  const f = (k, lab, ph) => `<label for="cl-${k}">${lab}</label><input id="cl-${k}" value="${esc(CL[k])}" placeholder="${esc(ph || '')}" oninput="clSet('${k}',this.value)">`;
+  openModal(`<h2>${CL.id ? 'Editar pegatina' : 'Nueva pegatina'}</h2>
+    <div id="cl-prev" style="text-align:center;margin:8px 0;overflow:hidden"></div><div class="sub" id="cl-note" style="text-align:center"></div>
+    ${f('name', 'Nombre de la plantilla (para guardarla)', 'Por ejemplo: Caja de cables')}
+    ${f('title', 'Título', 'Por ejemplo: Caja {n}')}${f('sub', 'Subtítulo')}${f('line3', 'Línea pequeña')}
+    ${f('tile', 'Recuadro negro con número (vacío = sin recuadro)', '{n}')}
+    ${f('qr', 'Código QR con este texto o enlace (vacío = sin QR)')}
+    <label class="chkrow"><input type="checkbox" id="cl-brand" ${CL.brand !== false ? 'checked' : ''} onchange="clSet('brand',this.checked)"><span>Barra negra con el nombre de la empresa</span></label>
+    <div class="two"><div><label for="cl-start">Numerar desde</label><input id="cl-start" type="number" value="${esc(CL.start)}" inputmode="numeric" oninput="clSet('start',this.value)"></div>
+      <div><label for="cl-copies">Cantidad de pegatinas</label><input id="cl-copies" type="number" min="1" max="500" value="${esc(CL.copies)}" inputmode="numeric" oninput="clSet('copies',this.value)"></div></div>
+    <div class="sub">Escribe {n} donde quieras el número: «Caja {n}» sale Caja 1, Caja 2, Caja 3… Vale también en el recuadro y en el QR.</div>
+    <button class="btn primary block" onclick="clPrint()">Imprimir</button><button class="btn block" onclick="clSave()">Guardar plantilla</button>
+    ${CL.id ? `<button class="btn block" onclick="clDuplicate()">Duplicar</button><button class="btn danger block" onclick="clDelete()">Borrar</button>` : ''}
+    <button class="btn block" onclick="closeModal()">Cerrar</button>`);
+  clRefresh();
+}
+function clSet(k, v){ CL[k] = k === 'brand' ? !!v : v; clRefresh(); }
+function clRefresh(){
+  const c = labelCfg(), n = Math.max(1, Math.min(500, parseInt(CL.copies) || 1)), s = parseInt(CL.start), st = isNaN(s) ? 1 : s, z = Math.min(1, 320 / (c.w * 3.7795));
+  const prev = $('#cl-prev'); if (!prev) return;
+  prev.innerHTML = `<div style="display:inline-block;zoom:${z.toFixed(3)}"><div class="lcell${c.border ? ' bd' : ' bd'}" style="position:relative;left:auto;top:auto;width:${c.w}mm;height:${c.h}mm;box-shadow:0 1px 6px rgba(0,0,0,.25)">${labelBoxHtml(customItem(CL, st), c)}</div></div>`;
+  $('#cl-note').textContent = `Así saldrá la nº ${st}${n > 1 ? ` · son ${n} pegatinas (hasta la nº ${st + n - 1})` : ''} · hoja: ${labelPresetName(c)}`;
+}
+function clPrint(){ const items = customItems(CL), t = CL.name || 'Pegatinas personalizadas'; closeModal(); openPrintLabels(items, t); }
+const clData = () => ({title:CL.title, sub:CL.sub, line3:CL.line3, tile:CL.tile, qr:CL.qr, brand:CL.brand !== false, start:parseInt(CL.start) || 1, copies:Math.max(1, Math.min(500, parseInt(CL.copies) || 1))});
+async function clSave(){
+  const name = String(CL.name || '').trim(); if (!name) return toast('Ponle un nombre a la plantilla para guardarla', true);
+  if (CL.id) await db(sb.from('custom_labels').update({name, data:clData()}).eq('id', CL.id));
+  else await db(sb.from('custom_labels').insert({name, data:clData()}));
+  closeModal(); await loadAll(); toast('Plantilla guardada');
+}
+async function clDuplicate(){
+  const name = String(CL.name || 'Pegatina').trim() + ' (copia)';
+  await db(sb.from('custom_labels').insert({name, data:clData()}));
+  closeModal(); await loadAll(); toast('Plantilla duplicada');
+}
+async function clDelete(){
+  if (!CL.id || !confirm(`¿Borrar la plantilla «${CL.name}»?`)) return;
+  const nm = CL.name, tid = await trashRun('custom_label', CL.id, `Pegatina «${nm}»`, () => db(sb.from('custom_labels').delete().eq('id', CL.id)));
+  closeModal(); await loadAll(); undoBar(`Plantilla «${nm}» borrada`, tid);
+}
+function printCustomSaved(id){ const x = S.customLabels.find(y => y.id === id); if (x) openPrintLabels(customItems(x.data || {}), x.name); }
+
+/* ---- Pantalla «Etiquetas» ---- */
+S.labSel = new Set(); S.labOpen = {};
+function labelsView(){
+  const cfg = labelCfg(), per = labelsPerSheet(cfg), sel = S.labSel, units = S.units.slice().sort(unitCmp);
+  const models = S.models.filter(m => !m.is_bulk && units.some(u => u.model_id === m.id)), cats = {};
+  models.forEach(m => { const c = S.categories.find(c => c.id === m.category_id), nm = c ? c.name : 'Sin categoría'; (cats[nm] = cats[nm] || []).push(m); });
+  const modelRows = m => {
+    const us = units.filter(u => u.model_id === m.id), n = us.filter(u => sel.has('u:' + u.id)).length, open = !!S.labOpen[m.id];
+    return `<div class="row urow"><label class="chkrow grow" style="padding:0"><input type="checkbox" data-lm="${m.id}" ${n === us.length ? 'checked' : ''} onchange="labToggleModel('${m.id}',this.checked)"><span class="grow"><b>${esc(m.name)}</b><span class="sub" style="display:block">${n ? `${n} de ${us.length} marcadas` : `${us.length} unidad${us.length === 1 ? '' : 'es'}`}${us.some(u => !u.label_printed_at) ? ` · ${us.filter(u => !u.label_printed_at).length} sin imprimir` : ''}</span></span></label><button class="btn small" aria-expanded="${open}" onclick="labToggleOpen('${m.id}')">${open ? '▾' : '▸'} Unidades</button></div>`
+      + (open ? us.map(u => `<div class="row urow" style="padding-left:30px"><label class="chkrow grow" style="padding:0"><input type="checkbox" data-lu="${u.id}" ${sel.has('u:' + u.id) ? 'checked' : ''} onchange="labToggle('u:${u.id}',this.checked)">${unitTile(u)}<span>${u.serial_number ? esc(u.serial_number) : '<span class="code sub">' + esc(u.code) + '</span>'}</span>${u.label_printed_at ? '' : '<span class="badge warn">Sin imprimir</span>'}</label></div>`).join('') : '');
+  };
+  const catHtml = Object.keys(cats).sort(catOrder).map(nm => catSection('labc:' + catKey(nm), nm, `${cats[nm].length} modelo${cats[nm].length === 1 ? '' : 's'}`, cats[nm].map(modelRows).join(''))).join('');
+  const kits = S.kits.slice().sort(byName), nSel = sel.size;
+  const kitHtml = kits.length ? catSection('labc:kits', 'Kits', `${kits.length} kit${kits.length === 1 ? '' : 's'}`, kits.map(k => `<div class="row urow"><label class="chkrow grow" style="padding:0"><input type="checkbox" data-lk="${k.id}" ${sel.has('k:' + k.id) ? 'checked' : ''} onchange="labToggle('k:${k.id}',this.checked)"><span class="grow"><b>${esc(k.name)}</b><span class="sub" style="display:block">${kitUnits(k).length} equipo${kitUnits(k).length === 1 ? '' : 's'}${k.label_printed_at ? '' : ' · sin imprimir'}</span></span></label></div>`).join('')) : '';
+  const custom = S.customLabels.length ? `<div class="list">${S.customLabels.map(x => { const d = x.data || {}; return `<div class="row urow"><div class="grow"><b>${esc(x.name)}</b><div class="sub">${esc([d.title, d.copies > 1 ? d.copies + ' pegatinas' : ''].filter(Boolean).join(' · '))}</div></div><button class="btn small primary" onclick="printCustomSaved('${x.id}')">Imprimir</button><button class="btn small" onclick="openCustomLabel('${x.id}')">Editar</button></div>`; }).join('')}</div>`
+    : `<div class="sub" style="margin:6px 18px">Aún no tienes ninguna. Crea pegatinas con tu propio texto: cajas numeradas, cables, avisos…</div>`;
+  return bar('Etiquetas', {back:true})
+    + `<div class="group">Hoja de pegatinas</div>
+      <div class="info" style="display:flex;align-items:center;gap:10px"><div class="grow"><b>${esc(labelPresetName(cfg))}</b><div class="sub">${cfg.cols}×${cfg.rows} · ${cfg.w}×${cfg.h} mm · ${per} por hoja</div></div><button class="btn small" onclick="openSheetCfg()">Configurar</button></div>
+      ${pendingLabelsHtml()}
+      <div class="group">Pegatinas personalizadas</div>${custom}
+      <div class="actions"><button class="btn primary" onclick="openCustomLabel()">+ Nueva pegatina</button></div>
+      <div class="group">Etiquetas de material</div>
+      <div class="actions"><button class="btn primary" id="lab-go" ${nSel ? '' : 'disabled'} onclick="labPrint()">${nSel ? `Imprimir las marcadas (${nSel})` : 'Marca lo que quieres imprimir'}</button><button class="btn small" onclick="labSelectPending()">Marcar pendientes</button><button class="btn small" onclick="labSelectAll(true)">Marcar todo</button><button class="btn small" onclick="labSelectAll(false)">Quitar marcas</button></div>
+      <div class="pad">${catHtml}${kitHtml}${!catHtml && !kitHtml ? '<div class="empty">Aún no hay equipos con número de serie ni kits.</div>' : ''}</div>`;
+}
+function labToggle(key, on){ if (on) S.labSel.add(key); else S.labSel.delete(key); render(); }
+function labToggleModel(mid, on){ S.units.filter(u => u.model_id === mid).forEach(u => on ? S.labSel.add('u:' + u.id) : S.labSel.delete('u:' + u.id)); render(); }
+function labToggleOpen(mid){ S.labOpen[mid] = !S.labOpen[mid]; render(); }
+function labSelectAll(on){ S.labSel = new Set(); if (on){ S.units.forEach(u => S.labSel.add('u:' + u.id)); S.kits.forEach(k => S.labSel.add('k:' + k.id)); } render(); }
+function labPrint(){
+  const items = [...S.units.slice().sort(unitCmp).filter(u => S.labSel.has('u:' + u.id)).map(u => ({kind:'unit', id:u.id})), ...S.kits.slice().sort(byName).filter(k => S.labSel.has('k:' + k.id)).map(k => ({kind:'kit', id:k.id}))];
+  openPrintLabels(items, 'Etiquetas de material');
+}
+function printLabels(ids){ if (!ids.length) return toast('No hay unidades para etiquetar', true); openPrintLabels(ids.map(id => ({kind:'unit', id})), 'Etiquetas de equipos'); }
+function printKitLabel(id){ openPrintLabels([{kind:'kit', id}], 'Etiqueta de kit'); }
+
+/* ============ FOTOS EN INCIDENCIAS ============ */
+const blobToDataUrl = blob => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(blob); });
+function dataUrlToBlob(u){
+  const [h, b] = String(u).split(','), mime = (/data:([^;]+)/.exec(h) || [])[1] || 'image/jpeg', bin = atob(b), a = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+  return new Blob([a], {type:mime});
+}
+// Sube la foto de una incidencia (dataURL o Blob) y devuelve su enlace. Si falla la conexión, lanza el error para que se reintente.
+async function uploadIncidentPhoto(src, key){
+  const blob = typeof src === 'string' ? dataUrlToBlob(src) : src, path = `incidencias/${key}-${Date.now()}.jpg`;
+  const r = await sb.storage.from('fotos').upload(path, blob, {contentType:'image/jpeg', upsert:true});
+  if (r.error){ if (/fetch|network|offline/i.test(r.error.message || '')) throw r.error; toast('No se pudo subir la foto: ' + (r.error.message || ''), true); return null; }
+  return sb.storage.from('fotos').getPublicUrl(path).data.publicUrl;
+}
+const photoField = (k, i) => `<label for="${k}ph-${i}">Foto (opcional)</label><input type="file" accept="image/*" capture="environment" id="${k}ph-${i}" onchange="condPhoto('${k}',${i},this)">
+  <div id="${k}pv-${i}" hidden><div style="display:flex;align-items:center;gap:10px;margin-top:6px"><img class="thumb" style="width:64px;height:64px" alt="Foto de la incidencia"><button type="button" class="btn small" onclick="condPhotoClear('${k}',${i})">Quitar foto</button></div></div>`;
+async function condPhoto(k, i, input){
+  const f = input.files && input.files[0]; if (!f) return;
+  try {
+    const url = await blobToDataUrl(await resizeImage(f, 800, 'image/jpeg', 0.65));      // pequeña (unos 100 KB) para que quepa también en la cola sin conexión
+    (k === 'u' ? condState : condBulk)[i].photo = url;
+    const box = $(`#${k}pv-${i}`); box.querySelector('img').src = url; box.hidden = false;
+  } catch (e){ toast('No se pudo leer la foto', true); }
+}
+function condPhotoClear(k, i){
+  const o = (k === 'u' ? condState : condBulk)[i]; if (o) o.photo = null;
+  const box = $(`#${k}pv-${i}`); if (box) box.hidden = true; const inp = $(`#${k}ph-${i}`); if (inp) inp.value = '';
+}
+const photoThumb = url => `<img class="thumb" src="${esc(url)}" alt="Foto de la incidencia" loading="lazy" onclick="openPhoto('${esc(url)}')" style="width:56px;height:56px;margin-top:6px;cursor:pointer">`;
+function openPhoto(url){ openModal(`<img src="${esc(url)}" style="width:100%;border-radius:10px" alt="Foto de la incidencia"><button class="btn block" style="margin-top:12px" onclick="closeModal()">Cerrar</button>`); }
+// Última foto de «incompleto» de una unidad
+function missingPhoto(u){
+  const l = S.maint.filter(x => x.unit_id === u.id && x.kind === 'missing' && x.photo_url).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))[0];
+  return l ? photoThumb(l.photo_url) : '';
+}
+
+/* ============ ETIQUETAS PENDIENTES DE IMPRIMIR ============ */
+const labelPending = () => ({units:S.units.filter(u => !u.label_printed_at), kits:S.kits.filter(k => !k.label_printed_at)});
+const labelPendingCount = () => { const p = labelPending(); return p.units.length + p.kits.length; };
+function labelStatusHtml(k, o){
+  return `<div class="sub" style="text-align:center;margin-top:6px">${o.label_printed_at ? `Etiqueta impresa el ${esc(fmtDay(String(o.label_printed_at).slice(0, 10)))}` : '<b style="color:var(--warn)">Etiqueta pendiente de imprimir</b>'}</div>
+    <div style="text-align:center;margin-top:4px"><button class="btn small" onclick="toggleLabelPrinted('${k}','${o.id}')">${o.label_printed_at ? 'Marcar como pendiente' : 'Marcar como impresa'}</button></div>`;
+}
+async function toggleLabelPrinted(k, id){
+  const o = k === 'u' ? unitById(id) : kitById(id); if (!o) return;
+  await db(sb.from(k === 'u' ? 'units' : 'kits').update({label_printed_at:o.label_printed_at ? null : new Date().toISOString()}).eq('id', id));
+  await loadAll(); if (k === 'u') openUnit(id); else render();
+}
+function pendingLabelsHtml(){
+  const p = labelPending(), np = p.units.length + p.kits.length, anyMarked = S.units.some(u => u.label_printed_at) || S.kits.some(k => k.label_printed_at);
+  if (!np) return `<div class="group">Etiquetas pendientes</div><div class="info"><b>Todas las etiquetas están impresas</b><div class="sub">Lo que añadas nuevo aparecerá aquí hasta que lo imprimas.</div></div>`;
+  return `<div class="group">Etiquetas pendientes</div>
+    <div class="info"><b>${np} etiqueta${np === 1 ? '' : 's'} sin imprimir</b><div class="sub">${p.units.length} equipo${p.units.length === 1 ? '' : 's'}${p.kits.length ? ` · ${p.kits.length} kit${p.kits.length === 1 ? '' : 's'}` : ''}</div>
+      ${!anyMarked ? `<div class="sub" style="margin-top:6px">Si ya imprimiste las etiquetas de lo que tienes, pulsa «Marcar todas como impresas»: a partir de ahí solo saldrá lo nuevo.</div>` : ''}</div>
+    <div class="actions"><button class="btn primary" onclick="labPrintPending()">Imprimir las pendientes (${np})</button><button class="btn small" onclick="labMarkAll()">Marcar todas como impresas</button></div>`;
+}
+function labPrintPending(){
+  const p = labelPending();
+  openPrintLabels([...p.units.slice().sort(unitCmp).map(u => ({kind:'unit', id:u.id})), ...p.kits.slice().sort(byName).map(k => ({kind:'kit', id:k.id}))], 'Etiquetas pendientes');
+}
+async function labMarkAll(){
+  const p = labelPending(), n = p.units.length + p.kits.length;
+  if (!n || !confirm(`¿Marcar las ${n} etiquetas pendientes como impresas?`)) return;
+  const now = new Date().toISOString();
+  if (p.units.length) await db(sb.from('units').update({label_printed_at:now}).in('id', p.units.map(u => u.id)));
+  if (p.kits.length) await db(sb.from('kits').update({label_printed_at:now}).in('id', p.kits.map(k => k.id)));
+  await loadAll(); toast('Marcadas como impresas');
+}
+function labSelectPending(){
+  S.labSel = new Set(); const p = labelPending();
+  p.units.forEach(u => S.labSel.add('u:' + u.id)); p.kits.forEach(k => S.labSel.add('k:' + k.id)); render();
+}
+// Al imprimir etiquetas se pregunta si salieron bien (el navegador no avisa de si se imprimió o se canceló)
+function askMarkPrinted(){
+  const m = S.markPending; if (!m || !(m.units.length + m.kits.length)) return;
+  const n = m.units.length + m.kits.length;
+  openModal(`<h2>¿Se han impreso bien?</h2><div class="sub">Si ${n === 1 ? 'la etiqueta salió bien' : `las ${n} etiquetas salieron bien`}, márcalas como impresas y no volverán a salir como pendientes. Si cancelaste la impresión o salió mal, di que no.</div>
+    <button class="btn primary block" onclick="markPrinted()">Sí, marcarlas como impresas</button><button class="btn block" onclick="S.markPending=null;closeModal()">No, las imprimiré otra vez</button>`);
+}
+async function markPrinted(){
+  const m = S.markPending; if (!m) return; S.markPending = null;
+  const now = new Date().toISOString();
+  if (m.units.length) await db(sb.from('units').update({label_printed_at:now}).in('id', m.units));
+  if (m.kits.length) await db(sb.from('kits').update({label_printed_at:now}).in('id', m.kits));
+  closeModal(); await loadAll(); toast('Etiquetas marcadas como impresas');
+}
+
+/* ============ DISPONIBILIDAD POR FECHAS ============ */
+S.av = {from:'', to:'', only:false};
+const availDay = d => { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
+// Rango consultado: del primer día a las 00:00 al último a las 23:59
+function availRange(){
+  const f = S.av.from || todayStr(), t = S.av.to || f; let a = new Date(f + 'T00:00:00'), b = new Date(t + 'T23:59:59');
+  if (b < a){ a = new Date(t + 'T00:00:00'); b = new Date(f + 'T23:59:59'); }
+  return {id:'__avail', starts_at:a.toISOString(), ends_at:b.toISOString(), a, b};
+}
+// Qué hay libre en ese rango: lo reservado en shows que se solapan, más lo que está físicamente fuera sin devolver, cuenta como ocupado
+function availCompute(){
+  const P = availRange(), busy = new Map();
+  S.reservations.forEach(r => {
+    if (r.state === 'returned') return; const q = projById(r.project_id); if (!q || q.status === 'cancelled') return;
+    const ov = new Date(q.starts_at) < P.b && new Date(q.ends_at) > P.a;
+    if (ov || r.state === 'out'){ if (!busy.has(r.unit_id)) busy.set(r.unit_id, []); busy.get(r.unit_id).push({p:q, out:r.state === 'out'}); }
+  });
+  const bulkBusy = {};
+  S.bulkRes.forEach(b => {
+    if (b.state === 'returned') return; const q = projById(b.project_id); if (!q || q.status === 'cancelled') return;
+    const ov = new Date(q.starts_at) < P.b && new Date(q.ends_at) > P.a;
+    if (ov || b.state === 'out') (bulkBusy[b.model_id] = bulkBusy[b.model_id] || []).push({p:q, qty:b.qty, out:b.state === 'out'});
+  });
+  return S.models.map(m => {
+    if (m.is_bulk){
+      const ls = bulkBusy[m.id] || [], used = ls.reduce((s, x) => s + x.qty, 0), rep = bulkRepair(m), total = m.bulk_stock || 0;
+      return {m, total, free:Math.max(0, total - rep - used), busy:used, repair:rep, incomplete:0, shows:[...new Set(ls.map(x => x.p.name))], bulkLines:ls, units:[]};
+    }
+    const all = S.units.filter(u => u.model_id === m.id && u.status !== 'lost' && u.status !== 'retired');
+    const free = all.filter(u => u.status === 'ok' && !busy.has(u.id)), busyU = all.filter(u => u.status === 'ok' && busy.has(u.id)), broken = all.filter(u => u.status === 'repair');
+    return {m, total:all.length, free:free.length, busy:busyU.length, repair:broken.length, incomplete:free.filter(u => u.missing_note).length,
+      shows:[...new Set(busyU.flatMap(u => busy.get(u.id).map(x => x.p.name)))], units:{free, busyU, broken, busy}, bulkLines:[]};
+  }).filter(r => r.total > 0);
+}
+function availView(){
+  const rows = availCompute().filter(r => !S.av.only || r.free > 0), cats = {}, from = S.av.from || todayStr(), to = S.av.to || from;
+  rows.forEach(r => { const c = S.categories.find(c => c.id === r.m.category_id), nm = c ? c.name : 'Sin categoría'; (cats[nm] = cats[nm] || []).push(r); });
+  const ok = availCompute().filter(r => r.free > 0).length;
+  const rowHtml = r => { const parts = [r.busy ? `${r.busy} reservad${r.busy === 1 ? 'o' : 'os'}${r.shows.length ? ' (' + r.shows.slice(0, 2).join(', ') + (r.shows.length > 2 ? ' y ' + (r.shows.length - 2) + ' más' : '') + ')' : ''}` : '', r.repair ? `${r.repair} en reparación` : '', r.incomplete ? `${r.incomplete} incompleto${r.incomplete === 1 ? '' : 's'}` : ''].filter(Boolean);
+    return `<div class="row tap mrow" data-s="${esc(norm(r.m.name + ' ' + (r.m.brand || '')))}" onclick="openAvail('${r.m.id}')"><div class="grow"><div class="mline" style="flex-wrap:nowrap;justify-content:space-between"><b>${colorDot(r.m)}${esc(r.m.name)}</b><span class="count">${r.free}<span class="sub" style="font-size:12px;font-weight:500"> de ${r.total}</span></span></div>
+      <div class="mline">${r.free === 0 ? '<span class="badge bad">Agotado</span>' : ''}<span class="sub">${esc(parts.join(' · ') || 'Todo libre')}</span></div></div></div>`; };
+  const shows = S.projects.filter(p => p.status !== 'cancelled').slice().sort((a, b) => new Date(b.starts_at) - new Date(a.starts_at));
+  return bar('Disponibilidad', {back:true})
+    + `<div class="info"><div class="sub">Elige las fechas y verás cuánto material tienes libre. Cuenta lo reservado en otros ${W.p} que se solapan y lo que está fuera sin devolver.</div>
+      <div class="two" style="margin-top:8px"><div><label for="av-from">Desde</label><input id="av-from" type="date" value="${from}" onchange="availSet('from',this.value)"></div><div><label for="av-to">Hasta</label><input id="av-to" type="date" value="${to}" onchange="availSet('to',this.value)"></div></div>
+      ${shows.length ? `<label for="av-show">O usa las fechas de un ${W.s}</label><select id="av-show" onchange="availFromShow(this.value)"><option value="">Elige un ${W.s}…</option>${shows.map(p => `<option value="${p.id}">${esc(p.name)} (${esc(fmtD(p.starts_at))})</option>`).join('')}</select>` : ''}</div>
+      <div class="search" style="margin:10px 0 0"><input type="search" placeholder="Buscar un material" oninput="filterRows(this.value)"></div>
+      <label class="chkrow" style="margin:8px 16px 0"><input type="checkbox" ${S.av.only ? 'checked' : ''} onchange="S.av.only=this.checked;render()"><span>Solo lo que tiene algo libre (${ok} modelo${ok === 1 ? '' : 's'})</span></label>
+      <div class="pad mat">${Object.keys(cats).sort(catOrder).map(nm => catSection('av:' + catKey(nm), nm, `${cats[nm].length} modelo${cats[nm].length === 1 ? '' : 's'}`, cats[nm].map(rowHtml).join(''))).join('') || '<div class="empty">No hay material que mostrar.</div>'}</div>`;
+}
+function availSet(k, v){
+  S.av[k] = v;
+  if (S.av.from && S.av.to && S.av.to < S.av.from){ if (k === 'from') S.av.to = S.av.from; else S.av.from = S.av.to; }       // «Hasta» nunca antes que «Desde»
+  render();
+}
+function availFromShow(id){ const p = projById(id); if (!p) return; S.av.from = availDay(p.starts_at); S.av.to = availDay(p.ends_at); render(); }
+function openAvail(mid){
+  const r = availCompute().find(x => x.m.id === mid); if (!r) return;
+  const m = r.m, P = availRange(), rango = S.av.from === S.av.to || !S.av.to ? fmtDay(S.av.from || todayStr()) : `${fmtDay(S.av.from)} → ${fmtDay(S.av.to)}`;
+  let body;
+  if (m.is_bulk){
+    body = `<div class="info" style="margin:10px 0 0"><b>${r.free}</b> libres de <b>${r.total}</b> en stock${r.repair ? ` · ${r.repair} en reparación` : ''}</div>`
+      + (r.bulkLines.length ? `<div class="group" style="margin:14px 0 6px">Reservados</div><div class="list" style="margin:0">${r.bulkLines.map(x => `<div class="row urow"><div class="grow"><b>${esc(x.p.name)}</b><div class="sub">${esc(fmtD(x.p.starts_at))} → ${esc(fmtD(x.p.ends_at))}${x.out ? ' · fuera' : ''}</div></div><div class="count">×${x.qty}</div></div>`).join('')}</div>` : '');
+  } else {
+    const u = r.units, sec = (t, arr, f) => arr.length ? `<div class="group" style="margin:14px 0 6px">${t} (${arr.length})</div><div class="list" style="margin:0">${arr.map(f).join('')}</div>` : '';
+    body = `<div class="info" style="margin:10px 0 0"><b>${r.free}</b> libres de <b>${r.total}</b></div>`
+      + sec('Libres', u.free, x => `<div class="row urow">${unitTile(x)}<div class="grow"><b>${esc(unitSub(x).replace(/<[^>]+>/g, ''))}</b>${x.missing_note ? `<div class="sub" style="color:var(--warn)">Incompleto: falta ${esc(x.missing_note)}</div>` : ''}</div></div>`)
+      + sec('Ocupados', u.busyU, x => `<div class="row urow">${unitTile(x)}<div class="grow"><b>${esc(unitSub(x).replace(/<[^>]+>/g, ''))}</b><div class="sub">${esc(u.busy.get(x.id).map(y => y.p.name + (y.out ? ' (fuera)' : '')).join(', '))}</div></div></div>`)
+      + sec('En reparación', u.broken, x => `<div class="row urow">${unitTile(x)}<div class="grow"><b>${esc(unitSub(x).replace(/<[^>]+>/g, ''))}</b></div></div>`);
+  }
+  openModal(`<h2>${esc(m.name)}</h2><div class="sub">${esc(rango)}</div>${body}<button class="btn block" style="margin-top:14px" onclick="closeModal()">Cerrar</button>`);
+}
+
+/* ============ PAPELERA Y DESHACER ============ */
+const TRASH_KIND = k => ({model:'Modelo', unit:'Unidad', kit:'Kit', project:W.S, client:'Cliente', technician:'Técnico', category:'Categoría', custom_label:'Pegatina'})[k] || k;
+const trashTable = (t, n) => { const one = n === 1, o = {equipment_models:['modelo','modelos'], units:['unidad','unidades'], reservations:['reserva','reservas'], bulk_reservations:['línea de cables','líneas de cables'], kit_items:['pieza de kit','piezas de kit'], maintenance_logs:['registro de mantenimiento','registros de mantenimiento'], bulk_logs:['incidencia de cables','incidencias de cables'], scan_events:['movimiento','movimientos'], kits:['kit','kits'], projects:[W.s, W.p], clients:['cliente','clientes'], technicians:['técnico','técnicos'], categories:['categoría','categorías'], crew_assignments:['asignación','asignaciones'], custom_labels:['pegatina','pegatinas']}[t]; return o ? o[one ? 0 : 1] : t; };
+// Foto de todo lo que se va a borrar (incluido lo que se borra en cascada), para poder restaurarlo
+async function trashCollect(kind, id){
+  const T = [], L = [], real = r => !String(r.id).startsWith('tmp-');
+  const add = (t, rows) => { rows = rows.filter(real); if (rows.length) T.push({t, rows}); };
+  const events = async ids => { if (!ids.length || !navigator.onLine) return []; try { const r = await sb.from('scan_events').select('*').in('unit_id', ids).limit(3000); return r.error ? [] : (r.data || []); } catch (e) { return []; } };
+  if (kind === 'model'){
+    const m = modelById(id), us = S.units.filter(u => u.model_id === id), ids = new Set(us.map(u => u.id));
+    add('equipment_models', [m]); add('units', us); add('reservations', S.reservations.filter(r => ids.has(r.unit_id)));
+    add('bulk_reservations', S.bulkRes.filter(b => b.model_id === id)); add('kit_items', S.kitItems.filter(k => ids.has(k.unit_id) || k.model_id === id));
+    add('maintenance_logs', S.maint.filter(l => ids.has(l.unit_id))); add('bulk_logs', S.bulkLogs.filter(l => l.model_id === id)); add('scan_events', await events([...ids]));
+  } else if (kind === 'unit'){
+    add('units', [unitById(id)]); add('reservations', S.reservations.filter(r => r.unit_id === id)); add('kit_items', S.kitItems.filter(k => k.unit_id === id));
+    add('maintenance_logs', S.maint.filter(l => l.unit_id === id)); add('scan_events', await events([id]));
+  } else if (kind === 'kit'){
+    add('kits', [kitById(id)]); add('kit_items', S.kitItems.filter(k => k.kit_id === id));
+    L.push({t:'reservations', col:'kit_id', ids:S.reservations.filter(r => r.kit_id === id).map(r => r.id), val:id}, {t:'bulk_reservations', col:'kit_id', ids:S.bulkRes.filter(b => b.kit_id === id).map(b => b.id), val:id});
+  } else if (kind === 'project'){
+    add('projects', [projById(id)]); add('reservations', S.reservations.filter(r => r.project_id === id)); add('bulk_reservations', S.bulkRes.filter(b => b.project_id === id)); add('crew_assignments', S.assigns.filter(a => a.project_id === id));
+  } else if (kind === 'client'){
+    add('clients', [clientById(id)]); L.push({t:'projects', col:'client_id', ids:S.projects.filter(p => p.client_id === id).map(p => p.id), val:id});
+  } else if (kind === 'technician'){
+    add('technicians', [S.techs.find(t => t.id === id)]); add('crew_assignments', S.assigns.filter(a => a.technician_id === id));
+  } else if (kind === 'category'){
+    add('categories', [S.categories.find(c => c.id === id)]); L.push({t:'equipment_models', col:'category_id', ids:S.models.filter(m => m.category_id === id).map(m => m.id), val:id});
+  } else if (kind === 'custom_label'){
+    add('custom_labels', [S.customLabels.find(c => c.id === id)]);
+  }
+  return {tables:T, links:L.filter(l => l.ids.length)};
+}
+// Guarda la foto en la papelera y luego borra. Si todavía no existe la papelera (falta esquema_v12.sql), borra igual y lo dice.
+async function trashRun(kind, id, label, del){
+  let tid = null;
+  try {
+    const snap = await trashCollect(kind, id), r = await sb.from('trash').insert({kind, label, data:snap}).select().single();
+    if (r.error) throw r.error; tid = r.data.id;
+  } catch (e){ if (!isSchemaErr(e)){ toast(errMsg(e), true, true); throw e; } }
+  await del();
+  return tid;
+}
+let undoTimer;
+function undoBar(msg, tid){
+  if (!tid) return toast(msg + ' (sin papelera: falta esquema_v12.sql)');
+  let u = $('#undobar'); if (!u){ u = document.createElement('div'); u.id = 'undobar'; u.className = 'undobar'; document.body.appendChild(u); }
+  u.innerHTML = `<span>${esc(msg)}</span><button onclick="undoNow('${tid}')">Deshacer</button>`; u.hidden = false;
+  clearTimeout(undoTimer); undoTimer = setTimeout(() => { u.hidden = true; }, 10000);
+}
+async function undoNow(tid){ const u = $('#undobar'); if (u) u.hidden = true; await restoreTrash(tid); }
+async function restoreTrash(tid){
+  const r = await sb.from('trash').select('*').eq('id', tid).limit(1);
+  if (r.error || !(r.data || []).length) return toast(r.error ? errMsg(r.error) : 'Ya no está en la papelera', true, true);
+  const row = r.data[0], d = row.data || {}; let problems = 0, lastErr = null;
+  for (const {t, rows} of (d.tables || [])) for (let i = 0; i < rows.length; i += 400){
+    const res = await sb.from(t).upsert(rows.slice(i, i + 400)); if (res.error){ problems++; lastErr = res.error; }
+  }
+  for (const l of (d.links || [])){ const res = await sb.from(l.t).update({[l.col]:l.val}).in('id', l.ids); if (res.error){ problems++; lastErr = res.error; } }
+  if (problems){ await loadAll(); return toast(`Se restauró solo una parte: ${errMsg(lastErr)} Sigue en la papelera por si quieres volver a intentarlo.`, true, true); }
+  await sb.from('trash').delete().eq('id', tid);
+  await loadAll(); if (S.view && S.view.name === 'trash'){ await loadTrash(); render(); }
+  toast(`«${row.label}» restaurado`);
+}
+async function loadTrash(){
+  try { await sb.from('trash').delete().lt('created_at', new Date(Date.now() - 30 * 864e5).toISOString()); } catch (e) {}      // a los 30 días se vacía sola
+  const r = await sb.from('trash').select('*').order('created_at', {ascending:false});
+  if (r.error){ S.trash = []; toast(errMsg(r.error), true, true); return; }
+  S.trash = (r.data || []).slice().sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+}
+async function openTrash(){ await loadTrash(); openView('trash', ''); }
+function trashView(){
+  const rows = S.trash || [];
+  return bar('Papelera', {back:true})
+    + `<div class="sub" style="margin:12px 16px 0">Lo que borras se guarda aquí 30 días, con todo lo que llevaba (unidades, reservas, historial…). Después se elimina solo.</div>`
+    + (rows.length ? `<div class="list">${rows.map(r => `<div class="row urow"><div class="grow"><b>${esc(r.label)}</b><div class="sub">Borrado el ${esc(fmtFull(r.created_at))}</div><div class="sub">${esc(((r.data || {}).tables || []).map(x => `${x.rows.length} ${trashTable(x.t, x.rows.length)}`).join(' · '))}</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><button class="btn small primary" onclick="restoreTrash('${r.id}')">Restaurar</button><button class="btn small danger" onclick="trashForever('${r.id}')">Eliminar</button></div></div>`).join('')}</div>
+      <div class="actions"><button class="btn danger" onclick="emptyTrash()">Vaciar la papelera</button></div>` : `<div class="empty">La papelera está vacía.</div>`);
+}
+async function trashForever(id){ if (!confirm('¿Eliminar para siempre? Ya no se podrá recuperar.')) return; await db(sb.from('trash').delete().eq('id', id)); await loadTrash(); render(); }
+async function emptyTrash(){ if (!(S.trash || []).length || !confirm(`¿Vaciar la papelera (${S.trash.length})? Ya no se podrá recuperar nada.`)) return; await db(sb.from('trash').delete().in('id', S.trash.map(t => t.id))); await loadTrash(); render(); toast('Papelera vaciada'); }
+
+/* ============ HISTORIAL DE CAMBIOS ============ */
+const audTable = t => ({equipment_models:'Modelo', units:'Unidad', kits:'Kit', projects:W.S, clients:'Cliente', technicians:'Técnico', categories:'Categoría'})[t] || t;
+const AUD_FIELD = {name:'nombre', brand:'marca', category_id:'categoría', day_rate:'tarifa', weight_kg:'peso', power_w:'potencia', width_cm:'ancho', height_cm:'alto', depth_cm:'fondo', notes:'notas', serial_number:'nº de serie', status:'estado', missing_note:'qué falta', purchase_date:'fecha de compra', next_service:'próxima revisión', lamp_hours:'horas de lámpara', lamp_life_hours:'vida de la lámpara', is_bulk:'por cantidad', bulk_stock:'stock', bulk_repair:'en reparación', color:'color', photo_url:'foto', starts_at:'inicio', ends_at:'fin', client:'cliente', client_id:'cliente', phone:'teléfono', email:'email', label_printed_at:'etiqueta impresa', sort_order:'orden', rider_notes:'notas del rider', payment_status:'cobro', invoice_no:'nº de factura', due_date:'vencimiento'};
+const AUD_HIDE = new Set(['id', 'created_at', 'updated_at', 'calendar_token']);
+function audValue(k, v){
+  if (v == null || v === '') return '(vacío)';
+  if (typeof v === 'boolean') return v ? 'sí' : 'no';
+  if (k === 'category_id') return (S.categories.find(c => c.id === v) || {}).name || '(otra)';
+  if (k === 'client_id') return (clientById(v) || {}).name || '(otro)';
+  let t = typeof v === 'object' ? JSON.stringify(v) : String(v);
+  if (/(_at|date|service)$/.test(k) && /^\d{4}-\d\d-\d\d/.test(t)) t = t.slice(0, 10);
+  return t.length > 40 ? t.slice(0, 40) + '…' : t;
+}
+function audText(r){
+  const kind = audTable(r.table_name), nm = r.label ? `«${r.label}»` : '';
+  if (r.action === 'insert') return `Creó ${kind} ${nm}`.trim();
+  if (r.action === 'delete') return `Borró ${kind} ${nm}`.trim();
+  const ch = Object.entries(r.changes || {}).filter(([k]) => !AUD_HIDE.has(k)).map(([k, v]) => `${AUD_FIELD[k] || k}: ${audValue(k, v[0])} → ${audValue(k, v[1])}`);
+  return `Cambió ${kind} ${nm}${ch.length ? ' · ' + ch.join('; ') : ''}`;
+}
+const audRowsHtml = rows => rows.map(r => `<div class="row urow" data-s="${esc(norm(audText(r) + ' ' + (r.user_email || '')))}"><div class="grow"><b>${esc(audText(r))}</b><div class="sub">${esc(fmtFull(r.at))}${r.user_email ? ' · ' + esc(String(r.user_email).split('@')[0]) : ''}</div></div></div>`).join('');
+S.hist = {rows:[], table:''};
+async function openHistory(){
+  try { await sb.from('audit_log').delete().lt('at', new Date(Date.now() - 90 * 864e5).toISOString()); } catch (e) {}      // se guardan 90 días
+  const r = await sb.from('audit_log').select('*').order('at', {ascending:false}).limit(300);
+  if (r.error) return toast(errMsg(r.error), true, true);
+  S.hist = {rows:(r.data || []).slice().sort((a, b) => String(b.at).localeCompare(String(a.at))), table:S.hist.table};
+  openView('history', '');
+}
+function historyView(){
+  const rows = S.hist.rows.filter(r => !S.hist.table || r.table_name === S.hist.table);
+  return bar('Historial de cambios', {back:true})
+    + `<div class="sub" style="margin:12px 16px 0">Quién cambió qué y cuándo. Se guardan los últimos 90 días.</div>
+      <div class="pad" style="margin-top:8px"><select aria-label="Filtrar por tipo" onchange="S.hist.table=this.value;render()"><option value="">Todo</option>${['equipment_models', 'units', 'kits', 'projects', 'clients', 'technicians', 'categories'].map(t => `<option value="${t}" ${S.hist.table === t ? 'selected' : ''}>${esc(audTable(t))}</option>`).join('')}</select></div>
+      <div class="search" style="margin:8px 0 0"><input type="search" placeholder="Buscar en el historial" oninput="filterRows(this.value)"></div>
+      ${rows.length ? `<div class="list">${audRowsHtml(rows)}</div>` : `<div class="empty">Aún no hay cambios registrados.</div>`}`;
+}
+async function openChanges(table, id){
+  openModal(`<h2>Cambios</h2><div class="empty" style="margin:30px 0">Cargando…</div>`);
+  const r = await sb.from('audit_log').select('*').eq('record_id', id).order('at', {ascending:false}).limit(60);
+  if (r.error){ closeModal(); return toast(errMsg(r.error), true, true); }
+  const rows = (r.data || []).slice().sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  openModal(`<h2>Cambios</h2>${rows.length ? `<div class="list" style="margin:12px 0 0">${audRowsHtml(rows)}</div>` : `<div class="empty" style="margin:24px 0">Todavía no hay cambios registrados de esto.</div>`}<button class="btn block" style="margin-top:12px" onclick="closeModal()">Cerrar</button>`);
+}
+
+/* ============ ERRORES CLAROS Y DIAGNÓSTICO ============ */
+S.errLog = []; S.schemaMiss = null;
+function noteError(e){ try { S.errLog.push({t:new Date().toISOString(), code:e.code || '', msg:String(e.message || e).slice(0, 300)}); if (S.errLog.length > 20) S.errLog.shift(); } catch (x) {} }
+function diagText(){
+  const q = S.queue ? S.queue.length : 0, f = S.failed ? S.failed.length : 0, c = labelCfg();
+  return [`RentApp ${APP_VERSION} · ${new Date().toISOString()}`, `Navegador: ${navigator.userAgent}`, `Conexión: ${navigator.onLine ? 'con internet' : 'SIN internet'} · operaciones pendientes: ${q} · fallidas: ${f}`,
+    `Usuario: ${(S.session && S.session.user && S.session.user.email) || '—'}`, `Scripts de base de datos que faltan: ${S.schemaMiss ? (S.schemaMiss.length ? S.schemaMiss.join(', ') : 'ninguno') : 'sin comprobar'}`,
+    `Datos: ${S.models.length} modelos · ${S.units.length} unidades · ${S.projects.length} ${W.p} · ${S.clients.length} clientes · ${S.kits.length} kits`, `Hoja de etiquetas: ${labelPresetName(c)}`, `Última copia en este dispositivo: ${lastBackup() ? fmtFull(lastBackup()) : 'nunca'}`,
+    `Últimos errores (${S.errLog.length}):`, ...S.errLog.slice().reverse().map(e => `  ${e.t.slice(11, 19)} [${e.code || '-'}] ${e.msg}`)].join('\n');
+}
+async function copyDiagnostics(){
+  const t = diagText();
+  try { await navigator.clipboard.writeText(t); toast('Diagnóstico copiado: pégalo en el chat'); }
+  catch (e){ openModal(`<h2>Diagnóstico</h2><div class="sub">No se pudo copiar solo: selecciona todo el texto y cópialo.</div><textarea id="diag-t" style="min-height:240px" readonly>${esc(t)}</textarea><button class="btn block" onclick="closeModal()">Cerrar</button>`); const el = $('#diag-t'); if (el){ el.focus(); el.select(); } }
+}
+function openHelp(){
+  openModal(`<h2>Ayuda y diagnóstico</h2><div class="sub">RentApp ${APP_VERSION}. Si algo falla, pulsa «Copiar diagnóstico» y pégalo en el chat: lleva la versión, lo que falta por sincronizar y los últimos errores, sin datos de tus clientes.</div>
+    <button class="btn primary block" onclick="copyDiagnostics()">Copiar diagnóstico</button>
+    ${S.errLog.length ? `<div class="group" style="margin:16px 0 6px">Últimos errores</div><div class="list" style="margin:0">${S.errLog.slice().reverse().map(e => `<div class="row urow"><div class="grow"><b>${esc(e.msg)}</b><div class="sub">${esc(e.t.slice(11, 19))}${e.code ? ' · ' + esc(e.code) : ''}</div></div></div>`).join('')}</div>` : '<div class="sub" style="margin-top:12px">No ha habido errores en esta sesión.</div>'}
+    <button class="btn block" style="margin-top:12px" onclick="closeModal()">Cerrar</button>`);
+}
+
+/* ============ ESTADO DEL SISTEMA ============ */
+const planLimits = p => p === 'pro' ? {db:8 * 1073741824, st:100 * 1073741824, name:'Pro'} : {db:500 * 1048576, st:1073741824, name:'Gratuito'};
+const bytesTxt = b => b == null ? '—' : b >= 1073741824 ? (b / 1073741824).toFixed(2) + ' GB' : (b / 1048576).toFixed(1) + ' MB';
+function usageBar(title, used, limit){
+  if (used == null) return `<div class="info"><b>${title}</b><div class="sub">No se pudo medir.</div></div>`;
+  const pct = Math.min(100, used / limit * 100), lv = pct >= 90 ? ['Casi lleno', 'bad'] : pct >= 70 ? ['Atención', 'warn'] : ['Bien', 'ok'];
+  return `<div class="info"><b>${title}</b><div class="sub">${bytesTxt(used)} de ${bytesTxt(limit)} (${pct.toFixed(0)} %) · <b style="color:var(--${lv[1]})">${lv[0]}</b></div><div style="height:10px;border-radius:6px;background:var(--line);margin-top:8px;overflow:hidden"><div style="height:100%;width:${pct.toFixed(1)}%;background:var(--${lv[1]})"></div></div></div>`;
+}
+const appPlan = () => ((S.settings && S.settings.app_config) || {}).plan || 'free';
+async function openSystem(){
+  S.sys = {usage:null, err:null, missing:null};
+  try { const r = await sb.rpc('system_usage'); if (r.error) S.sys.err = r.error; else S.sys.usage = r.data; } catch (e){ S.sys.err = e; }
+  try { S.sys.missing = await schemaMissing(); S.schemaMiss = S.sys.missing; } catch (e) {}
+  openView('system', '');
+}
+function systemView(){
+  const u = (S.sys && S.sys.usage) || null, lim = planLimits(appPlan()), l = lastBackup(), days = l ? Math.floor((Date.now() - new Date(l).getTime()) / 864e5) : null;
+  return bar('Estado del sistema', {back:true})
+    + `<div class="group">Espacio de tu plan de Supabase</div>`
+    + (u ? usageBar('Base de datos (aprox.)', u.db_bytes, lim.db) + usageBar(`Fotos y archivos${u.storage_files != null ? ` (${u.storage_files})` : ''}`, u.storage_bytes, lim.st)
+         : `<div class="info"><b>No se pudo medir el espacio</b><div class="sub">${S.sys && S.sys.err && isSchemaErr(S.sys.err) ? 'Falta ejecutar esquema_v12.sql en Supabase.' : esc(errMsg((S.sys || {}).err))}</div></div>`)
+    + `<div class="two" style="margin:10px 16px 0"><div><label for="sys-plan">Tu plan</label><select id="sys-plan" onchange="setPlan(this.value)"><option value="free" ${appPlan() === 'free' ? 'selected' : ''}>Gratuito (500 MB · 1 GB)</option><option value="pro" ${appPlan() === 'pro' ? 'selected' : ''}>Pro (8 GB · 100 GB)</option></select></div></div>
+      <div class="group">Pausa por inactividad</div>
+      <div class="info"><div class="sub">En el plan gratuito, <b>Supabase pausa el proyecto si pasa una semana sin actividad</b>, y la app deja de funcionar hasta que lo reactivas a mano en supabase.com. Abriendo la app de vez en cuando basta; si quieres asegurarte, puedes programar una visita automática.</div></div>
+      <div class="actions"><button class="btn" onclick="openKeepAlive()">Cómo evitar la pausa</button></div>
+      <div class="group">Copia de seguridad</div>
+      <div class="info"><div>Última copia en este dispositivo: <b>${l ? esc(fmtFull(l)) : 'nunca'}</b>${days != null && days > 7 ? ` · <b style="color:var(--warn)">hace ${days} días</b>` : ''}</div>
+        <div class="sub" style="margin-top:6px">El plan gratuito no incluye copias automáticas: la copia que descargas desde Más es la única que tienes.</div></div>
+      <div class="group">Conexión y base de datos</div>
+      <div class="info"><div>${navigator.onLine ? 'Con internet' : '<b style="color:var(--bad)">Sin internet</b>'} · pendiente de enviar: <b>${S.queue.length}</b> · fallidas: <b>${S.failed.length}</b></div>
+        <div class="sub" style="margin-top:6px">${S.sys && S.sys.missing ? (S.sys.missing.length ? `<b style="color:var(--warn)">Faltan scripts por ejecutar:</b> ${esc(S.sys.missing.join(', '))}` : 'Base de datos al día: están todos los scripts.') : 'Sin comprobar.'}</div></div>`;
+}
+async function setPlan(p){
+  S.settings.app_config = Object.assign({}, S.settings.app_config || {}, {plan:p});
+  try { await db(sb.from('settings').upsert({id:1, app_config:S.settings.app_config})); } catch (e) {}
+  render();
+}
+function keepAliveYaml(){
+  return `name: keepalive
+on:
+  schedule:
+    - cron: '17 6 * * 1,4'
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Visita a Supabase
+        run: |
+          curl -fsS "${SUPABASE_URL}/rest/v1/settings?select=id&limit=1" \\
+            -H "apikey: ${SUPABASE_KEY}" -H "Authorization: Bearer ${SUPABASE_KEY}" > /dev/null
+`;
+}
+function openKeepAlive(){
+  openModal(`<h2>Evitar la pausa</h2><div class="sub">Un pequeño trabajo de GitHub que visita tu Supabase dos veces por semana (lunes y jueves). Solo usa la clave pública que ya está en la app.</div>
+    <ol style="padding-left:20px;line-height:1.5"><li>En github.com/soko416/RENTAPP pulsa <b>Add file › Create new file</b>.</li><li>En el nombre escribe exactamente <b>.github/workflows/keepalive.yml</b></li><li>Pega el texto de abajo y pulsa <b>Commit changes</b>.</li><li>Pestaña <b>Actions</b> › «keepalive» › <b>Run workflow</b> para probarlo una vez.</li></ol>
+    <textarea id="ka-t" readonly style="min-height:200px;font-family:ui-monospace,monospace;font-size:12px">${esc(keepAliveYaml())}</textarea>
+    <div class="sub" style="margin-top:6px">Aviso: GitHub desactiva las tareas programadas si el repositorio pasa 60 días sin actividad, y no he podido comprobar que Supabase cuente estas visitas como actividad. Es una ayuda, no una garantía.</div>
+    <button class="btn primary block" onclick="navigator.clipboard.writeText(keepAliveYaml()).then(()=>toast('Copiado'),()=>{const e=$('#ka-t');e.focus();e.select();toast('Selecciona y copia',true)})">Copiar el texto</button><button class="btn block" onclick="closeModal()">Cerrar</button>`);
+}
+
+/* ============ AJUSTES DE LA APP (aspecto y nombre de los shows) ============ */
+const themePref = () => { try { return localStorage.getItem('theme') || 'auto'; } catch (e) { return 'auto'; } };
+function applyTheme(){ const t = themePref(), r = document.documentElement; if (t === 'light' || t === 'dark') r.setAttribute('data-theme', t); else r.removeAttribute('data-theme'); }
+function setTheme(v){ try { localStorage.setItem('theme', v); } catch (e) {} applyTheme(); }
+applyTheme();
+const SHOW_TERMS = [['show', 'shows'], ['bolo', 'bolos'], ['evento', 'eventos'], ['proyecto', 'proyectos'], ['trabajo', 'trabajos'], ['concierto', 'conciertos']];
+function applyAppConfig(){ const c = S.settings && S.settings.app_config; if (c && c.showTerm && c.showTerm[0]) setShowTerm(c.showTerm[0], c.showTerm[1]); }
+function openSettings(){
+  const cur = W.s + '|' + W.p, isPre = SHOW_TERMS.some(t => t.join('|') === cur), th = themePref();
+  openModal(`<h2>Ajustes de la app</h2>
+    <label for="st-theme">Aspecto</label><select id="st-theme" onchange="setTheme(this.value)"><option value="auto" ${th === 'auto' ? 'selected' : ''}>Automático (como tu móvil)</option><option value="light" ${th === 'light' ? 'selected' : ''}>Claro</option><option value="dark" ${th === 'dark' ? 'selected' : ''}>Oscuro</option></select>
+    <label for="st-show">Cómo llamas a los ${esc(W.p)}</label>
+    <select id="st-show" onchange="stShowChanged()">${SHOW_TERMS.map(t => `<option value="${t.join('|')}" ${t.join('|') === cur ? 'selected' : ''}>${capFirst(t[0])} / ${capFirst(t[1])}</option>`).join('')}<option value="custom" ${isPre ? '' : 'selected'}>Otro…</option></select>
+    <div id="st-custom" ${isPre ? 'hidden' : ''} class="two"><div><label for="st-s">En singular</label><input id="st-s" value="${esc(W.s)}"></div><div><label for="st-p">En plural</label><input id="st-p" value="${esc(W.p)}"></div></div>
+    <div class="sub">Cambia las pestañas, los títulos y los botones. Los nombres de lo que ya has creado no cambian. Usa palabras masculinas (bolo, evento, proyecto…).</div>
+    <button class="btn primary block" onclick="saveSettingsApp()">Guardar</button><button class="btn block" onclick="closeModal()">Cerrar</button>`);
+}
+function stShowChanged(){ const v = $('#st-show').value; $('#st-custom').hidden = v !== 'custom'; }
+async function saveSettingsApp(){
+  const v = $('#st-show').value, [s, p] = v === 'custom' ? [$('#st-s').value, $('#st-p').value] : v.split('|');
+  if (!String(s).trim()) return toast('Escribe cómo los llamas', true);
+  setShowTerm(s, p);
+  S.settings.app_config = Object.assign({}, S.settings.app_config || {}, {showTerm:[W.s, W.p]});
+  let shared = true;
+  try { const r = await sb.from('settings').upsert({id:1, app_config:S.settings.app_config}); if (r.error) shared = false; } catch (e) { shared = false; }
+  closeModal(); render(); toast(shared ? 'Guardado' : 'Guardado en este dispositivo (falta esquema_v12.sql para compartirlo)');
+}
+function moreView(){
+  const l = lastBackup(), al = maintAlerts();
+  return bar('Más')
+    + incidenceCard()
+    + (al.length ? `<div class="group">Avisos</div><div class="actions"><button class="btn" style="color:var(--warn)" onclick="openAlerts()">Mantenimiento: ${al.length} aviso${al.length === 1 ? '' : 's'}</button>${repairCount() ? repairBtn() : ''}</div>` : (repairCount() ? `<div class="group">Reparaciones</div><div class="actions">${repairBtn()}</div>` : ''))
+    + `<div class="group">${esc(W.P)}, clientes y cobros</div><div class="actions"><button class="btn" onclick="openView('clients','')">Clientes (${S.clients.length})</button><button class="btn" onclick="openPayments()">${esc(payHeadline())}</button><button class="btn" onclick="openBusiness()">Datos del negocio y presupuesto</button></div>`
+    + pendingBtn()
+    + `<div class="group">Inventario</div><div class="actions"><button class="btn" onclick="go('material');openView('labels','')">Gestor de etiquetas</button><button class="btn" onclick="openImport()">Importar desde Excel o CSV</button><button class="btn" onclick="openLegend()">Leyenda de colores</button></div>
+    <div class="group">Datos y copias</div>
+    <div class="info"><div>Última copia en este dispositivo: <b>${l ? esc(fmtFull(l)) : 'nunca'}</b></div><div class="sub" style="margin-top:6px">Descarga tus datos por si algún día pierdes el acceso a Supabase. Guarda el archivo en tu ordenador o en tu nube.</div></div>
+    <div class="actions"><button class="btn primary" onclick="exportExcel()">Descargar Excel</button><button class="btn" onclick="exportJson()">Copia completa (.json)</button><button class="btn" onclick="openRestore()">Restaurar copia</button></div>
+    <div class="actions"><button class="btn" onclick="openTrash()">Papelera</button><button class="btn" onclick="openHistory()">Historial de cambios</button></div>
+    <div class="group">Sistema</div><div class="actions"><button class="btn" onclick="openSystem()">Estado del sistema</button><button class="btn" onclick="openSettings()">Ajustes de la app</button><button class="btn" onclick="openHelp()">Ayuda y diagnóstico</button></div>
+    <div class="group">Cuenta</div><div class="actions"><button class="btn" onclick="logout()">Cerrar sesión</button></div>
+    <div class="sub" style="margin:28px 16px 0;text-align:center">RentApp · ${APP_VERSION}</div>`;
 }
 
 /* ============ Arranque ============ */
