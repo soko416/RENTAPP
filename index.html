@@ -37,6 +37,14 @@
   --ok:#5ED08C; --okbg:#173525; --warn:#F0B84A; --warnbg:#3A2E10; --bad:#FF8A78; --badbg:#3E1D18;
 }
 :root[data-theme="light"]{color-scheme:light}
+.seg.four button{font-size:14px;padding-left:2px;padding-right:2px;white-space:nowrap}
+body.wh .seg.four button{font-size:15px}
+.row a:not(.btn),.info a:not(.btn){color:var(--accent)}
+.camctl{display:flex;gap:10px;align-items:center;margin:8px 0;flex-wrap:wrap}
+.camzoom{display:flex;align-items:center;gap:8px;flex:1;min-width:200px}
+.camzoom input{flex:1;padding:0}
+body.wh .btn,body.wh .seg button{min-height:54px;font-size:17px}
+body.wh nav.tabs button{font-size:17px;padding-top:16px;padding-bottom:16px}
 .undobar{position:fixed;left:16px;right:16px;bottom:calc(100px + env(safe-area-inset-bottom));z-index:31;max-width:560px;margin:0 auto;background:var(--ink);color:var(--bg);padding:10px 12px 10px 14px;border-radius:12px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,.3)}
 .undobar span{flex:1}
 .undobar button{background:transparent;border:1px solid currentColor;color:inherit;border-radius:8px;padding:8px 14px;font:inherit;font-weight:700;cursor:pointer;min-height:40px}
@@ -258,7 +266,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = 'V1.03';   // siguiente: V1.04, V1.05, V1.06…
+const APP_VERSION = 'V1.05';   // siguiente: V1.06, V1.07, V1.08…
 // Cómo llamas a los shows (Más > Ajustes de la app): Show / Bolo / Evento… Todas las opciones son masculinas y el plural lleva «s».
 const W = {s:'show', p:'shows', S:'Show', P:'Shows'};
 const capFirst = x => x ? x.charAt(0).toUpperCase() + x.slice(1) : x;
@@ -302,7 +310,7 @@ function errMsg(e){
   if (c === '23P01') return 'Esa unidad ya está reservada en otro ' + W.s + ' que se solapa en fechas.';
   if (c === '23505') return 'Ya existe un elemento con ese valor (nombre o código repetido).';
   if (c === '23514') return m;
-  if (c === 'PGRST205' || c === 'PGRST204' || /schema cache/i.test(m)) return 'Falta ejecutar un script nuevo en Supabase: esquema_v2 a v12 (SQL Editor).';
+  if (c === 'PGRST205' || c === 'PGRST204' || /schema cache/i.test(m)) return 'Falta ejecutar un script nuevo en Supabase: esquema_v2 a v13 (SQL Editor).';
   if (/failed to fetch|network|load failed|networkerror/i.test(m)) return navigator.onLine ? 'No hay respuesta del servidor. Si tienes internet, puede que el proyecto de Supabase esté pausado por inactividad: entra en supabase.com y reactívalo.' : 'Sin conexión. Comprueba tu internet.';
   if (c === 'PGRST301' || /jwt/i.test(m)) return 'La sesión ha caducado. Cierra sesión y vuelve a entrar.';
   if (c === '42501' || /row-level security|permission denied/i.test(m)) return 'No tienes permiso para hacer eso.';
@@ -338,7 +346,7 @@ function download(blob, name){
 const S = {
   session:null, tab:'material', view:null, matMode:'equipos', nagged:false,
   categories:[], models:[], units:[], projects:[], reservations:[], techs:[], assigns:[],
-  kits:[], kitItems:[], bulkRes:[], maint:[], settings:{}, clients:[], bulkLogs:[], customLabels:[],
+  kits:[], kitItems:[], bulkRes:[], maint:[], settings:{}, clients:[], bulkLogs:[], customLabels:[], photos:[], docs:[],
   showsMode:'lista', calMonth:null, calDay:null,
   count:{seen:new Set()}, queue:[], failed:[],
   scan:{project:'', mode:'out', log:[]}
@@ -425,7 +433,9 @@ async function loadAll(draw=true){
   }
   [S.categories, S.models, S.units, S.projects, S.reservations, S.techs, S.assigns, S.kits, S.kitItems, S.bulkRes, S.maint, S.clients, S.bulkLogs] = rs.map(r => r.data);
   try { const cl = await fetchAll('custom_labels'); S.customLabels = cl.error ? [] : (cl.data || []).slice().sort(byName); } catch (e) { S.customLabels = []; }      // las pegatinas personalizadas no impiden abrir la app si falta esquema_v10.sql
-  S.clients.sort(byName); S.categories.sort(catCmp); S.models.sort(modelCmp); S.techs.sort(byName); S.kits.sort(byName);
+  try { const ph = await fetchAll('photos'); S.photos = ph.error ? [] : (ph.data || []); } catch (e) { S.photos = []; }
+  try { const dc = await fetchAll('model_docs'); S.docs = dc.error ? [] : (dc.data || []); } catch (e) { S.docs = []; }
+  S.clients.sort(byName); S.categories.sort(catCmp); S.models.sort(modelOrder); S.techs.sort(byName); S.kits.sort(byName);
   S.units.sort((a,b) => String(a.created_at).localeCompare(String(b.created_at)));
   S.projects.sort((a,b) => new Date(a.starts_at) - new Date(b.starts_at));
   S.settings = st.data || {}; applyAppConfig();
@@ -467,20 +477,21 @@ function bar(title, {back=false, actions=''} = {}){
   return `<header class="bar">${back?`<button class="btn small" onclick="goBack()">‹ Volver</button>`:''}<h1>${esc(title)}</h1>${actions}</header>`;
 }
 function navHTML(){
-  const t = [['material','Material'],['shows',('' + W.P + '')],['scan','Escanear'],['techs','Técnicos'],['more','Más']];
+  const t = whMode() ? [['scan','Escanear'],['shows','Carga'],['more','Más']] : [['material','Material'],['shows',('' + W.P + '')],['scan','Escanear'],['techs','Técnicos'],['more','Más']];
   return `<nav class="tabs">${t.map(([k,l]) => `<button class="${S.tab===k?'on':''}" onclick="go('${k}')">${l}${k === 'more' ? navBadgeHtml() : ''}</button>`).join('')}</nav>`;
 }
 
 let lastKey = '';
 function render(){
   if (!S.session){ stopCam(); $('#app').innerHTML = loginHTML(); return; }
+  if (whMode() && !['scan', 'shows', 'more'].includes(S.tab)) S.tab = 'scan';
   if (S.tab !== 'scan') stopCam();
   const key = S.tab + '/' + (S.view ? S.view.name + S.view.id : '') + S.matMode;
   const y = key === lastKey ? window.scrollY : 0;
   let body = '';
   const v = S.view && S.view.name;
-  if (S.tab === 'material') body = v === 'model' ? modelView(S.view.id) : v === 'kit' ? kitView(S.view.id) : v === 'repairs' ? repairsView() : v === 'labels' ? labelsView() : v === 'avail' ? availView() : materialList();
-  else if (S.tab === 'shows') body = v === 'project' ? projectView(S.view.id) : v === 'load' ? loadView(S.view.id) : showsList();
+  if (S.tab === 'material') body = v === 'model' ? modelView(S.view.id) : v === 'kit' ? kitView(S.view.id) : v === 'repairs' ? repairsView() : v === 'labels' ? labelsView() : v === 'avail' ? availView() : v === 'retired' ? retiredView() : materialList();
+  else if (S.tab === 'shows') body = v === 'load' ? loadView(S.view.id) : (v === 'project' && !whMode()) ? projectView(S.view.id) : showsList();
   else if (S.tab === 'scan') body = scanView();
   else if (S.tab === 'techs') body = v === 'tech' ? techView(S.view.id) : techsList();
   else if (S.tab === 'more') body = v === 'clients' ? clientsList() : v === 'client' ? clientView(S.view.id) : v === 'trash' ? trashView() : v === 'history' ? historyView() : v === 'system' ? systemView() : moreView();
@@ -575,26 +586,26 @@ function materialList(){
   if (S.matMode === 'kits') return kitsList();
   const groups = {};
   S.models.forEach(m => {
-    if (S.colorFilter.size && !S.colorFilter.has(String(m.color || '').toLowerCase())) return;       // filtro por color
+    if (!passFilters(m)) return;       // filtros: color, palabras clave y propietario
     const c = S.categories.find(c => c.id === m.category_id);
     const name = c ? c.name : 'Sin categoría';
     (groups[name] = groups[name] || []).push(m);
   });
   const names = Object.keys(groups).sort(catOrder);
-  const body = '<div class="pad mat">' + names.map(n => catSection('m:' + catKey(n), n, `${groups[n].length} modelo${groups[n].length === 1 ? '' : 's'}`, groups[n].map(m => {
-    const us = S.units.filter(u => u.model_id === m.id);
+  const body = '<div class="pad mat">' + names.map(n => catSection('m:' + catKey(n), n, `${groups[n].length} modelo${groups[n].length === 1 ? '' : 's'}`, groups[n].map((m, idx) => {
+    const us = S.units.filter(u => u.model_id === m.id), rk = matRowCtl(m, idx, groups[n].length);
     // Solo dos cuentas: lo que está fuera de servicio (roto, perdido o de baja; en cables, los que están en reparación) y lo marcado como incompleto
     const nBad = us.filter(u => u.status !== 'ok').length + bulkRepair(m), nInc = us.filter(u => u.missing_note).length;
     const subTxt = [colorText(m), m.brand].filter(Boolean).join(' · ');
-    return `<div class="row tap mrow" data-s="${esc((m.name+' '+(m.brand||'')+' '+n+' '+us.map(u=>u.serial_number||'').join(' ')).toLowerCase())}" onclick="openView('model','${m.id}')">
-      ${m.photo_url?`<img class="thumb" loading="lazy" src="${esc(m.photo_url)}" alt="">`:''}
-      <div class="grow"><div class="mline" style="flex-wrap:nowrap;justify-content:space-between"><b>${colorDot(m)}${esc(m.name)}</b><span class="count">${m.is_bulk ? m.bulk_stock : us.length}</span></div>${subTxt || m.is_bulk || nBad || nInc ? `<div class="mline">${subTxt ? `<span class="sub">${esc(subTxt)}</span>` : ''}${m.is_bulk ? '<span class="badge">Por cantidad</span>' : ''}${nBad ? `<span class="badge warn">${nBad} fuera de servicio</span>` : ''}${nInc ? `<span class="badge warn">${nInc} incompleto${nInc === 1 ? '' : 's'}</span>` : ''}</div>` : ''}</div></div>`;
+    return `<div class="row tap mrow" data-s="${esc((m.name+' '+(m.brand||'')+' '+n+' '+us.map(u=>(u.serial_number||'')+' '+(u.manufacturer_serial||'')).join(' ')+' '+(m.tags||[]).join(' ')+' '+(m.owner||'')).toLowerCase())}" onclick="${rk.click}">
+      ${rk.lead}${m.photo_url?`<img class="thumb" loading="lazy" src="${esc(m.photo_url)}" alt="">`:''}
+      <div class="grow"><div class="mline" style="flex-wrap:nowrap;justify-content:space-between"><b>${colorDot(m)}${esc(m.name)}</b><span class="count">${m.is_bulk ? m.bulk_stock : us.length}</span></div>${subTxt || m.is_bulk || nBad || nInc || rowExtraBadges(m) ? `<div class="mline">${subTxt ? `<span class="sub">${esc(subTxt)}</span>` : ''}${m.is_bulk ? '<span class="badge">Por cantidad</span>' : ''}${nBad ? `<span class="badge warn">${nBad} fuera de servicio</span>` : ''}${nInc ? `<span class="badge warn">${nInc} incompleto${nInc === 1 ? '' : 's'}</span>` : ''}${rowExtraBadges(m)}</div>` : ''}</div>${rk.trail}</div>`;
   }).join(''), /cabl/i.test(n) ? legendChips() : '')).join('') + '</div>';
   return bar('Material', {actions: `<button class="btn small" onclick="openView('labels','')">Etiquetas${labelPendingCount() ? ' (' + labelPendingCount() + ')' : ''}</button><button class="btn primary small" onclick="openModelForm()">+ Modelo</button>`})
     + matSeg()
     + (S.models.length ? `<div class="search"><input type="search" placeholder="Buscar por nombre, marca o nº de serie" oninput="filterRows(this.value)"></div>` : '')
-    + `<div class="actions" style="margin-top:10px"><button class="btn small" onclick="openCategories()">Gestionar categorías</button><button class="btn small" onclick="openBrands()">Gestionar marcas</button><button class="btn small" onclick="openView('avail','')">Disponibilidad</button><button class="btn small" onclick="openLegend()">Leyenda de colores</button>${panelBtns()}</div>${colorFilterBar(groups)}${matPanelHtml()}`
-    + (S.models.length ? (names.length || !S.colorFilter.size ? body : '') : `<div class="empty">Aún no hay material.<br>Pulsa «+ Modelo» para añadir el primer equipo.</div>`);
+    + `<div class="actions" style="margin-top:10px"><button class="btn small" onclick="openCategories()">Gestionar categorías</button><button class="btn small" onclick="openBrands()">Gestionar marcas</button><button class="btn small" onclick="openView('avail','')">Disponibilidad</button><button class="btn small" onclick="massToggle()">${S.mass.on ? 'Cancelar selección' : 'Seleccionar'}</button><button class="btn small" onclick="orderToggle()">${S.matOrder ? 'Terminar de ordenar' : 'Ordenar'}</button>${retiredUnits().length ? `<button class="btn small" onclick="openView('retired','')">Bajas (${retiredUnits().length})</button>` : ''}<button class="btn small" onclick="openLegend()">Leyenda de colores</button>${panelBtns()}</div>${filterBar(groups)}${tagBar()}${massBar()}${matPanelHtml()}`
+    + (S.models.length ? (names.length || !anyFilter() ? body : '') : `<div class="empty">Aún no hay material.<br>Pulsa «+ Modelo» para añadir el primer equipo.</div>`);
 }
 
 /* ---- Categorías ---- */
@@ -674,21 +685,21 @@ function modelView(id){
        ${m.color?`<div style="margin-top:6px">${colorDot(m)}<b>${esc(colorName(m.color))}</b>${colorLabel(m)?' · '+esc(colorLabel(m)):''}</div>`:''}
        ${m.day_rate>0?`<div style="margin-top:6px"><b>${eur(m.day_rate)}</b> <span class="sub">por día y unidad</span></div>`:''}
        ${m.notes?`<div style="margin-top:6px">${esc(m.notes)}</div>`:''}
-       ${specsLine(m)}<div class="sub" style="margin-top:8px">${esc(statTxt)}</div></div>`;
+       ${specsLine(m)}${dmxLine(m)}${modelExtraLines(m)}<div class="sub" style="margin-top:8px">${esc(statTxt)}</div></div>`;
   if (m.is_bulk){
     const lines = S.bulkRes.filter(b => b.model_id === id).map(b => ({b, p:projById(b.project_id)})).filter(x => x.p && x.b.state !== 'returned')
       .sort((x,y) => new Date(x.p.starts_at) - new Date(y.p.starts_at));
-    return head + `<div class="info"><b>${m.bulk_stock}</b> en stock · <span class="sub">por cantidad, sin número de serie</span>${bulkRepair(m) ? ` · <span style="color:var(--warn);font-weight:600">${bulkRepair(m)} en reparación</span>` : ''}</div>
-      <div class="actions"><button class="btn" onclick="openModelForm('${id}')">Editar</button><button class="btn" onclick="openChanges('equipment_models','${id}')">Cambios</button><button class="btn danger" onclick="deleteModel('${id}')">Eliminar</button></div>
+    return head + galleryHtml('m', id) + docsHtml(m) + `<div class="info"><b>${m.bulk_stock}</b> en stock · <span class="sub">por cantidad, sin número de serie</span>${bulkRepair(m) ? ` · <span style="color:var(--warn);font-weight:600">${bulkRepair(m)} en reparación</span>` : ''}</div>
+      <div class="actions"><button class="btn" onclick="openModelForm('${id}')">Editar</button>${m.consumable ? `<button class="btn" onclick="openStock('${id}','bought')">He comprado…</button><button class="btn" onclick="openStock('${id}','used')">He usado…</button>` : ''}<button class="btn" onclick="openMerge('${id}')">Unir con otro modelo…</button><button class="btn" onclick="openChanges('equipment_models','${id}')">Cambios</button><button class="btn danger" onclick="deleteModel('${id}')">Eliminar</button></div>
       <div class="group">Reservado en ${W.p}</div>
       ${lines.length ? `<div class="list">${lines.map(({b,p}) => `<div class="row tap" onclick="go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))}</div></div>
         <span class="badge ${RES_CLASS[b.state]}">${RES_STATE[b.state]}</span><div class="count">×${b.qty}</div></div>`).join('')}</div>`
         : `<div class="empty" style="margin:20px 24px">No está reservado en ningún ${W.s}.</div>`}${bulkHistoryHtml(m)}`;
   }
   const us = S.units.filter(u => u.model_id === id).sort(unitCmp);
-  return head
+  return head + galleryHtml('m', id) + docsHtml(m)
     + `<div class="actions">
-      <button class="btn" onclick="openModelForm('${id}')">Editar</button>
+      <button class="btn" onclick="openModelForm('${id}')">Editar</button><button class="btn" onclick="openNumber('${id}')">Numerar…</button><button class="btn" onclick="openMoveUnits('${id}')">Mover unidades…</button><button class="btn" onclick="openMerge('${id}')">Unir con otro modelo…</button>
       <button class="btn" onclick="printLabels(S.units.filter(u=>u.model_id==='${id}').map(u=>u.id))">Etiquetas QR</button>
       <button class="btn" onclick="openChanges('equipment_models','${id}')">Cambios</button><button class="btn danger" onclick="deleteModel('${id}')">Eliminar</button>
     </div>
@@ -756,7 +767,9 @@ function openModelForm(id){
       <option value="bulk" ${m.is_bulk?'selected':''}>Por cantidad (cables, consumibles…)</option></select>
     <div id="blk-ser" ${m.is_bulk?'hidden':''}>${id?'':`<label for="f-n">Unidades que tienes ahora (los números de serie los pones después)</label><input id="f-n" type="number" min="0" value="1" inputmode="numeric">`}
       <label for="f-lamp">Vida útil de la lámpara en horas (opcional, para avisos)</label><input id="f-lamp" type="number" min="0" value="${m.lamp_life_hours||''}" inputmode="numeric"></div>
-    <div id="blk-bulk" ${m.is_bulk?'':'hidden'}><label for="f-stock">Cantidad en stock</label><input id="f-stock" type="number" min="0" value="${m.bulk_stock||0}" inputmode="numeric"></div>
+    <div id="blk-bulk" ${m.is_bulk?'':'hidden'}><label for="f-stock">Cantidad en stock</label><input id="f-stock" type="number" min="0" value="${m.bulk_stock||0}" inputmode="numeric">
+      <label class="chkrow"><input type="checkbox" id="f-cons" ${m.consumable?'checked':''}>Es un consumible (se gasta y no vuelve)</label>
+      <label for="f-min">Avisar cuando queden menos de (stock mínimo, opcional)</label><input id="f-min" type="number" min="0" value="${m.min_stock!=null?m.min_stock:''}" inputmode="numeric"></div>
     <label for="f-rate">Tarifa por día y unidad (€, opcional)</label><input id="f-rate" type="number" min="0" step="0.01" value="${m.day_rate!=null?m.day_rate:''}" inputmode="decimal">
     <div class="two"><div><label for="f-wt">Peso (kg)</label><input id="f-wt" type="number" min="0" step="0.01" value="${m.weight_kg!=null?m.weight_kg:''}" inputmode="decimal"></div>
     <div><label for="f-pw">Potencia (W)</label><input id="f-pw" type="number" min="0" step="1" value="${m.power_w!=null?m.power_w:''}" inputmode="numeric"></div></div>
@@ -764,6 +777,10 @@ function openModelForm(id){
     <div class="three"><input id="f-dw" type="number" min="0" step="0.1" placeholder="ancho" value="${m.width_cm!=null?m.width_cm:''}" inputmode="decimal" aria-label="Ancho en cm">
       <input id="f-dh" type="number" min="0" step="0.1" placeholder="alto" value="${m.height_cm!=null?m.height_cm:''}" inputmode="decimal" aria-label="Alto en cm">
       <input id="f-dd" type="number" min="0" step="0.1" placeholder="fondo" value="${m.depth_cm!=null?m.depth_cm:''}" inputmode="decimal" aria-label="Fondo en cm"></div>
+    <label for="f-tags">Palabras clave (separadas por comas)</label><input id="f-tags" list="tag-list" autocomplete="off" value="${esc((m.tags||[]).join(', '))}" placeholder="Ej. exterior, IP65, LED"><datalist id="tag-list">${allTags().map(t => `<option value="${esc(t[1])}">`).join('')}</datalist>
+    <label for="f-dmx">Modos DMX (uno por línea: nombre y canales)</label><textarea id="f-dmx" style="min-height:70px" placeholder="Estándar: 16&#10;Extendido: 24">${esc(dmxText(m))}</textarea>
+    <label for="f-owner">Propietario (solo si el material NO es tuyo)</label><input id="f-owner" list="owner-list" autocomplete="off" value="${esc(m.owner||'')}" placeholder="Vacío = es tuyo"><datalist id="owner-list">${[...new Set(S.models.map(x => x.owner).filter(Boolean))].map(o => `<option value="${esc(o)}">`).join('')}</datalist>
+    <label for="f-rentcost">Lo que te cuesta alquilarlo (€ al día, opcional)</label><input id="f-rentcost" type="number" min="0" step="0.01" value="${m.rent_cost!=null?m.rent_cost:''}" inputmode="decimal">
     <label for="f-notes">Notas</label><textarea id="f-notes">${esc(m.notes||'')}</textarea>
     <button class="btn primary block" onclick="saveModel('${id||''}')">Guardar</button>`);
 }
@@ -794,6 +811,7 @@ async function saveModel(id){
     is_bulk:bulk, bulk_stock: bulk ? (parseInt($('#f-stock').value)||0) : 0, day_rate: isNaN(rate) ? null : rate,
     lamp_life_hours: (!bulk && lamp > 0) ? lamp : null, color: $('#f-color').value || null,
     weight_kg:nf('#f-wt'), power_w:nf('#f-pw') == null ? null : Math.round(nf('#f-pw')), width_cm:nf('#f-dw'), height_cm:nf('#f-dh'), depth_cm:nf('#f-dd')};
+  Object.assign(payload, modelExtras(id, bulk));
   const oldPhoto = id ? modelById(id).photo_url : null;
   let mid = id;
   if (id){ await db(sb.from('equipment_models').update(payload).eq('id', id)); }
@@ -839,17 +857,19 @@ function openUnit(id){
   const u = unitById(id), m = modelById(u.model_id);
   openModal(`<div class="qrbox">${qrSvg(u.code)}</div>
     <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:8px 0 4px">${unitTile(u, 'md')}<div><h2 style="margin:0;font-size:22px">${esc(m.name)}</h2>${u.serial_number ? `<div style="font-size:16px;color:var(--muted)">${esc(u.serial_number)}</div>` : ''}</div></div>
-    <div class="sub" style="text-align:center">Código interno (el del QR, no se puede cambiar): <span class="code">${esc(u.code)}</span></div>${labelStatusHtml('u', u)}
+    <div class="sub" style="text-align:center">Código interno (el del QR, no se puede cambiar): <span class="code">${esc(u.code)}</span></div>${labelStatusHtml('u', u)}${retiredBanner(u)}
     <label for="u-serial">Número de serie</label><input id="u-serial" value="${esc(u.serial_number||'')}">
+    <label for="u-mfr">Nº de serie del fabricante (garantías y talleres)</label><input id="u-mfr" value="${esc(u.manufacturer_serial||'')}">
     <label for="u-status">Estado</label><select id="u-status" onchange="unitStateChanged(${u.missing_note ? 'true' : 'false'})">${opts(Object.entries(UNIT_FORM_STATES), u.status === 'ok' && u.missing_note ? 'incomplete' : u.status)}</select>
     <div id="u-missing-box" ${u.missing_note ? '' : 'hidden'}><label for="u-missing">Qué falta</label><input id="u-missing" value="${esc(u.missing_note||'')}" placeholder="Por ejemplo: garra, cable de alimentación…"></div>
     <div class="two"><div><label for="u-buy">Fecha de compra</label><input id="u-buy" type="date" value="${u.purchase_date||''}"></div>
     <div><label for="u-next">Próxima revisión</label><input id="u-next" type="date" value="${u.next_service||''}"></div></div>
     ${m.lamp_life_hours>0?`<label for="u-lamp">Horas de lámpara (vida útil ${m.lamp_life_hours} h)</label><input id="u-lamp" type="number" min="0" step="0.5" value="${u.lamp_hours||0}" inputmode="decimal">`:''}
     <label for="u-notes">Notas</label><textarea id="u-notes">${esc(u.notes||'')}</textarea>
+    ${galleryHtml('u', id, true)}
     <button class="btn primary block" onclick="saveUnit('${id}')">Guardar</button>
     <div class="actions" style="margin:10px 0 0"><button class="btn" onclick="openUnitHistory('${id}')">Historial</button><button class="btn" onclick="openMaintenance('${id}')">Registrar mantenimiento</button></div>
-    <div class="actions" style="margin:10px 0 0"><button class="btn" onclick="closeModal();printLabels(['${id}'])">Imprimir etiqueta</button><button class="btn" onclick="openChanges('units','${id}')">Cambios</button><button class="btn danger" onclick="deleteUnit('${id}')">Eliminar</button></div>`);
+    <div class="actions" style="margin:10px 0 0"><button class="btn" onclick="closeModal();printLabels(['${id}'])">Imprimir etiqueta</button>${nfcSupported() ? `<button class="btn" onclick="nfcWrite(unitById('${id}').code)">Escribir en NFC</button>` : ''}<button class="btn" onclick="openChanges('units','${id}')">Cambios</button>${u.status === 'retired' || u.status === 'lost' ? '' : `<button class="btn" onclick="openRetire('${id}')">Dar de baja…</button>`}<button class="btn danger" onclick="deleteUnit('${id}')">Eliminar</button></div>`);
 }
 // Estados que se ven en la ficha. «Incompleto» es un equipo operativo al que le falta algo (se guarda como estado Operativa + qué falta).
 const UNIT_FORM_STATES = {ok:'Operativa', incomplete:'Incompleto', repair:'En reparación', lost:'Perdida', retired:'De baja'};
@@ -866,6 +886,7 @@ async function saveUnit(id){
   const payload = {serial_number:$('#u-serial').value.trim()||null, status, notes:$('#u-notes').value.trim()||null,
     purchase_date:$('#u-buy').value||null, next_service:$('#u-next').value||null, missing_note:missing};
   if ($('#u-lamp')) payload.lamp_hours = parseFloat($('#u-lamp').value) || 0;
+  Object.assign(payload, unitExtras(u));
   await db(sb.from('units').update(payload).eq('id', id));
   // el historial de la unidad recoge cuándo pasó a incompleta o a completa
   if (missing && missing !== (u.missing_note || null)) await db(sb.from('maintenance_logs').insert({unit_id:id, kind:'missing', done_on:todayStr(), description:missing}));
@@ -1010,11 +1031,11 @@ function showsList(){
   const now = Date.now();
   const up = S.projects.filter(p => new Date(p.ends_at) >= now).sort((a,b) => new Date(a.starts_at) - new Date(b.starts_at));
   const past = S.projects.filter(p => new Date(p.ends_at) < now).sort((a,b) => new Date(b.starts_at) - new Date(a.starts_at));
-  const rowH = p => `<div class="row tap" onclick="openView('project','${p.id}')">
+  const rowH = p => `<div class="row tap" onclick="openView('${whMode() ? 'load' : 'project'}','${p.id}')">
       <div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))}${p.venue?' · '+esc(p.venue):''}</div></div>
       ${p.status!=='confirmed'?`<span class="badge ${p.status==='cancelled'?'bad':p.status==='done'?'ok':''}">${PROJ_STATUS[p.status]}</span>`:''}${p.payment_status==='invoiced'?'<span class="badge warn">Facturado</span>':p.payment_status==='paid'?'<span class="badge ok">Cobrado</span>':''}
       <div class="count" title="Piezas reservadas">${pieces(p)}</div></div>`;
-  return bar(('' + W.P + ''), {actions:`<button class="btn primary small" onclick="openProjectForm()">+ ${W.S}</button>`}) + showsSeg()
+  return bar(whMode() ? 'Carga' : ('' + W.P + ''), {actions:whMode() ? '' : `<button class="btn primary small" onclick="openProjectForm()">+ ${W.S}</button>`}) + (whMode() ? '' : showsSeg())
     + (S.projects.length ? `${up.length?`<div class="group">Próximos</div><div class="list">${up.map(rowH).join('')}</div>`:''}
        ${past.length?`<div class="group">Pasados</div><div class="list">${past.map(rowH).join('')}</div>`:''}`
       : `<div class="empty">Aún no hay ${W.p}.<br>Pulsa «+ ${W.S}» para crear el primero.</div>`);
@@ -1109,6 +1130,7 @@ function projectView(id){
     <div class="actions"><button class="btn" onclick="openProjectForm('${id}')">Editar</button>
       <button class="btn" onclick="openView('load','${id}')">Lista de carga</button>
       <button class="btn" onclick="openQuote('${id}')">Presupuesto</button>
+      <button class="btn" onclick="openDmxPatch('${id}')">Patch DMX</button>
       <button class="btn" onclick="openDuplicate('${id}')">Duplicar</button>
       <button class="btn" onclick="openChanges('projects','${id}')">Cambios</button><button class="btn danger" onclick="deleteProject('${id}')">Eliminar</button></div>
     <div class="actions"><a class="btn" style="text-decoration:none" target="_blank" rel="noopener" href="${esc(gcalUrl(p))}">Añadir a Google Calendar</a><button class="btn" onclick="printRider('${id}')">Rider técnico</button></div>
@@ -1124,7 +1146,7 @@ function projectView(id){
       return `<div class="row"><div class="grow"><b>${esc(t.name)}</b><div class="sub">${esc([a.role, a.call_time?'Llamada '+fmtDT(a.call_time):''].filter(Boolean).join(' · '))}</div></div>
       ${t.phone?`<a class="btn small" style="text-decoration:none" target="_blank" rel="noopener" href="${waLink(t, a, p)}">WhatsApp</a>`:''}
       <button class="btn small" aria-label="Quitar" onclick="removeAssign('${a.id}')">✕</button></div>`; }).join('')}</div>`:`<div class="empty" style="margin:20px 24px">Aún no hay técnicos asignados.</div>`}
-    <div class="actions"><button class="btn primary" onclick="openAddAssign('${id}')">+ Añadir técnico</button></div>`;
+    <div class="actions"><button class="btn primary" onclick="openAddAssign('${id}')">+ Añadir técnico</button></div>${showDocsHtml(id)}`;
 }
 function openAddMaterial(pid){
   const p = projById(pid);
@@ -1416,7 +1438,7 @@ async function exportJson(){
   if (ev.error) return toast(errMsg(ev.error), true);
   const data = {exportado: new Date().toISOString(), categories:S.categories, equipment_models:S.models, units:S.units, kits:S.kits, kit_items:S.kitItems,
     projects:S.projects, reservations:S.reservations, bulk_reservations:S.bulkRes, technicians:S.techs, crew_assignments:S.assigns,
-    maintenance_logs:S.maint, bulk_logs:S.bulkLogs, custom_labels:S.customLabels, clients:S.clients, scan_events:ev.data, settings:S.settings};
+    maintenance_logs:S.maint, bulk_logs:S.bulkLogs, custom_labels:S.customLabels, photos:S.photos, model_docs:S.docs, clients:S.clients, scan_events:ev.data, settings:S.settings};
   download(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}), `copia-rentapp-${stampName()}.json`);
   markBackup(); render(); toast('Copia descargada');
 }
@@ -1455,13 +1477,14 @@ function scanProjects(){
 function scanView(){
   const ps = scanProjects();
   if (!ps.find(p => p.id === S.scan.project)) S.scan.project = (ps.find(p => new Date(p.ends_at) >= Date.now()) || ps[0] || {}).id || '';
-  return bar('Escanear')
+  return bar('Escanear', {actions:whMode() ? '' : '<button class="btn small" onclick="openWarehouse()">Modo almacén</button>'})
     + `<div class="pad" style="margin-top:12px">
-      <div class="seg"><button id="m-out" onclick="setMode('out')">Salida</button><button id="m-in" onclick="setMode('in')">Devolución</button><button id="m-count" onclick="setMode('count')">Recuento</button></div>
+      <div class="seg four"><button id="m-out" onclick="setMode('out')">Salida</button><button id="m-in" onclick="setMode('in')">Devolución</button><button id="m-count" onclick="setMode('count')">Recuento</button><button id="m-info" onclick="setMode('info')">Consultar</button></div>
       <div id="proj-wrap"><label for="scan-proj">${W.S} al que sale el material</label>
         <select id="scan-proj" onchange="S.scan.project=this.value;updateProgress()">${ps.length?opts(ps.map(p=>[p.id,p.name+' · '+fmtD(p.starts_at)]), S.scan.project):('<option value="">No hay ' + W.p + ' confirmados</option>')}</select></div>
       <div class="cam"><video id="cam" playsinline muted></video><div class="frame" id="frame" hidden></div><span id="cam-off">Cámara apagada</span></div>
-      <button class="btn primary block" id="cam-btn" onclick="toggleCam()">Abrir cámara</button>
+      <div id="cam-ctl" class="camctl" hidden></div>
+      <button class="btn primary block" id="cam-btn" onclick="toggleCam()">Abrir cámara</button>${nfcSupported() ? '<button class="btn block" id="nfc-btn" onclick="nfcToggle()">Leer pegatina NFC</button>' : ''}
       <div id="scan-msg" class="msg">Escanea la etiqueta QR de un equipo o de un kit.</div>
       <div id="progress" class="sub" style="margin-top:8px"></div>
       <div id="count-actions" class="actions" style="margin:10px 0 0" hidden><button class="btn primary" onclick="openCountResult()">Ver resultado</button><button class="btn" onclick="resetCount()">Reiniciar recuento</button></div>
@@ -1474,16 +1497,17 @@ function scanView(){
 }
 function afterScanRender(){
   setMode(S.scan.mode, true); renderLog(); updateProgress(); renderOutList();
-  if (stream){ const v = $('#cam'); v.srcObject = stream; v.play(); $('#cam-off').hidden = true; $('#frame').hidden = false; $('#cam-btn').textContent = 'Cerrar cámara'; }
+  if (stream){ const v = $('#cam'); v.srcObject = stream; v.play(); camControlsInit(stream.getVideoTracks()[0]); $('#cam-off').hidden = true; $('#frame').hidden = false; $('#cam-btn').textContent = 'Cerrar cámara'; }
 }
 function setMode(m, silent){
   S.scan.mode = m;
-  ['out','in','count'].forEach(k => $('#m-' + k).classList.toggle('on', m === k));
+  ['out','in','count','info'].forEach(k => $('#m-' + k).classList.toggle('on', m === k));
   $('#proj-wrap').hidden = m !== 'out';
   $('#count-actions').hidden = m !== 'count';
   $('#quick-wrap').hidden = m !== 'in'; $('#quick').checked = quickReturn();
   $('#out-wrap').hidden = m !== 'in';
   if (m === 'count') scanMsgIdle('Recuento: escanea todo lo que haya en el almacén. No se modifica ningún dato.');
+  if (m === 'info') scanMsgIdle('Consultar: escanea cualquier etiqueta para ver su ficha. No se modifica nada.');
   if (!silent) updateProgress();
 }
 function scanMsgIdle(t){ const el = $('#scan-msg'); if (el && !S.scan.log.length){ el.textContent = t; el.className = 'msg'; } }
@@ -1504,14 +1528,15 @@ function updateProgress(){
   const out = rs.filter(r => r.state === 'out').length, ret = rs.filter(r => r.state === 'returned').length;
   el.textContent = rs.length ? `${out} de ${rs.length} equipos fuera del almacén${ret?` · ${ret} devueltos`:''}` : ('Este ' + W.s + ' aún no tiene equipos reservados.');
 }
-function scanMsg(text, kind){
-  const m = $('#scan-msg'); if (m){ m.textContent = text; m.className = 'msg ' + kind; }
+function scanMsg(text, kind, undo){
+  const id = ++S.scan.seq, m = $('#scan-msg');
+  if (m){ m.className = 'msg ' + kind; m.innerHTML = esc(text) + (undo ? ` <button class="btn small" onclick="undoScan(${id})">Deshacer</button>` : ''); }
   if (navigator.vibrate) navigator.vibrate(kind === 'ok' ? 60 : [80,60,80]);
-  S.scan.log.unshift({text, kind, at:new Date()}); S.scan.log = S.scan.log.slice(0, 15); renderLog();
+  S.scan.log.unshift({id, text, kind, at:new Date(), undo:undo || null}); S.scan.log = S.scan.log.slice(0, 15); renderLog();
 }
 function renderLog(){
   const el = $('#scan-log'); if (!el) return;
-  el.innerHTML = S.scan.log.length ? S.scan.log.map(l => `<div class="row"><div class="grow">${esc(l.text)}</div><span class="badge ${l.kind}">${l.at.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</span></div>`).join('')
+  el.innerHTML = S.scan.log.length ? S.scan.log.map(l => `<div class="row"><div class="grow">${esc(l.text)}</div>${l.undo && !l.done ? `<button class="btn small" onclick="undoScan(${l.id})">Deshacer</button>` : ''}<span class="badge ${l.kind}">${l.at.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</span></div>`).join('')
     : `<div class="row"><span class="sub">Todavía no has escaneado nada.</span></div>`;
 }
 async function toggleCam(){ stream ? stopCam() : await startCam(); }
@@ -1520,12 +1545,13 @@ async function startCam(){
     stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}, audio:false});
   } catch(e){ stream = null; return toast('No se pudo abrir la cámara. Revisa los permisos del navegador.', true); }
   const v = $('#cam'); v.srcObject = stream; await v.play();
+  camControlsInit(stream.getVideoTracks()[0]);
   $('#cam-off').hidden = true; $('#frame').hidden = false; $('#cam-btn').textContent = 'Cerrar cámara';
   detector = ('BarcodeDetector' in window) ? new BarcodeDetector({formats:['qr_code']}) : null;
   loopScan();
 }
 function stopCam(){
-  clearTimeout(camTimer);
+  clearTimeout(camTimer); camControlsOff();
   if (stream){ stream.getTracks().forEach(t => t.stop()); stream = null; }
   const v = $('#cam'); if (v) v.srcObject = null;
   const off = $('#cam-off'); if (off) off.hidden = false;
@@ -1535,7 +1561,7 @@ function stopCam(){
 async function loopScan(){
   if (!stream) return;
   const v = $('#cam');
-  if (v && v.readyState >= 2 && !scanBusy){
+  if (v && v.readyState >= 2 && !scanBusy && !modalOpen()){
     let code = '';
     try {
       if (detector){ const r = await detector.detect(v); if (r.length) code = r[0].rawValue; }
@@ -1560,6 +1586,7 @@ async function handleCode(raw){
   try {
     const code = raw.trim().toUpperCase();
     if (S.scan.mode === 'count') return await handleCount(code);
+    if (S.scan.mode === 'info') return await handleInfo(raw);
     if (code.startsWith('K-') && S.kits.some(k => k.code === code)) return await handleKit(code);
     const f = findUnitByInput(raw);
     if (f.many) return scanMsg(`Hay ${f.many.length} equipos con el nº ${raw.trim()} (${f.many.map(x => (modelById(x.model_id) || {}).name).join(', ')}). Escribe el código U-… de uno de ellos.`, 'warn');
@@ -1581,7 +1608,7 @@ async function handleCode(raw){
       }
       enqueue({t:'out', unit_id:u.id, project_id:pid});
       updateProgress();
-      scanMsg('Salida: ' + label + (u.missing_note ? ' · OJO, está incompleta: falta ' + u.missing_note : '') + pend, u.missing_note ? 'warn' : 'ok');
+      scanMsg('Salida: ' + label + (u.missing_note ? ' · OJO, está incompleta: falta ' + u.missing_note : '') + pend, u.missing_note ? 'warn' : 'ok', {t:'uundo', unit_id:u.id, project_id:pid});
     } else {
       const res = S.reservations.find(r => r.unit_id === u.id && r.state === 'out');
       if (!res) return scanMsg(label + ' no consta como fuera del almacén.', 'warn');
@@ -1592,7 +1619,7 @@ async function handleCode(raw){
         c = r[0];
       }
       enqueue({t:'in', unit_id:u.id, cond:c.cond, note:c.note.trim(), clear:c.cond === 'ok' && !!u.missing_note, photo:c.photo || null});
-      scanMsg('Devuelta: ' + label + (c.cond !== 'ok' ? ' · ' + COND[c.cond] + (c.note.trim() ? ': ' + c.note.trim() : '') : '') + pend, c.cond === 'ok' ? 'ok' : 'warn');
+      scanMsg('Devuelta: ' + label + (c.cond !== 'ok' ? ' · ' + COND[c.cond] + (c.note.trim() ? ': ' + c.note.trim() : '') : '') + pend, c.cond === 'ok' ? 'ok' : 'warn', (c.cond === 'ok' && !u.missing_note) ? {t:'iundo', unit_id:u.id, project_id:res.project_id} : null);
     }
   } finally { scanBusy = false; }
 }
@@ -1620,7 +1647,7 @@ async function handleKit(code){
     const inc = pendR.map(r => unitById(r.unit_id)).filter(u => u && u.missing_note);
     enqueue({t:'kout', kit_id:kit.id, project_id:pid});
     updateProgress();
-    scanMsg(`Salida del kit «${kit.name}»: ${pendR.length} equipos${pendB.length ? ` y ${pendB.length} línea${pendB.length===1?'':'s'} por cantidad` : ''}${inc.length ? ` · OJO: ${inc.length} incompleto${inc.length===1?'':'s'} (${inc.map(u => unitLabel(u) + ': falta ' + u.missing_note).join('; ')})` : ''}${pend}`, inc.length ? 'warn' : 'ok');
+    scanMsg(`Salida del kit «${kit.name}»: ${pendR.length} equipos${pendB.length ? ` y ${pendB.length} línea${pendB.length===1?'':'s'} por cantidad` : ''}${inc.length ? ` · OJO: ${inc.length} incompleto${inc.length===1?'':'s'} (${inc.map(u => unitLabel(u) + ': falta ' + u.missing_note).join('; ')})` : ''}${pend}`, inc.length ? 'warn' : 'ok', {t:'kundo', kit_id:kit.id, project_id:pid});
   } else {
     const rs = S.reservations.filter(r => r.kit_id === kit.id && r.state === 'out'), bs = S.bulkRes.filter(b => b.kit_id === kit.id && b.state === 'out');
     if (!rs.length && !bs.length) return scanMsg(`El kit «${kit.name}» no consta como fuera del almacén.`, 'warn');
@@ -1658,6 +1685,7 @@ function maintAlerts(){
       out.push({u, text:`Lámpara al ${Math.round(100 * Number(u.lamp_hours) / m.lamp_life_hours)}% (${u.lamp_hours} de ${m.lamp_life_hours} h)`});
   });
   S.models.filter(m => m.is_bulk && bulkRepair(m) > 0).forEach(m => out.push({m, text:`${bulkRepair(m)} en reparación`}));
+  out.push(...stockAlerts());
   return out;
 }
 // Última nota de reparación de una unidad (la que se escribió al devolverla)
@@ -1668,7 +1696,7 @@ function openAlerts(){
   const al = maintAlerts();
   openModal(`<h2>Avisos de mantenimiento</h2><div class="sub">Equipos en reparación o incompletos, revisiones en los próximos 30 días y lámparas al 90% o más de su vida útil.</div>
     ${al.length ? `<div class="list" style="margin:12px 0 0">${al.map(a => a.u ? `<div class="row tap" onclick="openUnit('${a.u.id}')"><div class="grow"><b>${esc(unitLabel(a.u))}</b><div class="sub">${esc(a.text)}</div></div></div>`
-      : `<div class="row tap" onclick="closeModal();go('material');openView('repairs','')"><div class="grow"><b>${colorDot(a.m)}${esc(a.m.name)}</b><div class="sub">${esc(a.text)}</div></div></div>`).join('')}</div>`
+      : `<div class="row tap" onclick="closeModal();go('material');${a.go || "openView('repairs','')"}"><div class="grow"><b>${colorDot(a.m)}${esc(a.m.name)}</b><div class="sub">${esc(a.text)}</div></div></div>`).join('')}</div>`
       : `<div class="empty" style="margin:24px 0">Todo al día.</div>`}`);
 }
 async function openUnitHistory(id){
@@ -2003,7 +2031,7 @@ async function runImport(){
 
 /* ============ RESTAURAR COPIA ============ */
 let restoreData = null;
-const RESTORE_ORDER = ['categories','equipment_models','units','kits','kit_items','clients','projects','technicians','reservations','bulk_reservations','crew_assignments','maintenance_logs','bulk_logs','custom_labels','scan_events'];
+const RESTORE_ORDER = ['categories','equipment_models','units','kits','kit_items','clients','projects','technicians','reservations','bulk_reservations','crew_assignments','maintenance_logs','bulk_logs','custom_labels','photos','model_docs','scan_events'];
 function openRestore(){
   restoreData = null;
   openModal(`<h2>Restaurar copia</h2>
@@ -2148,6 +2176,8 @@ function applyLocal(op){
     }
   } else if (op.t === 'uundo'){
     const r = S.reservations.find(x => x.unit_id === op.unit_id && x.project_id === op.project_id && x.state === 'out'); if (r) r.state = 'planned';
+  } else if (op.t === 'iundo'){
+    const r = S.reservations.find(x => x.unit_id === op.unit_id && x.project_id === op.project_id && x.state === 'returned'); if (r) r.state = 'out';
   } else if (op.t === 'kundo'){
     S.reservations.filter(x => x.project_id === op.project_id && x.kit_id === op.kit_id && x.state === 'out').forEach(x => x.state = 'planned');
     S.bulkRes.filter(x => x.project_id === op.project_id && x.kit_id === op.kit_id && x.state === 'out').forEach(x => x.state = 'planned');
@@ -2185,6 +2215,10 @@ async function syncCondition(unitId, cond, note, clear, at, photo){
 }
 // Envía una operación al servidor
 // Al deshacer una salida también se borra el último «Salida» del historial de esa unidad
+async function deleteLastEvent(unitId, projectId, action){
+  const ev = must(await sb.from('scan_events').select('id').eq('unit_id', unitId).eq('project_id', projectId).eq('action', action).order('at', {ascending:false}).limit(1));
+  if (ev.length) must(await sb.from('scan_events').delete().eq('id', ev[0].id));
+}
 async function deleteLastOutEvent(unitId, projectId){
   const ev = must(await sb.from('scan_events').select('id').eq('unit_id', unitId).eq('project_id', projectId).eq('action', 'out').order('at', {ascending:false}).limit(1));
   if (ev.length) must(await sb.from('scan_events').delete().eq('id', ev[0].id));
@@ -2240,6 +2274,9 @@ async function syncOp(op){
   } else if (op.t === 'uundo'){
     const rs = must(await sb.from('reservations').select('id').eq('unit_id', op.unit_id).eq('project_id', op.project_id).eq('state', 'out').limit(1));
     if (rs.length){ must(await sb.from('reservations').update({state:'planned'}).eq('id', rs[0].id)); await deleteLastOutEvent(op.unit_id, op.project_id); }
+  } else if (op.t === 'iundo'){
+    const rs = must(await sb.from('reservations').select('id').eq('unit_id', op.unit_id).eq('project_id', op.project_id).eq('state', 'returned').limit(1));
+    if (rs.length){ must(await sb.from('reservations').update({state:'out'}).eq('id', rs[0].id)); await deleteLastEvent(op.unit_id, op.project_id, 'in'); }
   } else if (op.t === 'kundo'){
     const rs = must(await sb.from('reservations').select('id,unit_id').eq('project_id', op.project_id).eq('kit_id', op.kit_id).eq('state', 'out'));
     if (rs.length){
@@ -2549,7 +2586,10 @@ async function schemaMissing(){
     ['esquema_v11.sql', sb.from('maintenance_logs').select('photo_url').limit(1)],
     ['esquema_v12.sql', sb.from('trash').select('id').limit(1)],
     ['esquema_v12.sql', sb.from('audit_log').select('id').limit(1)],
-    ['esquema_v12.sql', sb.from('settings').select('app_config').limit(1)]
+    ['esquema_v12.sql', sb.from('settings').select('app_config').limit(1)],
+    ['esquema_v13.sql', sb.from('photos').select('id').limit(1)],
+    ['esquema_v13.sql', sb.from('units').select('manufacturer_serial').limit(1)],
+    ['esquema_v13.sql', sb.from('equipment_models').select('tags').limit(1)]
   ];
   const rs = await Promise.all(probes.map(p => Promise.resolve(p[1]).then(r => r, e => ({error:e}))));
   return [...new Set(probes.filter((p, i) => rs[i].error && isSchemaErr(rs[i].error)).map(p => p[0]))];
@@ -2893,7 +2933,7 @@ function findUnitByInput(raw){
   const code = String(raw || '').trim().toUpperCase();
   const byCode = S.units.find(x => x.code === code); if (byCode) return {u:byCode};
   const k = compactStr(raw); if (!k) return {};
-  let hits = S.units.filter(x => x.serial_number && compactStr(x.serial_number) === k);
+  let hits = S.units.filter(x => (x.serial_number && compactStr(x.serial_number) === k) || (x.manufacturer_serial && compactStr(x.manufacturer_serial) === k));
   if (hits.length > 1){
     const mode = S.scan.mode;
     const pref = mode === 'out' ? hits.filter(x => S.reservations.some(r => r.unit_id === x.id && r.project_id === S.scan.project && r.state !== 'returned'))
@@ -3005,7 +3045,7 @@ function incidenceStats(){
   S.models.forEach(m => { if (m.is_bulk) bad += bulkRepair(m); });
   return {bad, inc, total:bad + inc};
 }
-function navBadgeHtml(){ const n = incidenceStats().total; return `<span id="nav-badge" class="tabbadge" ${n ? '' : 'hidden'} aria-label="${n} incidencias">${n}</span>`; }
+function navBadgeHtml(){ if (whMode()) return ''; const n = incidenceStats().total; return `<span id="nav-badge" class="tabbadge" ${n ? '' : 'hidden'} aria-label="${n} incidencias">${n}</span>`; }
 function updateNavBadge(){ const el = $('#nav-badge'); if (!el) return; const n = incidenceStats().total; el.textContent = n; el.hidden = !n; }
 function incidenceCard(){
   const s = incidenceStats(); if (!s.total) return '';
@@ -3073,7 +3113,7 @@ function confirmBaja(){
 }
 
 /* ============ HISTORIAL DE INCIDENCIAS DE UN MATERIAL POR CANTIDAD ============ */
-const BULK_LOG = {repair:'En reparación', missing:'Faltaron', fixed:'Reparados', lost:'Dados de baja'};
+const BULK_LOG = {repair:'En reparación', missing:'Faltaron', fixed:'Reparados', lost:'Dados de baja', bought:'Comprados', used:'Usados'};
 function bulkHistoryHtml(m){
   const ls = S.bulkLogs.filter(l => l.model_id === m.id).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0, 15);
   if (!ls.length) return '';
@@ -3383,8 +3423,8 @@ function dataUrlToBlob(u){
   return new Blob([a], {type:mime});
 }
 // Sube la foto de una incidencia (dataURL o Blob) y devuelve su enlace. Si falla la conexión, lanza el error para que se reintente.
-async function uploadIncidentPhoto(src, key){
-  const blob = typeof src === 'string' ? dataUrlToBlob(src) : src, path = `incidencias/${key}-${Date.now()}.jpg`;
+async function uploadIncidentPhoto(src, key, prefix){
+  const blob = typeof src === 'string' ? dataUrlToBlob(src) : src, path = `${prefix || 'incidencias'}/${key}-${Date.now()}.jpg`;
   const r = await sb.storage.from('fotos').upload(path, blob, {contentType:'image/jpeg', upsert:true});
   if (r.error){ if (/fetch|network|offline/i.test(r.error.message || '')) throw r.error; toast('No se pudo subir la foto: ' + (r.error.message || ''), true); return null; }
   return sb.storage.from('fotos').getPublicUrl(path).data.publicUrl;
@@ -3537,7 +3577,7 @@ function openAvail(mid){
 
 /* ============ PAPELERA Y DESHACER ============ */
 const TRASH_KIND = k => ({model:'Modelo', unit:'Unidad', kit:'Kit', project:W.S, client:'Cliente', technician:'Técnico', category:'Categoría', custom_label:'Pegatina'})[k] || k;
-const trashTable = (t, n) => { const one = n === 1, o = {equipment_models:['modelo','modelos'], units:['unidad','unidades'], reservations:['reserva','reservas'], bulk_reservations:['línea de cables','líneas de cables'], kit_items:['pieza de kit','piezas de kit'], maintenance_logs:['registro de mantenimiento','registros de mantenimiento'], bulk_logs:['incidencia de cables','incidencias de cables'], scan_events:['movimiento','movimientos'], kits:['kit','kits'], projects:[W.s, W.p], clients:['cliente','clientes'], technicians:['técnico','técnicos'], categories:['categoría','categorías'], crew_assignments:['asignación','asignaciones'], custom_labels:['pegatina','pegatinas']}[t]; return o ? o[one ? 0 : 1] : t; };
+const trashTable = (t, n) => { const one = n === 1, o = {equipment_models:['modelo','modelos'], units:['unidad','unidades'], reservations:['reserva','reservas'], bulk_reservations:['línea de cables','líneas de cables'], kit_items:['pieza de kit','piezas de kit'], maintenance_logs:['registro de mantenimiento','registros de mantenimiento'], bulk_logs:['incidencia de cables','incidencias de cables'], scan_events:['movimiento','movimientos'], kits:['kit','kits'], projects:[W.s, W.p], clients:['cliente','clientes'], technicians:['técnico','técnicos'], categories:['categoría','categorías'], crew_assignments:['asignación','asignaciones'], photos:['foto','fotos'], model_docs:['documento','documentos'], custom_labels:['pegatina','pegatinas']}[t]; return o ? o[one ? 0 : 1] : t; };
 // Foto de todo lo que se va a borrar (incluido lo que se borra en cascada), para poder restaurarlo
 async function trashCollect(kind, id){
   const T = [], L = [], real = r => !String(r.id).startsWith('tmp-');
@@ -3547,10 +3587,10 @@ async function trashCollect(kind, id){
     const m = modelById(id), us = S.units.filter(u => u.model_id === id), ids = new Set(us.map(u => u.id));
     add('equipment_models', [m]); add('units', us); add('reservations', S.reservations.filter(r => ids.has(r.unit_id)));
     add('bulk_reservations', S.bulkRes.filter(b => b.model_id === id)); add('kit_items', S.kitItems.filter(k => ids.has(k.unit_id) || k.model_id === id));
-    add('maintenance_logs', S.maint.filter(l => ids.has(l.unit_id))); add('bulk_logs', S.bulkLogs.filter(l => l.model_id === id)); add('scan_events', await events([...ids]));
+    add('maintenance_logs', S.maint.filter(l => ids.has(l.unit_id))); add('bulk_logs', S.bulkLogs.filter(l => l.model_id === id)); add('photos', S.photos.filter(p => p.model_id === id || ids.has(p.unit_id))); add('model_docs', S.docs.filter(d => d.model_id === id)); add('scan_events', await events([...ids]));
   } else if (kind === 'unit'){
     add('units', [unitById(id)]); add('reservations', S.reservations.filter(r => r.unit_id === id)); add('kit_items', S.kitItems.filter(k => k.unit_id === id));
-    add('maintenance_logs', S.maint.filter(l => l.unit_id === id)); add('scan_events', await events([id]));
+    add('maintenance_logs', S.maint.filter(l => l.unit_id === id)); add('photos', S.photos.filter(p => p.unit_id === id)); add('scan_events', await events([id]));
   } else if (kind === 'kit'){
     add('kits', [kitById(id)]); add('kit_items', S.kitItems.filter(k => k.kit_id === id));
     L.push({t:'reservations', col:'kit_id', ids:S.reservations.filter(r => r.kit_id === id).map(r => r.id), val:id}, {t:'bulk_reservations', col:'kit_id', ids:S.bulkRes.filter(b => b.kit_id === id).map(b => b.id), val:id});
@@ -3618,7 +3658,7 @@ async function emptyTrash(){ if (!(S.trash || []).length || !confirm(`¿Vaciar l
 
 /* ============ HISTORIAL DE CAMBIOS ============ */
 const audTable = t => ({equipment_models:'Modelo', units:'Unidad', kits:'Kit', projects:W.S, clients:'Cliente', technicians:'Técnico', categories:'Categoría'})[t] || t;
-const AUD_FIELD = {name:'nombre', brand:'marca', category_id:'categoría', day_rate:'tarifa', weight_kg:'peso', power_w:'potencia', width_cm:'ancho', height_cm:'alto', depth_cm:'fondo', notes:'notas', serial_number:'nº de serie', status:'estado', missing_note:'qué falta', purchase_date:'fecha de compra', next_service:'próxima revisión', lamp_hours:'horas de lámpara', lamp_life_hours:'vida de la lámpara', is_bulk:'por cantidad', bulk_stock:'stock', bulk_repair:'en reparación', color:'color', photo_url:'foto', starts_at:'inicio', ends_at:'fin', client:'cliente', client_id:'cliente', phone:'teléfono', email:'email', label_printed_at:'etiqueta impresa', sort_order:'orden', rider_notes:'notas del rider', payment_status:'cobro', invoice_no:'nº de factura', due_date:'vencimiento'};
+const AUD_FIELD = {name:'nombre', brand:'marca', category_id:'categoría', day_rate:'tarifa', weight_kg:'peso', power_w:'potencia', width_cm:'ancho', height_cm:'alto', depth_cm:'fondo', notes:'notas', serial_number:'nº de serie', status:'estado', missing_note:'qué falta', purchase_date:'fecha de compra', next_service:'próxima revisión', lamp_hours:'horas de lámpara', lamp_life_hours:'vida de la lámpara', is_bulk:'por cantidad', bulk_stock:'stock', bulk_repair:'en reparación', color:'color', photo_url:'foto', starts_at:'inicio', ends_at:'fin', client:'cliente', client_id:'cliente', phone:'teléfono', email:'email', label_printed_at:'etiqueta impresa', sort_order:'orden', rider_notes:'notas del rider', payment_status:'cobro', invoice_no:'nº de factura', due_date:'vencimiento', tags:'palabras clave', dmx_modes:'modos DMX', owner:'propietario', rent_cost:'coste de alquiler', consumable:'consumible', min_stock:'stock mínimo', manufacturer_serial:'nº de serie del fabricante', retired_reason:'motivo de baja', retired_value:'valor de baja', retired_at:'fecha de baja'};
 const AUD_HIDE = new Set(['id', 'created_at', 'updated_at', 'calendar_token']);
 function audValue(k, v){
   if (v == null || v === '') return '(vacío)';
@@ -3759,6 +3799,7 @@ function openSettings(){
     <select id="st-show" onchange="stShowChanged()">${SHOW_TERMS.map(t => `<option value="${t.join('|')}" ${t.join('|') === cur ? 'selected' : ''}>${capFirst(t[0])} / ${capFirst(t[1])}</option>`).join('')}<option value="custom" ${isPre ? '' : 'selected'}>Otro…</option></select>
     <div id="st-custom" ${isPre ? 'hidden' : ''} class="two"><div><label for="st-s">En singular</label><input id="st-s" value="${esc(W.s)}"></div><div><label for="st-p">En plural</label><input id="st-p" value="${esc(W.p)}"></div></div>
     <div class="sub">Cambia las pestañas, los títulos y los botones. Los nombres de lo que ya has creado no cambian. Usa palabras masculinas (bolo, evento, proyecto…).</div>
+    <button class="btn block" onclick="closeModal();openWarehouse()">Activar modo almacén…</button>
     <button class="btn primary block" onclick="saveSettingsApp()">Guardar</button><button class="btn block" onclick="closeModal()">Cerrar</button>`);
 }
 function stShowChanged(){ const v = $('#st-show').value; $('#st-custom').hidden = v !== 'custom'; }
@@ -3772,6 +3813,7 @@ async function saveSettingsApp(){
   closeModal(); render(); toast(shared ? 'Guardado' : 'Guardado en este dispositivo (falta esquema_v12.sql para compartirlo)');
 }
 function moreView(){
+  if (whMode()) return whMoreView();
   const l = lastBackup(), al = maintAlerts();
   return bar('Más')
     + incidenceCard()
@@ -3787,6 +3829,421 @@ function moreView(){
     <div class="group">Cuenta</div><div class="actions"><button class="btn" onclick="logout()">Cerrar sesión</button></div>
     <div class="sub" style="margin:28px 16px 0;text-align:center">RentApp · ${APP_VERSION}</div>`;
 }
+
+/* ============ ESCÁNER: CONSULTAR, LINTERNA Y ZOOM, DESHACER, MODO ALMACÉN Y NFC ============ */
+S.cam = null; S.nfc = null;
+// ---- Consultar: ver la ficha de lo que escaneas sin modificar nada ----
+async function handleInfo(raw){
+  const code = raw.trim().toUpperCase();
+  if (code.startsWith('K-') && S.kits.some(k => k.code === code)){ const k = S.kits.find(x => x.code === code); scanMsg(`Consulta: kit «${k.name}»`, 'ok'); return openKitInfo(k); }
+  const f = findUnitByInput(raw);
+  if (f.many) return scanMsg(`Hay ${f.many.length} equipos con el nº ${raw.trim()}. Escribe el código U-… de uno de ellos.`, 'warn');
+  if (!f.u) return scanMsg('Código no reconocido: ' + raw.trim(), 'bad');
+  scanMsg('Consulta: ' + unitLabel(f.u), 'ok'); openUnitInfo(f.u);
+}
+function unitSituation(u){
+  const rs = S.reservations.filter(r => r.unit_id === u.id && r.state !== 'returned').map(r => ({r, p:projById(r.project_id)})).filter(x => x.p && x.p.status !== 'cancelled');
+  const out = rs.find(x => x.r.state === 'out'), next = rs.filter(x => x.r.state !== 'out').sort((a, b) => new Date(a.p.starts_at) - new Date(b.p.starts_at));
+  return {out, next, all:rs};
+}
+function openUnitInfo(u){
+  const m = modelById(u.model_id) || {}, sit = unitSituation(u), kit = S.kitItems.filter(i => i.unit_id === u.id).map(i => kitById(i.kit_id)).filter(Boolean)[0];
+  let dónde, kind = '';
+  if (u.status === 'repair'){ dónde = 'En reparación'; kind = 'warn'; }
+  else if (u.status === 'lost' || u.status === 'retired'){ dónde = UNIT_STATUS[u.status]; kind = 'bad'; }
+  else if (sit.out){ dónde = `Fuera del almacén · ${sit.out.p.name} (${fmtD(sit.out.p.starts_at)} → ${fmtD(sit.out.p.ends_at)})`; kind = 'warn'; }
+  else if (sit.next.length){ dónde = `En el almacén, reservada para ${sit.next[0].p.name} (${fmtD(sit.next[0].p.starts_at)})`; }
+  else dónde = 'En el almacén, libre';
+  const l = repairLog(u), mt = [u.next_service ? `Próxima revisión: ${fmtDay(u.next_service)}` : '', m.lamp_life_hours > 0 ? `Lámpara: ${u.lamp_hours || 0} de ${m.lamp_life_hours} h` : ''].filter(Boolean);
+  openModal(`<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">${unitTile(u, 'md')}<div><h2 style="margin:0;font-size:22px">${esc(m.name || '')}</h2>${u.serial_number ? `<div style="font-size:16px;color:var(--muted)">${esc(u.serial_number)}</div>` : ''}</div></div>
+    <div class="info" style="margin:8px 0 0"><b${kind ? ` style="color:var(--${kind})"` : ''}>${esc(dónde)}</b>
+      ${u.status === 'ok' && u.missing_note ? `<div class="sub" style="color:var(--warn);font-weight:600">Incompleto: falta ${esc(u.missing_note)}</div>` : ''}
+      ${u.status === 'repair' && l && l.description ? `<div class="sub">${esc(l.description)}</div>` : ''}
+      ${kit ? `<div class="sub">Va en el kit «${esc(kit.name)}»</div>` : ''}</div>
+    ${sit.next.length > (sit.out ? 0 : 1) || (sit.out && sit.next.length) ? `<div class="group" style="margin:14px 0 6px">Próximas reservas</div><div class="list" style="margin:0">${sit.next.slice(sit.out ? 0 : 1, (sit.out ? 0 : 1) + 4).map(x => `<div class="row urow"><div class="grow"><b>${esc(x.p.name)}</b><div class="sub">${esc(fmtD(x.p.starts_at))} → ${esc(fmtD(x.p.ends_at))}</div></div></div>`).join('')}</div>` : ''}
+    ${mt.length ? `<div class="sub" style="margin-top:10px">${esc(mt.join(' · '))}</div>` : ''}
+    <div class="group" style="margin:14px 0 6px">Últimos movimientos</div><div class="list" style="margin:0" id="info-ev"><div class="row urow"><span class="sub">Cargando…</span></div></div>
+    <div class="actions" style="margin:14px 0 0">${whMode() ? '' : `<button class="btn" onclick="closeModal();openUnit('${u.id}')">Abrir ficha</button>`}<button class="btn" onclick="closeModal()">Cerrar</button></div>`);
+  infoEvents(u.id);
+}
+const EV_ES = {out:'Salida', in:'Devolución', repair:'Reparación', count:'Recuento'};
+async function infoEvents(uid){
+  const box = () => $('#info-ev'); if (!box()) return;
+  try {
+    const r = await sb.from('scan_events').select('*').eq('unit_id', uid).order('at', {ascending:false}).limit(5);
+    const rows = (r.data || []).slice().sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 5);
+    if (!box()) return;
+    box().innerHTML = rows.length ? rows.map(e => { const p = e.project_id ? projById(e.project_id) : null; return `<div class="row urow"><div class="grow"><b>${esc(EV_ES[e.action] || e.action)}${p ? ' · ' + esc(p.name) : ''}</b><div class="sub">${esc(fmtFull(e.at))}</div></div></div>`; }).join('') : `<div class="row urow"><span class="sub">Todavía no hay movimientos.</span></div>`;
+  } catch (e) { if (box()) box().innerHTML = `<div class="row urow"><span class="sub">No se pudieron cargar (sin conexión).</span></div>`; }
+}
+function openKitInfo(k){
+  const us = S.kitItems.filter(i => i.kit_id === k.id && i.unit_id).map(i => unitById(i.unit_id)).filter(Boolean), rs = S.reservations.filter(r => r.kit_id === k.id && r.state === 'out'), bs = S.bulkRes.filter(b => b.kit_id === k.id && b.state === 'out');
+  const out = rs.length || bs.length, p = out ? projById((rs[0] || bs[0]).project_id) : null;
+  const next = S.reservations.filter(r => r.kit_id === k.id && r.state === 'planned').map(r => projById(r.project_id)).filter(Boolean).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))[0];
+  openModal(`<h2>${esc(k.name)}</h2><div class="sub">Kit · ${esc(k.code)}</div>
+    <div class="info" style="margin:8px 0 0"><b${out ? ' style="color:var(--warn)"' : ''}>${out ? `Fuera del almacén${p ? ' · ' + esc(p.name) : ''}` : next ? `En el almacén, reservado para ${esc(next.name)} (${esc(fmtD(next.starts_at))})` : 'En el almacén, libre'}</b></div>
+    <div class="group" style="margin:14px 0 6px">Contenido (${us.length} equipo${us.length === 1 ? '' : 's'})</div>
+    <div class="list" style="margin:0">${us.map(u => `<div class="row urow">${unitTile(u)}<div class="grow"><b>${esc(unitModelName(u))}</b><div class="sub">${unitSub(u)}${u.missing_note ? ' · <span style="color:var(--warn)">incompleto: falta ' + esc(u.missing_note) + '</span>' : ''}</div></div></div>`).join('') || '<div class="row urow"><span class="sub">Sin equipos con número.</span></div>'}</div>
+    <div class="actions" style="margin:14px 0 0">${whMode() ? '' : `<button class="btn" onclick="closeModal();go('material');setMat('kits');openView('kit','${k.id}')">Abrir kit</button>`}<button class="btn" onclick="closeModal()">Cerrar</button></div>`);
+}
+
+// ---- Linterna y zoom de la cámara (solo si el móvil y el navegador lo permiten) ----
+function camControlsInit(track){
+  const box = $('#cam-ctl'); if (!box) return;
+  let caps = {}; try { caps = (track && track.getCapabilities) ? (track.getCapabilities() || {}) : {}; } catch (e) {}
+  let cur = 1; try { cur = (track.getSettings && track.getSettings().zoom) || (caps.zoom && caps.zoom.min) || 1; } catch (e) {}
+  S.cam = {track, caps, torch:false, zoom:cur};
+  box.innerHTML = (caps.torch ? `<button class="btn small" id="cam-torch" aria-pressed="false" onclick="camTorch()">Linterna: apagada</button>` : '')
+    + (caps.zoom ? `<label class="camzoom">Zoom <input type="range" id="cam-zoom" min="${caps.zoom.min}" max="${caps.zoom.max}" step="${caps.zoom.step || 0.1}" value="${cur}" oninput="camZoom(this.value)" aria-label="Zoom de la cámara"> <span id="cam-zoomv">${(+cur).toFixed(1)}×</span></label>` : '');
+  box.hidden = !box.innerHTML;
+}
+async function camTorch(){
+  const c = S.cam; if (!c) return; const want = !c.torch;
+  try { await c.track.applyConstraints({advanced:[{torch:want}]}); c.torch = want; }
+  catch (e) { return toast('Tu móvil no deja encender la linterna desde la web', true); }
+  const b = $('#cam-torch'); if (b){ b.textContent = 'Linterna: ' + (want ? 'encendida' : 'apagada'); b.setAttribute('aria-pressed', want); b.classList.toggle('primary', want); }
+}
+async function camZoom(v){
+  const c = S.cam; if (!c) return; const z = parseFloat(v); const s = $('#cam-zoomv'); if (s) s.textContent = z.toFixed(1) + '×';
+  try { await c.track.applyConstraints({advanced:[{zoom:z}]}); c.zoom = z; } catch (e) {}
+}
+function camControlsOff(){ S.cam = null; const b = $('#cam-ctl'); if (b){ b.innerHTML = ''; b.hidden = true; } }
+
+// ---- Deshacer lecturas ----
+S.scan.seq = 0;
+function undoScan(id){
+  const l = S.scan.log.find(x => x.id === id); if (!l || !l.undo || l.done) return;
+  l.done = true; enqueue(l.undo); updateProgress();
+  const m = $('#scan-msg'); if (m){ m.textContent = 'Deshecho: ' + l.text; m.className = 'msg warn'; } renderLog();
+  S.scan.log.unshift({id:++S.scan.seq, text:'Deshecho: ' + l.text, kind:'warn', at:new Date()}); S.scan.log = S.scan.log.slice(0, 15); renderLog();
+}
+
+// ---- Modo almacén: pantalla simplificada para dejar el móvil a un ayudante ----
+const whCfg = () => { try { return JSON.parse(localStorage.getItem('warehouse') || 'null'); } catch (e) { return null; } };
+const whMode = () => !!(whCfg() && whCfg().on);
+function applyWh(){ document.body.classList.toggle('wh', whMode()); }
+function openWarehouse(){
+  openModal(`<h2>Modo almacén</h2><div class="sub">Deja solo <b>Escanear</b> y la <b>carga de cada ${esc(W.s)}</b>, con botones grandes. Oculta Material, clientes, cobros, presupuestos y ajustes. Es para que un ayudante cargue y descargue sin ver el resto.</div>
+    <label for="wh-pin">PIN para salir (4 cifras, opcional)</label><input id="wh-pin" inputmode="numeric" maxlength="4" placeholder="Vacío = sin PIN">
+    <div class="sub" style="margin-top:6px"><b>No es una medida de seguridad:</b> quien sepa cerrar sesión o borrar los datos del navegador puede salir. Sirve para evitar toques por error.</div>
+    <button class="btn primary block" onclick="enterWarehouse()">Activar modo almacén</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
+}
+function enterWarehouse(){
+  const pin = ($('#wh-pin').value || '').trim();
+  if (pin && !/^\d{4}$/.test(pin)) return toast('El PIN son 4 cifras', true);
+  try { localStorage.setItem('warehouse', JSON.stringify({on:true, pin})); } catch (e) {}
+  closeModal(); applyWh(); S.tab = 'scan'; S.view = null; render(); toast('Modo almacén activado');
+}
+function exitWarehouse(){
+  const c = whCfg(); if (!c) return;
+  if (c.pin){ const p = prompt('PIN para salir del modo almacén'); if (p == null) return; if (String(p).trim() !== c.pin) return toast('PIN incorrecto', true); }
+  try { localStorage.setItem('warehouse', JSON.stringify({on:false, pin:c.pin})); } catch (e) {}
+  applyWh(); S.tab = 'more'; S.view = null; render(); toast('Modo almacén desactivado');
+}
+function whMoreView(){
+  return bar('Más') + `<div class="group">Modo almacén</div><div class="info"><b>Modo almacén activo</b><div class="sub">Aquí solo se carga y se descarga material. Para volver a ver todo, sal del modo almacén.</div></div>
+    <div class="actions"><button class="btn primary" onclick="exitWarehouse()">Salir del modo almacén</button></div>
+    <div class="sub" style="margin:28px 16px 0;text-align:center">RentApp · ${APP_VERSION}</div>`;
+}
+
+// ---- NFC (solo Chrome en Android) ----
+const nfcSupported = () => 'NDEFReader' in window;
+const nfcCode = txt => { const m = /[UK]-[0-9A-F]{8}/i.exec(String(txt || '')); return m ? m[0].toUpperCase() : null; };
+async function nfcToggle(){
+  if (S.nfc){ S.nfc.ctl.abort(); S.nfc = null; const b = $('#nfc-btn'); if (b) b.textContent = 'Leer pegatina NFC'; return toast('NFC parado'); }
+  try {
+    const reader = new NDEFReader(), ctl = new AbortController();
+    await reader.scan({signal:ctl.signal});
+    S.nfc = {reader, ctl}; const b = $('#nfc-btn'); if (b) b.textContent = 'Leyendo NFC… (toca para parar)';
+    reader.onreading = ev => {
+      let code = null;
+      for (const rec of ev.message.records){ try { code = nfcCode(new TextDecoder(rec.encoding || 'utf-8').decode(rec.data)); } catch (e) {} if (code) break; }
+      if (code) handleCode(code).catch(() => {}); else scanMsg('Esa pegatina NFC no lleva un código de RentApp.', 'warn');
+    };
+    reader.onreadingerror = () => scanMsg('No se pudo leer la pegatina NFC. Acércala otra vez.', 'warn');
+    toast('Acerca la pegatina NFC al móvil');
+  } catch (e) { S.nfc = null; toast(e && e.name === 'NotAllowedError' ? 'Activa el permiso de NFC para esta página' : 'No se pudo activar el NFC en este móvil', true); }
+}
+async function nfcWrite(code){
+  if (!nfcSupported()) return toast('Tu navegador no permite escribir NFC (solo Chrome en Android)', true);
+  try { toast('Acerca una pegatina NFC vacía al móvil…'); await new NDEFReader().write({records:[{recordType:'text', data:code}]}); toast('Pegatina NFC escrita: ' + code); }
+  catch (e) { toast('No se pudo escribir en la pegatina NFC', true); }
+}
+
+const modalOpen = () => { const m = $('#modal'); return !!(m && m.classList.contains('open')); };
+if (document.body) applyWh(); else document.addEventListener('DOMContentLoaded', applyWh);
+
+/* ============ MATERIAL V1.05: ficha ampliada, filtros, orden, selección en masa, bajas… ============ */
+S.tagFilter = new Set(); S.ownerFilter = ''; S.mass = {on:false, sel:new Set()}; S.matOrder = false;
+const modelOrder = (a, b) => (a.sort_order == null ? 1e9 : a.sort_order) - (b.sort_order == null ? 1e9 : b.sort_order) || modelCmp(a, b);
+// ---- palabras clave, modos DMX y datos extra del modelo (solo se envían si cambian: así no estorban si falta el script) ----
+function allTags(){ const m = new Map(); S.models.forEach(x => (x.tags || []).forEach(t => { if (!m.has(norm(t))) m.set(norm(t), t); })); return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1], 'es')); }
+const canonTags = txt => { const out = [], seen = new Set(), known = new Map(allTags()); String(txt || '').split(/[,;\n]/).map(x => x.trim()).filter(Boolean).forEach(t => { const k = norm(t); if (seen.has(k)) return; seen.add(k); out.push(known.get(k) || t); }); return out; };
+function parseDmx(txt){ const out = []; String(txt || '').split('\n').forEach(l => { const m = /^\s*(.*?[A-Za-zÁ-ú].*?)\s*[:=\-–]?\s*(\d{1,3})\s*(?:ch|canales)?\s*$/i.exec(l); if (m && +m[2] >= 1 && +m[2] <= 512) out.push({name:m[1].replace(/[:=\-–\s]+$/, ''), channels:+m[2]}); }); return out.length ? out : null; }
+const dmxText = m => (m.dmx_modes || []).map(x => `${x.name}: ${x.channels}`).join('\n');
+function modelExtras(id, bulk){
+  const m = id ? modelById(id) : {}, ex = {};
+  const set = (k, v, cur) => { const empty = v == null || v === '' || v === false || (Array.isArray(v) && !v.length); if (JSON.stringify(v == null ? null : v) !== JSON.stringify(cur == null ? null : cur) && !(!id && empty)) ex[k] = v; };
+  set('tags', canonTags($('#f-tags').value), m.tags && m.tags.length ? m.tags : []);
+  set('dmx_modes', bulk ? null : parseDmx($('#f-dmx').value), m.dmx_modes || null);
+  set('owner', $('#f-owner').value.trim() || null, m.owner || null);
+  set('rent_cost', nf('#f-rentcost'), m.rent_cost != null ? Number(m.rent_cost) : null);
+  set('consumable', bulk && !!$('#f-cons').checked, !!m.consumable);
+  const mn = parseInt($('#f-min').value); set('min_stock', bulk && mn >= 0 ? mn : null, m.min_stock != null ? Number(m.min_stock) : null);
+  return ex;
+}
+function unitExtras(u){ const v = $('#u-mfr').value.trim() || null; return v !== (u.manufacturer_serial || null) ? {manufacturer_serial:v} : {}; }
+const lowStock = m => !!(m.is_bulk && m.consumable && m.min_stock != null && Number(m.bulk_stock) <= Number(m.min_stock));
+const dmxLine = m => (m.dmx_modes && m.dmx_modes.length) ? `<div style="margin-top:6px">DMX: ${esc(m.dmx_modes.map(x => `${x.name} ${x.channels} ch`).join(' · '))}${m.power_w ? ` · ≈ ${(m.power_w / 230).toFixed(1)} A a 230 V` : ''}</div>` : '';
+const modelExtraLines = m => ((m.tags || []).length ? `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">${m.tags.map(t => `<span class="badge">${esc(t)}</span>`).join('')}</div>` : '')
+  + (m.owner ? `<div style="margin-top:6px"><span class="badge">De terceros</span> Propietario: <b>${esc(m.owner)}</b>${m.rent_cost != null ? ' · te cuesta ' + eur(m.rent_cost) + ' al día' : ''}</div>` : '')
+  + (m.is_bulk && m.consumable ? `<div style="margin-top:6px"><span class="badge ${lowStock(m) ? 'bad' : ''}">${lowStock(m) ? 'Bajo mínimo' : 'Consumible'}</span>${m.min_stock != null ? ` Aviso por debajo de ${m.min_stock}` : ''}</div>` : '');
+// ---- fotos de la ficha ----
+function galleryHtml(k, id, modal){
+  const ph = S.photos.filter(p => k === 'm' ? p.model_id === id : p.unit_id === id), pad = modal ? '' : 'padding:0 16px';
+  return `<div class="group" style="${modal ? 'margin:14px 0 6px' : ''}">Fotos${ph.length ? ` (${ph.length})` : ''}</div><div style="display:flex;flex-wrap:wrap;gap:8px;${pad}">${ph.map(p => `<img class="thumb" style="width:72px;height:72px;cursor:pointer" src="${esc(p.url)}" loading="lazy" alt="Foto de la ficha" onclick="openGallery('${p.id}')">`).join('')}</div>
+    <div style="${pad};margin-top:8px"><label class="btn small" style="display:inline-block;cursor:pointer">+ Añadir foto<input type="file" accept="image/*" hidden onchange="addGalleryPhoto('${k}','${id}',this)"></label></div>`;
+}
+async function addGalleryPhoto(k, id, input){
+  const f = input.files && input.files[0]; if (!f) return;
+  if (S.photos.filter(p => k === 'm' ? p.model_id === id : p.unit_id === id).length >= 12) return toast('Máximo 12 fotos por ficha', true);
+  try {
+    const url = await uploadIncidentPhoto(await resizeImage(f, 1000, 'image/jpeg', 0.75), (k === 'm' ? 'modelo-' : 'unidad-') + id, 'galeria'); if (!url) return;
+    await db(sb.from('photos').insert(k === 'm' ? {model_id:id, url} : {unit_id:id, url}));
+    await loadAll(); if (k === 'u') openUnit(id); toast('Foto añadida');
+  } catch (e) { if (!e || !e.code) toast('No se pudo añadir la foto', true); }
+}
+function openGallery(pid){
+  const p = S.photos.find(x => x.id === pid); if (!p) return;
+  openModal(`<img src="${esc(p.url)}" style="width:100%;border-radius:10px" alt="Foto de la ficha"><div class="actions" style="margin-top:12px"><button class="btn danger" onclick="delGallery('${pid}')">Eliminar foto</button><button class="btn" onclick="closeModal()">Cerrar</button></div>`);
+}
+async function delGallery(pid){
+  const p = S.photos.find(x => x.id === pid); if (!p || !confirm('¿Eliminar esta foto?')) return;
+  await db(sb.from('photos').delete().eq('id', pid)); removeOldPhoto(p.url); closeModal(); await loadAll(); toast('Foto eliminada');
+}
+// ---- manuales y fichas técnicas ----
+function docsHtml(m){
+  const ds = S.docs.filter(d => d.model_id === m.id);
+  return `<div class="group">Manuales y fichas técnicas${ds.length ? ` (${ds.length})` : ''}</div>${ds.length ? `<div class="list">${ds.map(d => `<div class="row urow"><div class="grow"><a href="${esc(d.url)}" target="_blank" rel="noopener"><b>${esc(d.name)}</b></a><div class="sub">${esc(bytesTxt(d.size_bytes))}</div></div><button class="btn small danger" onclick="delDoc('${d.id}')">Quitar</button></div>`).join('')}</div>` : ''}
+    <div class="actions"><label class="btn small" style="cursor:pointer">+ Añadir PDF<input type="file" accept="application/pdf,.pdf" hidden onchange="addDoc('${m.id}',this)"></label></div>`;
+}
+async function addDoc(mid, input){
+  const f = input.files && input.files[0]; if (!f) return;
+  if (f.size > 20 * 1048576) return toast('El archivo pesa más de 20 MB', true);
+  const safe = f.name.replace(/\.[^.]+$/, '').replace(/[^\w.-]+/g, '-').slice(0, 40), path = `docs/${mid}-${Date.now()}-${safe}.pdf`;
+  const r = await sb.storage.from('fotos').upload(path, f, {contentType:f.type || 'application/pdf', upsert:true});
+  if (r.error) return toast('No se pudo subir el archivo: ' + (r.error.message || ''), true, true);
+  await db(sb.from('model_docs').insert({model_id:mid, name:f.name.replace(/\.[^.]+$/, ''), url:sb.storage.from('fotos').getPublicUrl(path).data.publicUrl, size_bytes:f.size}));
+  await loadAll(); toast('Documento añadido');
+}
+async function delDoc(id){ const d = S.docs.find(x => x.id === id); if (!d || !confirm(`¿Quitar «${d.name}»?`)) return; await db(sb.from('model_docs').delete().eq('id', id)); removeOldPhoto(d.url); await loadAll(); toast('Documento quitado'); }
+function showDocsHtml(pid){
+  const ids = new Set([...S.reservations.filter(r => r.project_id === pid).map(r => (unitById(r.unit_id) || {}).model_id), ...S.bulkRes.filter(b => b.project_id === pid).map(b => b.model_id)].filter(Boolean));
+  const ds = S.docs.filter(d => ids.has(d.model_id)); if (!ds.length) return '';
+  return `<div class="group">Manuales y fichas técnicas</div><div class="list">${ds.map(d => `<div class="row urow"><div class="grow"><a href="${esc(d.url)}" target="_blank" rel="noopener"><b>${esc(d.name)}</b></a><div class="sub">${esc((modelById(d.model_id) || {}).name || '')}</div></div></div>`).join('')}</div>`;
+}
+// ---- patch DMX de un show ----
+function dmxPatch(pid){
+  const fx = [], sinDmx = new Set(); let pw = 0;
+  S.reservations.filter(r => r.project_id === pid).forEach(r => { const u = unitById(r.unit_id), m = u && modelById(u.model_id); if (!m) return; pw += Number(m.power_w) || 0; const mode = (m.dmx_modes || [])[0]; if (mode) fx.push({u, m, mode}); else sinDmx.add(m.name); });
+  fx.sort((a, b) => unitCmp(a.u, b.u));
+  let uni = 1, addr = 1; const rows = fx.map(f => { if (addr + f.mode.channels - 1 > 512){ uni++; addr = 1; } const r = {f, uni, addr}; addr += f.mode.channels; return r; });
+  return {rows, universes:rows.length ? rows[rows.length - 1].uni : 0, channels:fx.reduce((s, f) => s + f.mode.channels, 0), power:pw, sinDmx:[...sinDmx]};
+}
+function openDmxPatch(pid){
+  const p = projById(pid), d = dmxPatch(pid);
+  openModal(`<h2>Patch DMX</h2><div class="sub">${esc(p.name)}</div>
+    <div class="info" style="margin:10px 0 0"><b>${d.rows.length}</b> aparatos con DMX · <b>${d.channels}</b> canales · <b>${d.universes}</b> universo${d.universes === 1 ? '' : 's'}${d.power ? `<div class="sub">Potencia total: ${fmtNum(d.power, 0)} W ≈ ${(d.power / 230).toFixed(1)} A a 230 V</div>` : ''}</div>
+    ${d.rows.length ? `<div class="list" style="margin:12px 0 0">${d.rows.map(r => `<div class="row urow">${unitTile(r.f.u)}<div class="grow"><b>${esc(r.f.m.name)}</b><div class="sub">${esc(r.f.mode.name)} · ${r.f.mode.channels} ch</div></div><div class="count" style="font-size:15px">${r.uni}.${String(r.addr).padStart(3, '0')}</div></div>`).join('')}</div>` : `<div class="empty" style="margin:16px 0">Ningún modelo de este ${esc(W.s)} tiene modos DMX. Defínelos en la ficha del modelo.</div>`}
+    ${d.sinDmx.length ? `<div class="sub" style="margin-top:10px">Sin canales definidos: ${esc(d.sinDmx.join(', '))}</div>` : ''}
+    <div class="sub" style="margin-top:8px">Direcciones consecutivas con el primer modo de cada modelo; un aparato nunca queda partido entre dos universos.</div>
+    <div class="actions" style="margin-top:12px">${d.rows.length ? `<button class="btn primary" onclick="copyDmxPatch('${pid}')">Copiar patch</button>` : ''}<button class="btn" onclick="closeModal()">Cerrar</button></div>`);
+}
+function copyDmxPatch(pid){
+  const t = ['Universo\tDirección\tAparato\tModo\tCanales', ...dmxPatch(pid).rows.map(r => [r.uni, r.addr, unitLabel(r.f.u), r.f.mode.name, r.f.mode.channels].join('\t'))].join('\n');
+  navigator.clipboard.writeText(t).then(() => toast('Patch copiado'), () => toast('No se pudo copiar', true));
+}
+// ---- filtros: color, palabras clave, propietario; filtros guardados ----
+const anyFilter = () => !!(S.colorFilter.size || S.tagFilter.size || S.ownerFilter);
+function passFilters(m){
+  if (S.matOrder || S.mass.on) return true;
+  if (S.colorFilter.size && !S.colorFilter.has(String(m.color || '').toLowerCase())) return false;
+  const tg = (m.tags || []).map(norm); for (const t of S.tagFilter) if (!tg.includes(t)) return false;
+  if (S.ownerFilter === 'own' && m.owner) return false; if (S.ownerFilter === 'third' && !m.owner) return false;
+  return true;
+}
+const savedFilters = () => ((S.settings && S.settings.app_config) || {}).savedFilters || [];
+function toggleTag(i){ const t = allTags()[i]; if (!t) return; if (S.tagFilter.has(t[0])) S.tagFilter.delete(t[0]); else S.tagFilter.add(t[0]); render(); }
+function setOwnerFilter(v){ S.ownerFilter = S.ownerFilter === v ? '' : v; render(); }
+function clearAllFilters(){ S.colorFilter = new Set(); S.tagFilter = new Set(); S.ownerFilter = ''; render(); }
+const sameSet = (a, b) => a.size === b.size && [...a].every(x => b.has(x));
+const filterIsSaved = f => sameSet(new Set(f.colors || []), S.colorFilter) && sameSet(new Set(f.tags || []), S.tagFilter) && (f.owner || '') === S.ownerFilter;
+function filterBar(groups){
+  if (!anyFilter() || S.matOrder || S.mass.on) return '';
+  const names = [...S.colorFilter].map(k => { const e = legendList().find(x => String(x.hex).toLowerCase() === k); return e ? entryText(e) : colorName(k); }), tags = [...S.tagFilter].map(k => (allTags().find(t => t[0] === k) || [k, k])[1]);
+  const own = S.ownerFilter === 'own' ? 'Propio' : S.ownerFilter === 'third' ? 'De terceros' : '', n = Object.values(groups).reduce((s, g) => s + g.length, 0);
+  return `<div class="info" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><div class="grow"><b>Filtrando</b><div class="sub">${esc([...names, ...tags, own].filter(Boolean).join(' · '))} · ${n} modelo${n === 1 ? '' : 's'}</div></div>${savedFilters().some(filterIsSaved) ? '' : '<button class="btn small" onclick="saveFilterAsk()">Guardar filtro</button>'}<button class="btn small" onclick="clearAllFilters()">Quitar filtros</button></div>`;
+}
+function tagBar(){
+  if (S.matOrder || S.mass.on) return '';
+  const tags = allTags(), thirds = S.models.some(m => m.owner), sv = savedFilters(); if (!tags.length && !thirds && !sv.length) return '';
+  const chip = (on, label, fn) => `<button type="button" class="chip ${on ? 'sel' : ''}" aria-pressed="${on}" onclick="${fn}">${on ? '✓ ' : ''}${esc(label)}</button>`;
+  return `<div class="pad">${sv.length ? `<div class="sub" style="font-weight:700;margin:6px 2px 0">Mis filtros · <a href="#" onclick="openSavedFilters();return false" style="color:var(--accent)">gestionar</a></div><div class="legend compact">${sv.map((f, i) => chip(filterIsSaved(f), f.name, `applySavedFilter(${i})`)).join('')}</div>` : ''}
+    ${tags.length || thirds ? `<div class="sub" style="font-weight:700;margin:6px 2px 0">Palabras clave · toca para filtrar</div><div class="legend compact">${tags.map(([k, t], i) => chip(S.tagFilter.has(k), t, `toggleTag(${i})`)).join('')}${thirds ? chip(S.ownerFilter === 'own', 'Propio', "setOwnerFilter('own')") + chip(S.ownerFilter === 'third', 'De terceros', "setOwnerFilter('third')") : ''}</div>` : ''}</div>`;
+}
+async function persistConfig(){ try { const r = await sb.from('settings').upsert({id:1, app_config:S.settings.app_config}); if (r.error) throw r.error; return true; } catch (e) { toast(errMsg(e), true, true); return false; } }
+async function saveFilterAsk(){
+  const nm = prompt('Nombre del filtro (por ejemplo: Focos de exterior)'); if (!nm || !nm.trim()) return;
+  const c = Object.assign({}, S.settings.app_config || {}); c.savedFilters = [...(c.savedFilters || []), {name:nm.trim(), colors:[...S.colorFilter], tags:[...S.tagFilter], owner:S.ownerFilter}];
+  S.settings.app_config = c; if (await persistConfig()) toast('Filtro guardado'); render();
+}
+function applySavedFilter(i){ const f = savedFilters()[i]; if (!f) return; if (filterIsSaved(f)) return clearAllFilters(); S.colorFilter = new Set(f.colors || []); S.tagFilter = new Set(f.tags || []); S.ownerFilter = f.owner || ''; render(); }
+function openSavedFilters(){
+  const sv = savedFilters();
+  openModal(`<h2>Mis filtros</h2>${sv.length ? `<div class="list" style="margin:12px 0 0">${sv.map((f, i) => `<div class="row urow"><div class="grow"><b>${esc(f.name)}</b></div><button class="btn small danger" onclick="delSavedFilter(${i})">Borrar</button></div>`).join('')}</div>` : '<div class="empty" style="margin:24px 0">No tienes filtros guardados.</div>'}<button class="btn block" style="margin-top:12px" onclick="closeModal()">Cerrar</button>`);
+}
+async function delSavedFilter(i){ const c = Object.assign({}, S.settings.app_config || {}); c.savedFilters = (c.savedFilters || []).filter((_, j) => j !== i); S.settings.app_config = c; await persistConfig(); openSavedFilters(); render(); }
+// ---- orden manual de modelos dentro de su categoría ----
+function orderToggle(){ S.matOrder = !S.matOrder; if (S.matOrder) S.mass = {on:false, sel:new Set()}; render(); }
+async function moveModel(id, dir){
+  const m = modelById(id), list = S.models.filter(x => (x.category_id || null) === (m.category_id || null)).slice().sort(modelOrder), i = list.findIndex(x => x.id === id), j = i + dir;
+  if (j < 0 || j >= list.length) return; [list[i], list[j]] = [list[j], list[i]];
+  await Promise.all(list.map((x, k) => (x.sort_order === k + 1 ? null : db(sb.from('equipment_models').update({sort_order:k + 1}).eq('id', x.id)))).filter(Boolean));
+  await loadAll();
+}
+// ---- selección en masa ----
+function massToggle(){ S.mass = {on:!S.mass.on, sel:new Set()}; if (S.mass.on) S.matOrder = false; render(); }
+function massPick(id, on){ if (on) S.mass.sel.add(id); else S.mass.sel.delete(id); render(); }
+function massBar(){
+  if (!S.mass.on) return '';
+  const n = S.mass.sel.size, b = (t, f) => `<button class="btn small" ${n ? '' : 'disabled'} onclick="${f}">${t}</button>`;
+  return `<div class="info"><b>${n ? `${n} modelo${n === 1 ? '' : 's'} seleccionado${n === 1 ? '' : 's'}` : 'Toca los modelos que quieras cambiar'}</b>
+    <div class="actions" style="margin:8px 0 0;flex-wrap:wrap">${b('Categoría…', 'massCategory()')}${b('Marca…', 'massBrand()')}${b('Color…', 'massColor()')}${b('Palabras clave…', 'massTags()')}${b('Etiquetas QR', 'massLabels()')}<button class="btn small danger" ${n ? '' : 'disabled'} onclick="massDelete()">Eliminar</button><button class="btn small" onclick="massToggle()">Cancelar</button></div></div>`;
+}
+const massIds = () => [...S.mass.sel];
+async function massApply(patch, msg){ await db(sb.from('equipment_models').update(patch).in('id', massIds())); const n = S.mass.sel.size; S.mass = {on:false, sel:new Set()}; closeModal(); await loadAll(); toast(`${msg} (${n})`); }
+function massCategory(){ openModal(`<h2>Cambiar de categoría</h2><div class="sub">${S.mass.sel.size} modelos</div><label for="ms-cat">Categoría</label><select id="ms-cat"><option value="">Sin categoría</option>${opts(S.categories.map(c => [c.id, c.name]), '')}</select><button class="btn primary block" style="margin-top:12px" onclick="massApply({category_id:$('#ms-cat').value||null},'Categoría cambiada')">Cambiar</button><button class="btn block" onclick="closeModal()">Cancelar</button>`); }
+function massBrand(){ openModal(`<h2>Cambiar la marca</h2><div class="sub">${S.mass.sel.size} modelos</div><label for="ms-brand">Marca</label><input id="ms-brand" list="brand-list2" autocomplete="off"><datalist id="brand-list2">${brandList().map(b => `<option value="${esc(b)}">`).join('')}</datalist><div class="sub">Vacío = quitar la marca.</div><button class="btn primary block" style="margin-top:12px" onclick="massApply({brand:canonBrand($('#ms-brand').value)},'Marca cambiada')">Cambiar</button><button class="btn block" onclick="closeModal()">Cancelar</button>`); }
+function massColor(){ const l = legendList().filter(e => e.hex); openModal(`<h2>Cambiar el color</h2><div class="sub">${S.mass.sel.size} modelos</div><div class="legend" style="margin:10px 0">${l.map(e => `<button type="button" class="chip" onclick="massApply({color:'${esc(e.hex)}'},'Color cambiado')"><span class="sw" style="background:${esc(e.hex)}"></span>${esc(entryText(e))}</button>`).join('')}</div><button class="btn block" onclick="massApply({color:null},'Color quitado')">Sin color</button><button class="btn block" onclick="closeModal()">Cancelar</button>`); }
+function massTags(){
+  const mine = [...new Set(massIds().flatMap(i => (modelById(i).tags || [])))];
+  openModal(`<h2>Palabras clave</h2><div class="sub">${S.mass.sel.size} modelos</div><label for="ms-add">Añadir (separadas por comas)</label><input id="ms-add" list="tag-list2" autocomplete="off"><datalist id="tag-list2">${allTags().map(t => `<option value="${esc(t[1])}">`).join('')}</datalist>
+    <button class="btn primary block" style="margin:10px 0" onclick="massTagsDo('add')">Añadir a todos</button>${mine.length ? `<label for="ms-del">Quitar de todos</label><select id="ms-del">${mine.map(t => `<option>${esc(t)}</option>`).join('')}</select><button class="btn block" onclick="massTagsDo('del')">Quitar</button>` : ''}<button class="btn block" onclick="closeModal()">Cancelar</button>`);
+}
+async function massTagsDo(op){
+  const add = op === 'add' ? canonTags($('#ms-add').value) : [], del = op === 'del' ? norm($('#ms-del').value) : null; if (op === 'add' && !add.length) return toast('Escribe una palabra clave', true);
+  for (const id of massIds()){ const m = modelById(id); let t = [...(m.tags || [])]; if (op === 'add') add.forEach(a => { if (!t.some(x => norm(x) === norm(a))) t.push(a); }); else t = t.filter(x => norm(x) !== del); await db(sb.from('equipment_models').update({tags:t}).eq('id', id)); }
+  const n = S.mass.sel.size; S.mass = {on:false, sel:new Set()}; closeModal(); await loadAll(); toast(`Palabras clave actualizadas (${n})`);
+}
+function massLabels(){ const ids = S.units.filter(u => S.mass.sel.has(u.model_id)).map(u => u.id); if (!ids.length) return toast('Los modelos elegidos no tienen unidades con etiqueta', true); printLabels(ids); }
+async function massDelete(){
+  const n = S.mass.sel.size; if (!confirm(`¿Eliminar ${n} modelo${n === 1 ? '' : 's'} con sus unidades? Se guardan 30 días en la papelera.`)) return;
+  for (const id of massIds()){ const m = modelById(id); await trashRun('model', id, `Modelo «${m.name}»`, () => db(sb.from('equipment_models').delete().eq('id', id))); }
+  S.mass = {on:false, sel:new Set()}; await loadAll(); toast(`${n} modelo${n === 1 ? '' : 's'} en la papelera`);
+}
+// ---- numerar unidades ----
+function autoPrefix(name){ const parts = String(name || '').replace(/\d+/g, ' ').match(/[A-ZÁÉÍÓÚÑ][a-záéíóúñ]*|[a-záéíóúñ]+/g) || ['X']; const p = parts.map(x => x[0].toUpperCase()).join(''); return (p.length >= 2 ? p : parts[0].slice(0, 3).toUpperCase()).slice(0, 4); }
+function numberPlan(mid, prefix, digits, start, scope){
+  const us = S.units.filter(u => u.model_id === mid).sort(unitCmp), target = scope === 'todas' ? us : us.filter(u => !u.serial_number), ids = new Set(target.map(u => u.id));
+  let n = start; const plan = target.map(u => ({u, serial:prefix + String(n++).padStart(digits, '0')})), taken = new Set(S.units.filter(u => !ids.has(u.id) && u.serial_number).map(u => compactStr(u.serial_number)));
+  return {plan, dup:plan.filter(p => taken.has(compactStr(p.serial))).map(p => p.serial)};
+}
+function openNumber(mid){
+  const m = modelById(mid), nums = S.units.filter(u => u.model_id === mid).map(u => nominalNumber(u)).filter(n => n != null), sin = S.units.filter(u => u.model_id === mid && !u.serial_number).length;
+  openModal(`<h2>Numerar unidades</h2><div class="sub">${esc(m.name)} · ${sin} sin número de serie</div>
+    <div class="two"><div><label for="nm-pre">Letras delante</label><input id="nm-pre" value="${esc(autoPrefix(m.name))}" oninput="numPreview('${mid}')" autocapitalize="characters"></div><div><label for="nm-start">Empezar en</label><input id="nm-start" type="number" min="0" value="${(nums.length ? Math.max(...nums) : 0) + 1}" oninput="numPreview('${mid}')"></div></div>
+    <div class="two"><div><label for="nm-dig">Cifras</label><input id="nm-dig" type="number" min="1" max="6" value="3" oninput="numPreview('${mid}')"></div><div><label for="nm-scope">A cuáles</label><select id="nm-scope" onchange="numPreview('${mid}')"><option value="sin">Solo las que no tienen número</option><option value="todas">Renumerar todas</option></select></div></div>
+    <div id="nm-prev" class="info" style="margin-top:10px"></div><button class="btn primary block" style="margin-top:10px" onclick="numberApply('${mid}')">Numerar</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
+  numPreview(mid);
+}
+function numRead(mid){ return numberPlan(mid, $('#nm-pre').value.trim().toUpperCase(), Math.max(1, Math.min(6, parseInt($('#nm-dig').value) || 3)), parseInt($('#nm-start').value) || 1, $('#nm-scope').value); }
+function numPreview(mid){
+  const r = numRead(mid), box = $('#nm-prev'); if (!box) return;
+  box.innerHTML = r.dup.length ? `<b style="color:var(--bad)">Estos números ya existen: ${esc(r.dup.slice(0, 5).join(', '))}</b>` : r.plan.length ? `<b>${r.plan.length} unidad${r.plan.length === 1 ? '' : 'es'}</b><div class="sub">${esc(r.plan.slice(0, 4).map(p => p.serial).join(', '))}${r.plan.length > 4 ? ' … ' + esc(r.plan[r.plan.length - 1].serial) : ''}</div>` : '<span class="sub">No hay unidades que numerar.</span>';
+}
+async function numberApply(mid){
+  const r = numRead(mid); if (!r.plan.length) return toast('No hay unidades que numerar', true); if (r.dup.length) return toast('Hay números repetidos: cambia las letras o dónde empieza', true);
+  if ($('#nm-scope').value === 'todas' && !confirm(`¿Renumerar las ${r.plan.length} unidades? Cambiarán sus números de serie (las etiquetas con QR siguen valiendo).`)) return;
+  for (let i = 0; i < r.plan.length; i += 10) await Promise.all(r.plan.slice(i, i + 10).map(p => db(sb.from('units').update({serial_number:p.serial}).eq('id', p.u.id))));
+  closeModal(); await loadAll(); toast(`${r.plan.length} unidades numeradas`);
+}
+// ---- unir modelos y mover unidades ----
+function openMerge(id){
+  const m = modelById(id), cand = S.models.filter(x => x.id !== id && !!x.is_bulk === !!m.is_bulk);
+  if (!cand.length) return toast('No hay otro modelo del mismo tipo con el que unirlo', true);
+  openModal(`<h2>Unir con otro modelo</h2><div class="sub">«${esc(m.name)}» desaparece y todo lo suyo pasa al modelo que elijas.</div>
+    <label for="mg-dst">Unir con</label><select id="mg-dst">${cand.map(x => `<option value="${x.id}">${esc(x.name)}${x.brand ? ' · ' + esc(x.brand) : ''}</option>`).join('')}</select>
+    <div class="info" style="margin-top:10px">${m.is_bulk ? `Pasan ${m.bulk_stock} de stock y sus reservas en shows.` : `Pasan ${S.units.filter(u => u.model_id === id).length} unidades, con sus reservas, historial y kits.`}</div>
+    <button class="btn primary block" style="margin-top:10px" onclick="mergeModels('${id}',$('#mg-dst').value)">Unir</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
+}
+async function mergeModels(src, dst){
+  const a = modelById(src), b = modelById(dst); if (!a || !b || a.id === b.id) return;
+  if (!confirm(`¿Unir «${a.name}» con «${b.name}»? «${a.name}» se elimina.`)) return;
+  if (a.is_bulk){
+    await db(sb.from('bulk_reservations').update({model_id:dst}).eq('model_id', src)); await db(sb.from('kit_items').update({model_id:dst}).eq('model_id', src)); await db(sb.from('bulk_logs').update({model_id:dst}).eq('model_id', src));
+    await db(sb.from('equipment_models').update({bulk_stock:(b.bulk_stock || 0) + (a.bulk_stock || 0), ...(a.bulk_repair || b.bulk_repair ? {bulk_repair:bulkRepair(b) + bulkRepair(a)} : {})}).eq('id', dst));
+  } else await db(sb.from('units').update({model_id:dst}).eq('model_id', src));
+  await db(sb.from('equipment_models').delete().eq('id', src));
+  S.view = {name:'model', id:dst}; closeModal(); await loadAll(); toast(`«${a.name}» unido con «${b.name}»`);
+}
+function openMoveUnits(id){
+  const m = modelById(id), us = S.units.filter(u => u.model_id === id).sort(unitCmp), cand = S.models.filter(x => x.id !== id && !x.is_bulk);
+  if (!cand.length) return toast('No hay otro modelo al que mover unidades', true);
+  openModal(`<h2>Mover unidades</h2><div class="sub">De «${esc(m.name)}» a otro modelo.</div><div class="list" style="margin:10px 0">${us.map(u => `<label class="row urow chkrow" style="padding:6px 12px"><input type="checkbox" class="mv-ck" value="${u.id}">${unitTile(u)}<span>${u.serial_number ? esc(u.serial_number) : '<span class="code sub">' + esc(u.code) + '</span>'}</span></label>`).join('')}</div>
+    <label for="mv-dst">Pasan a</label><select id="mv-dst">${cand.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select>
+    <button class="btn primary block" style="margin-top:10px" onclick="moveUnitsDo('${id}')">Mover las marcadas</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
+}
+async function moveUnitsDo(id){
+  const ids = [...document.querySelectorAll('.mv-ck:checked')].map(x => x.value); if (!ids.length) return toast('Marca las unidades que quieres mover', true);
+  const dst = modelById($('#mv-dst').value); await db(sb.from('units').update({model_id:dst.id}).in('id', ids)); closeModal(); await loadAll(); toast(`${ids.length} unidad${ids.length === 1 ? '' : 'es'} movida${ids.length === 1 ? '' : 's'} a «${dst.name}»`);
+}
+// ---- bajas de equipos con motivo y valor ----
+const RETIRE_REASONS = ['Vendido', 'Robado', 'Perdido', 'Roto sin arreglo', 'Otro'];
+const retiredUnits = () => S.units.filter(u => u.status === 'retired' || u.status === 'lost');
+const retiredBanner = u => (u.status === 'retired' || u.status === 'lost') ? `<div class="info" style="margin:8px 0 0"><b style="color:var(--bad)">${esc(UNIT_STATUS[u.status])}${u.retired_at ? ' el ' + esc(fmtDay(String(u.retired_at).slice(0, 10))) : ''}</b>${u.retired_reason ? `<div class="sub">${esc(u.retired_reason)}</div>` : ''}${u.retired_value != null ? `<div class="sub">Valor: ${eur(u.retired_value)}</div>` : ''}<div style="margin-top:6px"><button class="btn small" onclick="reactivateUnit('${u.id}')">Reactivar</button></div></div>` : '';
+function openRetire(id){
+  const u = unitById(id), pend = S.reservations.filter(r => r.unit_id === id && r.state === 'planned').length;
+  if (S.reservations.some(r => r.unit_id === id && r.state === 'out')) return toast('Está fuera del almacén: devuélvela antes de darla de baja', true);
+  openModal(`<h2>Dar de baja</h2><div class="sub">${esc(unitLabel(u))}</div>
+    <label for="rt-why">Motivo</label><select id="rt-why">${RETIRE_REASONS.map(r => `<option>${r}</option>`).join('')}</select>
+    <label for="rt-note">Detalle (opcional)</label><input id="rt-note" placeholder="Por ejemplo: vendida a Acme SL">
+    <div class="two"><div><label for="rt-val">Valor (€, venta o pérdida)</label><input id="rt-val" type="number" min="0" step="0.01" inputmode="decimal"></div><div><label for="rt-date">Fecha</label><input id="rt-date" type="date" value="${todayStr()}"></div></div>
+    ${pend ? `<div class="sub" style="color:var(--warn);font-weight:600;margin-top:8px">Tiene ${pend} reserva${pend === 1 ? '' : 's'} pendiente${pend === 1 ? '' : 's'}: se quitará${pend === 1 ? '' : 'n'} de los ${esc(W.p)}.</div>` : ''}
+    <button class="btn danger block" style="margin-top:12px" onclick="saveRetire('${id}')">Dar de baja</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
+}
+async function saveRetire(id){
+  const why = $('#rt-why').value, note = $('#rt-note').value.trim(), v = parseFloat($('#rt-val').value), date = $('#rt-date').value || todayStr();
+  await db(sb.from('reservations').delete().eq('unit_id', id).eq('state', 'planned'));
+  await db(sb.from('units').update({status:(why === 'Robado' || why === 'Perdido') ? 'lost' : 'retired', retired_at:new Date(date + 'T12:00:00').toISOString(), retired_reason:why + (note ? ' · ' + note : ''), retired_value:isNaN(v) ? null : v}).eq('id', id));
+  await db(sb.from('maintenance_logs').insert({unit_id:id, kind:'note', done_on:date, description:'Baja: ' + why + (note ? ' · ' + note : '')}));
+  closeModal(); await loadAll(); toast('Dada de baja');
+}
+async function reactivateUnit(id){ if (!confirm('¿Reactivar este equipo? Vuelve a estar operativo.')) return; await db(sb.from('units').update({status:'ok', retired_at:null, retired_reason:null, retired_value:null}).eq('id', id)); await loadAll(); openUnit(id); toast('Reactivada'); }
+function retiredView(){
+  const us = retiredUnits().sort((a, b) => String(b.retired_at || '').localeCompare(String(a.retired_at || ''))), tot = us.reduce((s, u) => s + (Number(u.retired_value) || 0), 0);
+  return bar('Bajas', {back:true}) + (us.length ? `<div class="info"><b>${us.length} equipo${us.length === 1 ? '' : 's'} de baja o perdido${us.length === 1 ? '' : 's'}</b>${tot ? `<div class="sub">Valor anotado: ${eur(tot)}</div>` : ''}</div>
+    <div class="list">${us.map(u => `<div class="row urow tap" onclick="openUnit('${u.id}')">${unitTile(u)}<div class="grow"><b>${esc(unitModelName(u))}</b><div class="sub">${unitSub(u)} · ${esc(UNIT_STATUS[u.status])}${u.retired_at ? ' · ' + esc(fmtDay(String(u.retired_at).slice(0, 10))) : ''}</div>${u.retired_reason ? `<div class="sub">${esc(u.retired_reason)}</div>` : ''}</div>${u.retired_value != null ? `<div class="count" style="font-size:15px">${eur(u.retired_value)}</div>` : ''}</div>`).join('')}</div>` : '<div class="empty">No hay equipos de baja.</div>');
+}
+// ---- consumibles: comprado / usado ----
+function openStock(mid, kind){
+  const m = modelById(mid), buy = kind === 'bought';
+  openModal(`<h2>${buy ? 'He comprado' : 'He usado'}</h2><div class="sub">${esc(m.name)} · ahora ${m.bulk_stock}</div><label for="sk-n">Cantidad</label><input id="sk-n" type="number" min="1" inputmode="numeric" value="1"><label for="sk-note">Nota (opcional)</label><input id="sk-note">
+    <button class="btn primary block" style="margin-top:10px" onclick="stockApply('${mid}','${kind}')">${buy ? 'Sumar al stock' : 'Restar del stock'}</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
+}
+async function stockApply(mid, kind){
+  const m = modelById(mid), n = parseInt($('#sk-n').value); if (!(n >= 1)) return toast('Escribe cuántos', true);
+  if (kind === 'used' && n > m.bulk_stock) return toast(`Solo quedan ${m.bulk_stock}`, true);
+  await db(sb.from('equipment_models').update({bulk_stock:m.bulk_stock + (kind === 'bought' ? n : -n)}).eq('id', mid));
+  await db(sb.from('bulk_logs').insert({model_id:mid, kind, qty:n, note:$('#sk-note').value.trim() || null})); closeModal(); await loadAll(); toast(kind === 'bought' ? `${n} sumados` : `${n} restados`);
+}
+function stockAlerts(){ return S.models.filter(lowStock).map(m => ({m, text:`Reponer: quedan ${m.bulk_stock} (mínimo ${m.min_stock})`, go:`openView('model','${m.id}')`})); }
+
+function matRowCtl(m, idx, total){
+  if (S.mass.on){ const on = S.mass.sel.has(m.id); return {click:`massPick('${m.id}',${!on})`, lead:`<input type="checkbox" class="massck" aria-label="Seleccionar ${esc(m.name)}" ${on ? 'checked' : ''} onclick="event.stopPropagation()" onchange="massPick('${m.id}',this.checked)">`, trail:''}; }
+  if (S.matOrder) return {click:'', lead:'', trail:`<div style="display:flex;flex-direction:column;gap:4px"><button class="btn small" aria-label="Subir ${esc(m.name)}" ${idx === 0 ? 'disabled' : ''} onclick="event.stopPropagation();moveModel('${m.id}',-1)">▲</button><button class="btn small" aria-label="Bajar ${esc(m.name)}" ${idx === total - 1 ? 'disabled' : ''} onclick="event.stopPropagation();moveModel('${m.id}',1)">▼</button></div>`};
+  return {click:`openView('model','${m.id}')`, lead:'', trail:''};
+}
+const rowExtraBadges = m => (m.owner ? `<span class="badge">De terceros: ${esc(m.owner)}</span>` : '') + (lowStock(m) ? '<span class="badge bad">Bajo mínimo</span>' : '');
 
 /* ============ Arranque ============ */
 S.queue = lsGet(QUEUE_KEY, []); S.failed = lsGet(FAIL_KEY, []);
