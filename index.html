@@ -288,7 +288,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = 'V1.12';   // siguiente: V1.13, V1.14…
+const APP_VERSION = 'V1.16';   // siguiente: V1.17, V1.18…
 // Cómo llamas a los shows (Más > Ajustes de la app): Show / Bolo / Evento… Todas las opciones son masculinas y el plural lleva «s».
 const W = {s:'show', p:'shows', S:'Show', P:'Shows'};
 const capFirst = x => x ? x.charAt(0).toUpperCase() + x.slice(1) : x;
@@ -367,7 +367,7 @@ function download(blob, name){
 
 /* ============ Estado ============ */
 const S = {
-  session:null, tab:'today', view:null, matMode:'equipos', nagged:false,
+  session:null, tab:'material', view:null, matMode:'equipos', nagged:false,
   categories:[], models:[], units:[], projects:[], reservations:[], techs:[], assigns:[],
   kits:[], kitItems:[], bulkRes:[], maint:[], settings:{}, clients:[], bulkLogs:[], customLabels:[], photos:[], docs:[], accs:[], kitPieces:[], quoteVersions:[], templates:[], tplItems:[],
   showsMode:'lista', calMonth:null, calDay:null,
@@ -611,7 +611,7 @@ function modelStats(m){
 
 /* ============ MATERIAL: equipos ============ */
 function matSeg(){
-  return `<div class="pad" style="margin-top:12px"><div class="seg"><button class="${S.matMode==='equipos'?'on':''}" onclick="setMat('equipos')">Equipos</button><button class="${S.matMode==='kits'?'on':''}" onclick="setMat('kits')">Kits</button></div></div>`;
+  return `<div class="pad" style="margin-top:12px"><div class="seg"><button class="${S.matMode==='equipos'?'on':''}" onclick="setMat('equipos')">Equipos</button><button class="${S.matMode==='kits'?'on':''}" onclick="setMat('kits')">Kits</button></div>${splitBtn() ? `<div style="margin-top:8px">${splitBtn()}</div>` : ''}</div>`;
 }
 function materialList(){
   if (S.matMode === 'kits') return kitsList();
@@ -721,7 +721,7 @@ function modelView(id){
   if (m.is_bulk){
     const lines = S.bulkRes.filter(b => b.model_id === id).map(b => ({b, p:projById(b.project_id)})).filter(x => x.p && x.b.state !== 'returned')
       .sort((x,y) => new Date(x.p.starts_at) - new Date(y.p.starts_at));
-    return head + galleryHtml('m', id) + docsHtml(m) + notesHtml('model', id) + `<div class="info"><b>${m.bulk_stock}</b> en stock · <span class="sub">por cantidad, sin número de serie</span>${kitBulkUsed(id) ? ` · <b>${kitBulkUsed(id)}</b> en kits (${kitBulkAvail(m)} libres para kits)` : ''}${bulkRepair(m) ? ` · <span style="color:var(--warn);font-weight:600">${bulkRepair(m)} en reparación</span>` : ''}</div>
+    return head + galleryHtml('m', id) + docsHtml(m) + notesHtml('model', id) + `<div class="info"><b>${m.bulk_stock}</b> en stock · <span class="sub">por cantidad, sin número de serie</span>${kitBulkUsed(id) ? ` · <b>${kitBulkUsed(id)}</b> en kits (${kitBulkAvail(m)} libres)` : ''}${bulkRepair(m) ? ` · <span style="color:var(--warn);font-weight:600">${bulkRepair(m)} en reparación</span>` : ''}</div>
       <div class="actions"><button class="btn" onclick="openModelForm('${id}')">Editar</button><button class="btn" onclick="openModelForm('','${id}')">Duplicar</button>${m.consumable ? `<button class="btn" onclick="openStock('${id}','bought')">He comprado…</button><button class="btn" onclick="openStock('${id}','used')">He usado…</button>` : ''}<button class="btn" onclick="openMerge('${id}')">Unir con otro modelo…</button><button class="btn" onclick="openChanges('equipment_models','${id}')">Cambios</button><button class="btn danger" onclick="deleteModel('${id}')">Eliminar</button></div>
       <div class="group">Reservado en ${W.p}</div>
       ${lines.length ? `<div class="list">${lines.map(({b,p}) => `<div class="row tap" onclick="go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))}</div></div>
@@ -3862,6 +3862,7 @@ function openSettings(){
     <div id="st-custom" ${isPre ? 'hidden' : ''} class="two"><div><label for="st-s">En singular</label><input id="st-s" value="${esc(W.s)}"></div><div><label for="st-p">En plural</label><input id="st-p" value="${esc(W.p)}"></div></div>
     <div class="sub">Cambia las pestañas, los títulos y los botones. Los nombres de lo que ya has creado no cambian. Usa palabras masculinas (bolo, evento, proyecto…).</div>
     <label class="chkrow"><input type="checkbox" id="st-gest" ${gesturesOn() ? 'checked' : ''} onchange="setGestures(this.checked)"><span>Gestos: deslizar desde el borde izquierdo para volver y tirar hacia abajo para actualizar</span></label>
+    <label class="chkrow"><input type="checkbox" id="st-split" ${splitPref() ? 'checked' : ''} onchange="setSplit(this.checked)"><span>Vista partida en pantallas anchas (lista a la izquierda y ficha a la derecha, a partir de 1000 px)</span></label>
     <button class="btn block" onclick="closeModal();openWarehouse()">Activar modo almacén…</button>
     <button class="btn primary block" onclick="saveSettingsApp()">Guardar</button><button class="btn block" onclick="closeModal()">Cerrar</button>`);
 }
@@ -4814,7 +4815,7 @@ async function lpPdf(share){
 }
 /* ============ USO DIARIO V1.09: Hoy, buscador, favoritos, notas, tour, gestos y atajos ============ */
 S.notes = []; S.favOnly = false;
-const navTabs = () => whMode() ? [['scan', 'Escanear'], ['shows', 'Carga'], ['more', 'Más']] : [['today', 'Hoy'], ['material', 'Material'], ['shows', '' + W.P], ['scan', 'Escanear'], ['more', 'Más']];
+const navTabs = () => whMode() ? [['scan', 'Escanear'], ['shows', 'Carga'], ['more', 'Más']] : [['scan', 'Escanear'], ['shows', '' + W.P], ['material', 'Material'], ['today', 'Hoy'], ['more', 'Más']];
 const DAY_MS = 864e5, tdStart = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
 const tdDiff = iso => Math.round((tdStart(iso) - tdStart(Date.now())) / DAY_MS);
 const tdTime = iso => new Date(iso).toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
@@ -4964,7 +4965,7 @@ function openTour(i){
     <div class="actions" style="margin-top:14px">${i > 0 ? `<button class="btn" onclick="openTour(${i - 1})">Anterior</button>` : ''}${last ? `<button class="btn primary" onclick="tourDone();closeModal()">Terminar</button>` : `<button class="btn primary" onclick="openTour(${i + 1})">Siguiente</button><button class="btn" onclick="tourDone();closeModal()">Saltar</button>`}</div>`);
 }
 function tourDone(){ try { localStorage.setItem('tourSeen', '1'); } catch (e) {} if (S.tab === 'today') render(); }
-const SHORTCUTS = [['Ctrl/⌘ + K  ·  /', 'Buscar en todo'], ['1 · 2 · 3 · 4 · 5', 'Cambiar de pestaña'], ['n', 'Nuevo (modelo, show o nota, según la pestaña)'], ['Esc', 'Cerrar la ventana o volver atrás'], ['?', 'Ver esta lista']];
+const SHORTCUTS = [['Ctrl/⌘ + K  ·  /', 'Buscar en todo'], ['1 · 2 · 3 · 4 · 5', 'Cambiar de pestaña, en el orden de la barra inferior'], ['n', 'Nuevo (modelo, show o nota, según la pestaña)'], ['v', 'Activar o desactivar la vista partida (pantallas anchas)'], ['Esc', 'Cerrar la ventana o volver atrás'], ['?', 'Ver esta lista']];
 function openShortcuts(){ openModal(`<h2>Atajos de teclado</h2><div class="list" style="margin:12px 0">${SHORTCUTS.map(([k, d]) => `<div class="row urow"><div class="grow"><b>${esc(k)}</b><div class="sub">${esc(d)}</div></div></div>`).join('')}</div><div class="sub">No funcionan mientras escribes en un campo.</div><button class="btn block" style="margin-top:12px" onclick="closeModal()">Cerrar</button>`); }
 // ---- gestos (103) ----
 const gesturesOn = () => { try { return localStorage.getItem('gestures') !== '0'; } catch (e) { return true; } };
@@ -4992,6 +4993,7 @@ document.addEventListener('keydown', e => {
   if (e.key === '/' && !whMode()){ e.preventDefault(); openSearch(); }
   else if (e.key === '?'){ openShortcuts(); }
   else if (/^[1-9]$/.test(e.key) && navTabs()[+e.key - 1]) go(navTabs()[+e.key - 1][0]);
+  else if (e.key === 'v' && window.innerWidth >= 1000 && !whMode()){ setSplit(!splitPref()); }
   else if (e.key === 'n' && !whMode()){ if (S.tab === 'material') openModelForm(); else if (S.tab === 'shows') openProjectForm(); else if (S.tab === 'today') openNote(); }
 });
 
@@ -5117,7 +5119,7 @@ function downloadAllIcs(){
   download(new Blob([icsDoc(ps.map(p => icsVevent(p, p.status === 'quoted' ? 'TENTATIVE' : 'CONFIRMED')))], {type:'text/calendar'}), 'calendario-' + (W.p || 'shows') + '.ics');
   toast(`Calendario con ${ps.length} ${ps.length === 1 ? W.s : W.p}: ábrelo con tu calendario`);
 }
-const icsBar = () => `<div class="actions" style="margin-top:6px"><button class="btn small" onclick="downloadAllIcs()">Calendario de todos los ${esc(W.p)} (.ics)</button></div>`;
+const icsBar = () => `<div class="actions" style="margin-top:6px">${splitBtn()}<button class="btn small" onclick="downloadAllIcs()">Calendario de todos los ${esc(W.p)} (.ics)</button></div>`;
 
 /* ============ V1.11: planificador de furgoneta, calendario arrastrable y dos columnas ============ */
 // ---- furgonetas (medidas en cm; sin tocar la base de datos) ----
@@ -5292,7 +5294,10 @@ function calOver(e){ if (!CALDRAG) return; e.preventDefault(); e.currentTarget.c
 function calLeave(e){ e.currentTarget.classList.remove('dropok'); }
 function calDrop(e, k){ e.preventDefault(); e.currentTarget.classList.remove('dropok'); const pid = CALDRAG || (e.dataTransfer && e.dataTransfer.getData('text/plain')); CALDRAG = null; if (pid) askMoveShow(pid, k); }
 // ---- dos columnas en pantallas anchas (107) ----
-const splitOn = () => window.innerWidth >= 1000 && !whMode() && ['material', 'shows'].includes(S.tab);
+const splitPref = () => { try { return localStorage.getItem('split') !== '0'; } catch (e) { return true; } };
+const splitOn = () => window.innerWidth >= 1000 && !whMode() && splitPref() && ['material', 'shows'].includes(S.tab);
+function setSplit(on){ try { localStorage.setItem('split', on ? '1' : '0'); } catch (e) {} render(); toast(on ? 'Vista partida activada' : 'Vista partida desactivada'); }
+const splitBtn = () => (window.innerWidth >= 1000 && !whMode()) ? `<button class="btn small" aria-pressed="${splitPref()}" onclick="setSplit(${!splitPref()})">Vista partida: ${splitPref() ? 'sí' : 'no'}</button>` : '';
 function splitMark(){ if (!S.view) return; document.querySelectorAll('.pl .row[onclick]').forEach(r => { if ((r.getAttribute('onclick') || '').includes("'" + S.view.id + "'")) r.classList.add('sel'); }); }
 let RS_WAS = null;
 window.addEventListener('resize', () => { const on = window.innerWidth >= 1000; if (RS_WAS !== on){ RS_WAS = on; if (S.session) render(); } });
