@@ -19,7 +19,7 @@
 :root{
   --bg:#E6E9EE; --panel:#FFFFFF; --ink:#1B1F27; --muted:#657084; --line:#D3D8E0;
   --accent:#2457F5; --accent-ink:#FFFFFF;
-  --ok:#1B7F46; --okbg:#DDF1E5; --warn:#9A6200; --warnbg:#FBEBCB; --bad:#B8321F; --badbg:#F8DCD7;
+  --ok:#1B7F46; --okbg:#DDF1E5; --warn:#9A6200; --warnbg:#FBEBCB; --bad:#B8321F; --badbg:#F8DCD7; --info:#1B4FC9; --infobg:#DCE6FF;
   --r:10px;
 }
 @media (prefers-color-scheme: dark){
@@ -27,14 +27,14 @@
     color-scheme:dark;
     --bg:#14181F; --panel:#1E242E; --ink:#E8ECF2; --muted:#9AA5B8; --line:#2E3644;
     --accent:#6C8DFF; --accent-ink:#0E1320;
-    --ok:#5ED08C; --okbg:#173525; --warn:#F0B84A; --warnbg:#3A2E10; --bad:#FF8A78; --badbg:#3E1D18;
+    --ok:#5ED08C; --okbg:#173525; --warn:#F0B84A; --warnbg:#3A2E10; --bad:#FF8A78; --badbg:#3E1D18; --info:#8FB0FF; --infobg:#1A2A52;
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
   --bg:#14181F; --panel:#1E242E; --ink:#E8ECF2; --muted:#9AA5B8; --line:#2E3644;
   --accent:#6C8DFF; --accent-ink:#0E1320;
-  --ok:#5ED08C; --okbg:#173525; --warn:#F0B84A; --warnbg:#3A2E10; --bad:#FF8A78; --badbg:#3E1D18;
+  --ok:#5ED08C; --okbg:#173525; --warn:#F0B84A; --warnbg:#3A2E10; --bad:#FF8A78; --badbg:#3E1D18; --info:#8FB0FF; --infobg:#1A2A52;
 }
 :root[data-theme="light"]{color-scheme:light}
 .seg.four button{font-size:14px;padding-left:2px;padding-right:2px;white-space:nowrap}
@@ -91,6 +91,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .badge.ok{background:var(--okbg);color:var(--ok)}
 .badge.warn{background:var(--warnbg);color:var(--warn)}
 .badge.bad{background:var(--badbg);color:var(--bad)}
+.badge.fuera{background:var(--infobg);color:var(--info)}
 .empty{margin:40px 24px;text-align:center;color:var(--muted)}
 .search{margin:12px 16px 0}
 label{display:block;font-size:14px;color:var(--muted);margin:12px 0 4px}
@@ -288,7 +289,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = 'V1.16';   // siguiente: V1.17, V1.18…
+const APP_VERSION = 'V1.19';   // siguiente: V1.20, V1.21…
 // Cómo llamas a los shows (Más > Ajustes de la app): Show / Bolo / Evento… Todas las opciones son masculinas y el plural lleva «s».
 const W = {s:'show', p:'shows', S:'Show', P:'Shows'};
 const capFirst = x => x ? x.charAt(0).toUpperCase() + x.slice(1) : x;
@@ -315,6 +316,14 @@ const opts = (list, sel) => list.map(([v,t]) => `<option value="${esc(v)}" ${v==
 
 const UNIT_STATUS = {ok:'Operativa', repair:'En reparación', lost:'Perdida', retired:'De baja'};
 const UNIT_CLASS = {ok:'ok', repair:'warn', lost:'bad', retired:'bad'};
+// Etiqueta de estado de una unidad: Operativa (verde) · Fuera (azul, está en un show) · Incompleta / En reparación (aviso) · Perdida / De baja (rojo)
+function unitBadges(u){
+  const out = S.reservations.some(r => r.unit_id === u.id && r.state === 'out'), b = [];
+  const cond = u.status === 'repair' ? ['warn', UNIT_STATUS.repair] : (u.status === 'lost' || u.status === 'retired') ? ['bad', UNIT_STATUS[u.status]] : (u.missing_note ? ['warn', 'Incompleta'] : null);
+  if (out) b.push(['fuera', 'Fuera']);
+  if (cond) b.push(cond); else if (!out) b.push(['ok', UNIT_STATUS.ok]);
+  return b.map(([c, t]) => `<span class="badge ${c}">${esc(t)}</span>`).join('');
+}
 const PROJ_STATUS = {draft:'Borrador', quoted:'Presupuestado', confirmed:'Confirmado', done:'Hecho', cancelled:'Cancelado'};
 const RES_STATE = {planned:'Pendiente', out:'Fuera', returned:'Devuelto', mixed:'Parcial'};
 const RES_CLASS = {planned:'', out:'warn', returned:'ok', mixed:'warn'};
@@ -736,10 +745,11 @@ function modelView(id){
       <button class="btn" onclick="openChanges('equipment_models','${id}')">Cambios</button><button class="btn danger" onclick="deleteModel('${id}')">Eliminar</button>
     </div>
     <div class="group">Unidades (${us.length})</div>
+    ${us.length ? `<div class="sub" style="margin:0 18px 6px">Operativa = lista · Fuera = en un ${esc(W.s)} · Incompleta o En reparación = aviso</div>` : ''}
     ${us.length ? `<div class="list">${us.map(u => { const w = unitWhere(u), k = unitKit(u); return `<div class="row tap urow" onclick="openUnit('${u.id}')">${unitTile(u)}
       <div class="grow"><b>${esc(unitModelName(u))}</b>
-      <div class="sub">${[u.serial_number ? esc(u.serial_number) : `<span class="code faint">${esc(u.code)}</span>`, k ? 'Kit ' + esc(k.name) : '', w ? esc(w.t) : '', u.missing_note ? `<span style="color:var(--warn);font-weight:600">Incompleto: ${esc(u.missing_note)}</span>` : ''].filter(Boolean).join(' · ')}</div></div>
-      <span class="badge ${UNIT_CLASS[u.status]}">${UNIT_STATUS[u.status]}</span></div>`; }).join('')}</div>`
+      <div class="sub">${[u.serial_number ? esc(u.serial_number) : `<span class="code faint">${esc(u.code)}</span>`, k ? 'Kit ' + esc(k.name) : '', w ? esc(w.t.replace(/^Fuera · /, 'En ')) : '', u.missing_note ? `<span style="color:var(--warn);font-weight:600">Falta: ${esc(u.missing_note)}</span>` : '', (u.status === 'repair' && repairLog(u)) ? `<span style="color:var(--warn);font-weight:600">${repairLog(u).description === 'Devuelta con daños' ? 'Devuelta con daños' : 'Roto: ' + esc(repairLog(u).description)}</span>` : ''].filter(Boolean).join(' · ')}</div></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">${unitBadges(u)}</div></div>`; }).join('')}</div>`
       : `<div class="empty">Este modelo aún no tiene unidades.</div>`}
     <div class="actions"><button class="btn primary" onclick="openAddUnits('${id}')">+ Añadir unidades</button></div>`;
 }
@@ -896,6 +906,7 @@ function openUnit(id){
     <label for="u-serial">Número de serie</label><input id="u-serial" value="${esc(u.serial_number||'')}">
     <label for="u-mfr">Nº de serie del fabricante (garantías y talleres)</label><input id="u-mfr" value="${esc(u.manufacturer_serial||'')}">
     <label for="u-status">Estado</label><select id="u-status" onchange="unitStateChanged(${u.missing_note ? 'true' : 'false'})">${opts(Object.entries(UNIT_FORM_STATES), u.status === 'ok' && u.missing_note ? 'incomplete' : u.status)}</select>
+    <div id="u-broken-box" ${u.status === 'repair' ? '' : 'hidden'}><label for="u-broken">Qué está roto</label><input id="u-broken" value="${esc(u.status === 'repair' ? ((repairLog(u) || {}).description || '') : '')}" placeholder="Por ejemplo: lente rota, no enciende…"></div>
     <div id="u-missing-box" ${u.missing_note ? '' : 'hidden'}><label for="u-missing">Qué falta</label><input id="u-missing" value="${esc(u.missing_note||'')}" placeholder="Por ejemplo: garra, cable de alimentación…"></div>
     <div class="two"><div><label for="u-buy">Fecha de compra</label><input id="u-buy" type="date" value="${u.purchase_date||''}"></div>
     <div><label for="u-next">Próxima revisión</label><input id="u-next" type="date" value="${u.next_service||''}"></div></div>
@@ -912,6 +923,7 @@ const UNIT_FORM_STATES = {ok:'Operativa', incomplete:'Incompleto', repair:'En re
 function unitStateChanged(hadMissing){
   const v = $('#u-status').value, box = $('#u-missing-box');
   box.hidden = !(v === 'incomplete' || (v !== 'ok' && hadMissing));       // si estaba incompleto y pasa a reparación, se sigue viendo qué le falta
+  const bb = $('#u-broken-box'); if (bb){ bb.hidden = v !== 'repair'; if (v === 'repair' && !$('#u-broken').value.trim()) $('#u-broken').focus(); }
   if (v === 'incomplete' && !$('#u-missing').value.trim()) $('#u-missing').focus();
 }
 async function saveUnit(id){
@@ -927,6 +939,13 @@ async function saveUnit(id){
   // el historial de la unidad recoge cuándo pasó a incompleta o a completa
   if (missing && missing !== (u.missing_note || null)) await db(sb.from('maintenance_logs').insert({unit_id:id, kind:'missing', done_on:todayStr(), description:missing}));
   else if (!missing && u.missing_note) await db(sb.from('maintenance_logs').insert({unit_id:id, kind:'missing', done_on:todayStr(), description:'Completo: ya no falta nada'}));
+  // qué está roto: queda en el historial como una reparación nueva (la última es la que se enseña)
+  if (status === 'repair'){
+    const note = ($('#u-broken').value || '').trim(), cur = u.status === 'repair' ? ((repairLog(u) || {}).description || '') : '';
+    if (note && note !== cur) await db(sb.from('maintenance_logs').insert({unit_id:id, kind:'repair', done_on:todayStr(), description:note}));
+  } else if (u.status === 'repair' && status === 'ok'){
+    await db(sb.from('maintenance_logs').insert({unit_id:id, kind:'repair', done_on:todayStr(), description:'Reparado'}));
+  }
   closeModal(); await loadAll(); toast('Guardado');
 }
 async function deleteUnit(id){
@@ -1721,7 +1740,9 @@ function maintAlerts(){
 }
 // Última nota de reparación de una unidad (la que se escribió al devolverla)
 function repairLog(u){
-  return S.maint.filter(l => l.unit_id === u.id && l.kind === 'repair' && l.description !== 'Reparado').sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))[0];
+  const ls = S.maint.filter(l => l.unit_id === u.id && l.kind === 'repair' && l.description !== 'Reparado').map((l, i) => [l, i]);
+  ls.sort((a, b) => String(b[0].created_at).localeCompare(String(a[0].created_at)) || b[1] - a[1]);      // en un empate gana el apunte más reciente (el último guardado)
+  return ls.length ? ls[0][0] : undefined;
 }
 function openAlerts(){
   const al = maintAlerts();
@@ -4318,7 +4339,7 @@ function matRowCtl(m, idx, total, list){
   }
   return {click:`openView('model','${m.id}')`, lead:'', trail:''};
 }
-const rowExtraBadges = m => (m.owner ? `<span class="badge">De terceros: ${esc(m.owner)}</span>` : '') + (lowStock(m) ? '<span class="badge bad">Bajo mínimo</span>' : '') + (m.is_bulk && kitBulkUsed(m.id) ? `<span class="badge">${kitBulkUsed(m.id)} en kits</span>` : '');
+const rowExtraBadges = m => (m.owner ? `<span class="badge">De terceros: ${esc(m.owner)}</span>` : '') + (lowStock(m) ? '<span class="badge bad">Bajo mínimo</span>' : '') + (m.is_bulk && kitBulkUsed(m.id) ? `<span class="badge">${kitBulkUsed(m.id)} en kits</span><span class="badge">${kitBulkAvail(m)} libres</span>` : '');
 
 /* ============ LISTAS DE COMPROBACIÓN V1.06: accesorios, piezas del kit, etiqueta con contenido ============ */
 const accText = a => (a.qty > 1 ? a.qty + '× ' : '') + a.name;
