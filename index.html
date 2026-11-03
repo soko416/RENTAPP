@@ -45,6 +45,16 @@ body.wh .seg.four button{font-size:15px}
 .camzoom input{flex:1;padding:0}
 body.wh .btn,body.wh .seg button{min-height:54px;font-size:17px}
 body.wh nav.tabs button{font-size:17px;padding-top:16px;padding-bottom:16px}
+#app.split{max-width:1480px;display:grid;grid-template-columns:minmax(360px,440px) 1fr;height:100vh;overflow:hidden;padding-bottom:0}
+.pane{height:100vh;overflow-y:auto;padding-bottom:calc(84px + env(safe-area-inset-bottom));min-width:0}
+.pane.pl{border-right:1px solid var(--line)}
+.pl .row.sel{background:color-mix(in srgb, var(--accent) 12%, var(--panel));box-shadow:inset 3px 0 0 var(--accent)}
+.split-ph{margin-top:28vh}
+.cal-day.dropok{outline:2px dashed var(--accent);outline-offset:-2px}
+.fam-head{display:flex;align-items:center;gap:8px;padding:8px 16px 4px;font-weight:700;font-size:13px;color:var(--muted);border-top:1px solid var(--line)}
+.fam-head:first-child{border-top:0}
+.kc-cat{border:1px solid var(--line);border-radius:12px;margin:8px 0;padding:0 12px;background:var(--panel)}
+.kc-cat summary{display:flex;align-items:center;gap:8px;padding:12px 0;font-weight:700;cursor:pointer;list-style-position:inside}
 .undobar{position:fixed;left:16px;right:16px;bottom:calc(100px + env(safe-area-inset-bottom));z-index:31;max-width:560px;margin:0 auto;background:var(--ink);color:var(--bg);padding:10px 12px 10px 14px;border-radius:12px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,.3)}
 .undobar span{flex:1}
 .undobar button{background:transparent;border:1px solid currentColor;color:inherit;border-radius:8px;padding:8px 14px;font:inherit;font-weight:700;cursor:pointer;min-height:40px}
@@ -278,7 +288,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = 'V1.09';   // siguiente: V1.10, V1.11…
+const APP_VERSION = 'V1.12';   // siguiente: V1.13, V1.14…
 // Cómo llamas a los shows (Más > Ajustes de la app): Show / Bolo / Evento… Todas las opciones son masculinas y el plural lleva «s».
 const W = {s:'show', p:'shows', S:'Show', P:'Shows'};
 const capFirst = x => x ? x.charAt(0).toUpperCase() + x.slice(1) : x;
@@ -453,10 +463,10 @@ async function loadAll(draw=true){
   try { const qv = await fetchAll('quote_versions'); S.quoteVersions = qv.error ? [] : (qv.data || []); } catch (e) { S.quoteVersions = []; }
   try { const tt = await fetchAll('show_templates'), ti = await fetchAll('template_items'); S.templates = tt.error ? [] : (tt.data || []); S.tplItems = ti.error ? [] : (ti.data || []); } catch (e) { S.templates = []; S.tplItems = []; }
   try { const nn = await fetchAll('notes'); S.notes = nn.error ? [] : (nn.data || []); } catch (e) { S.notes = []; }
-  S.clients.sort(byName); S.categories.sort(catCmp); S.models.sort(modelOrder); S.techs.sort(byName); S.kits.sort(byName);
+  S.clients.sort(byName); S.categories.sort(catCmp); S.techs.sort(byName); S.kits.sort(kitOrder);
   S.units.sort((a,b) => String(a.created_at).localeCompare(String(b.created_at)));
   S.projects.sort((a,b) => new Date(a.starts_at) - new Date(b.starts_at));
-  S.settings = st.data || {}; applyAppConfig();
+  S.settings = st.data || {}; applyAppConfig(); resortModels();
   S.queue.forEach(applyLocal);          // lo que aún no se ha enviado sigue viéndose reflejado
   saveSnapshot(); updateOffBar();
   autoMergeBulk();
@@ -500,23 +510,29 @@ function navHTML(){
 }
 
 let lastKey = '';
+function tabBody(tab, v){
+  if (tab === 'today') return todayView();
+  if (tab === 'material') return v === 'model' ? modelView(S.view.id) : v === 'kit' ? kitView(S.view.id) : v === 'repairs' ? repairsView() : v === 'labels' ? labelsView() : v === 'avail' ? availView() : v === 'retired' ? retiredView() : v === 'profit' ? profitView() : materialList();
+  if (tab === 'shows') return v === 'van' ? vanView(S.view.id) : v === 'load' ? loadView(S.view.id) : (v === 'project' && !whMode()) ? projectView(S.view.id) : showsList();
+  if (tab === 'scan') return scanView();
+  if (tab === 'techs') return v === 'tech' ? techView(S.view.id) : techsList();
+  if (tab === 'more') return v === 'clients' ? clientsList() : v === 'client' ? clientView(S.view.id) : v === 'trash' ? trashView() : v === 'history' ? historyView() : v === 'system' ? systemView() : moreView();
+  return '';
+}
 function render(){
   if (!S.session){ stopCam(); $('#app').innerHTML = loginHTML(); return; }
   if (whMode() && !['scan', 'shows', 'more'].includes(S.tab)) S.tab = 'scan';
   if (S.tab !== 'scan') stopCam();
   const key = S.tab + '/' + (S.view ? S.view.name + S.view.id : '') + S.matMode;
   const y = key === lastKey ? window.scrollY : 0;
-  let body = '';
-  const v = S.view && S.view.name;
-  if (S.tab === 'today') body = todayView();
-  else if (S.tab === 'material') body = v === 'model' ? modelView(S.view.id) : v === 'kit' ? kitView(S.view.id) : v === 'repairs' ? repairsView() : v === 'labels' ? labelsView() : v === 'avail' ? availView() : v === 'retired' ? retiredView() : v === 'profit' ? profitView() : materialList();
-  else if (S.tab === 'shows') body = v === 'load' ? loadView(S.view.id) : (v === 'project' && !whMode()) ? projectView(S.view.id) : showsList();
-  else if (S.tab === 'scan') body = scanView();
-  else if (S.tab === 'techs') body = v === 'tech' ? techView(S.view.id) : techsList();
-  else if (S.tab === 'more') body = v === 'clients' ? clientsList() : v === 'client' ? clientView(S.view.id) : v === 'trash' ? trashView() : v === 'history' ? historyView() : v === 'system' ? systemView() : moreView();
-  $('#app').innerHTML = body + navHTML();
+  const v = S.view && S.view.name, app = $('#app'), split = splitOn();
+  const pl0 = app.querySelector('.pl'), pr0 = app.querySelector('.pr'), plTop = pl0 ? pl0.scrollTop : 0, prTop = pr0 ? pr0.scrollTop : 0;
+  const body = split ? `<div class="pane pl">${tabBody(S.tab, null)}</div><div class="pane pr">${S.view ? tabBody(S.tab, v) : '<div class="empty split-ph">Elige algo de la lista para verlo aquí.</div>'}</div>` : tabBody(S.tab, v);
+  app.className = split ? 'split' : '';
+  app.innerHTML = body + navHTML();
+  if (split){ const l = app.querySelector('.pl'), r = app.querySelector('.pr'); if (l) l.scrollTop = plTop; if (r) r.scrollTop = key === lastKey ? prTop : 0; splitMark(); }
   lastKey = key;
-  if (y) window.scrollTo(0, y);
+  if (y && !split) window.scrollTo(0, y);
   if (S.tab === 'scan') afterScanRender();
   document.querySelectorAll('input[data-ind]').forEach(i => i.indeterminate = true);
 }
@@ -594,15 +610,12 @@ function modelStats(m){
 }
 
 /* ============ MATERIAL: equipos ============ */
-function filterRows(v){
-  v = v.toLowerCase();
-  document.querySelectorAll('[data-s]').forEach(el => el.hidden = !el.dataset.s.includes(v));
-}
 function matSeg(){
   return `<div class="pad" style="margin-top:12px"><div class="seg"><button class="${S.matMode==='equipos'?'on':''}" onclick="setMat('equipos')">Equipos</button><button class="${S.matMode==='kits'?'on':''}" onclick="setMat('kits')">Kits</button></div></div>`;
 }
 function materialList(){
   if (S.matMode === 'kits') return kitsList();
+  S.catForce = anyFilter() || S.matOrder || S.mass.on;
   const groups = {};
   S.models.forEach(m => {
     if (!passFilters(m)) return;       // filtros: color, palabras clave y propietario
@@ -612,18 +625,18 @@ function materialList(){
   });
   const names = Object.keys(groups).sort(catOrder);
   const body = '<div class="pad mat">' + names.map(n => catSection('m:' + catKey(n), n, `${groups[n].length} modelo${groups[n].length === 1 ? '' : 's'}`, groups[n].map((m, idx) => {
-    const us = S.units.filter(u => u.model_id === m.id), rk = matRowCtl(m, idx, groups[n].length);
+    const us = S.units.filter(u => u.model_id === m.id), rk = matRowCtl(m, idx, groups[n].length, groups[n]);
     // Solo dos cuentas: lo que está fuera de servicio (roto, perdido o de baja; en cables, los que están en reparación) y lo marcado como incompleto
     const nBad = us.filter(u => u.status !== 'ok').length + bulkRepair(m), nInc = us.filter(u => u.missing_note).length;
     const subTxt = [colorText(m), m.brand].filter(Boolean).join(' · ');
-    return `<div class="row tap mrow" data-s="${esc((m.name+' '+(m.brand||'')+' '+n+' '+us.map(u=>(u.serial_number||'')+' '+(u.manufacturer_serial||'')).join(' ')+' '+(m.tags||[]).join(' ')+' '+(m.owner||'')).toLowerCase())}" onclick="${rk.click}">
+    return famHead(groups[n], idx) + `<div class="row tap mrow" data-s="${esc((m.name+' '+(m.brand||'')+' '+n+' '+us.map(u=>(u.serial_number||'')+' '+(u.manufacturer_serial||'')).join(' ')+' '+(m.tags||[]).join(' ')+' '+(m.owner||'')).toLowerCase())}" onclick="${rk.click}">
       ${rk.lead}${m.photo_url?`<img class="thumb" loading="lazy" src="${esc(m.photo_url)}" alt="">`:''}
       <div class="grow"><div class="mline" style="flex-wrap:nowrap;justify-content:space-between"><b>${colorDot(m)}${esc(m.name)}</b><span class="count">${m.is_bulk ? m.bulk_stock : us.length}</span></div>${subTxt || m.is_bulk || nBad || nInc || rowExtraBadges(m) ? `<div class="mline">${subTxt ? `<span class="sub">${esc(subTxt)}</span>` : ''}${m.is_bulk ? '<span class="badge">Por cantidad</span>' : ''}${nBad ? `<span class="badge warn">${nBad} fuera de servicio</span>` : ''}${nInc ? `<span class="badge warn">${nInc} incompleto${nInc === 1 ? '' : 's'}</span>` : ''}${rowExtraBadges(m)}</div>` : ''}</div>${rk.trail}</div>`;
   }).join(''), /cabl/i.test(n) ? legendChips() : '')).join('') + '</div>';
   return bar('Material', {actions: `<button class="btn small" onclick="openView('labels','')">Etiquetas${labelPendingCount() ? ' (' + labelPendingCount() + ')' : ''}</button><button class="btn primary small" onclick="openModelForm()">+ Modelo</button>`})
     + matSeg()
     + (S.models.length ? `<div class="search"><input type="search" placeholder="Buscar por nombre, marca o nº de serie" oninput="filterRows(this.value)"></div>` : '')
-    + `<div class="actions" style="margin-top:10px"><button class="btn small" onclick="openCategories()">Gestionar categorías</button><button class="btn small" onclick="openBrands()">Gestionar marcas</button><button class="btn small" onclick="openView('avail','')">Disponibilidad</button><button class="btn small" onclick="openView('profit','')">Rentabilidad</button><button class="btn small" onclick="massToggle()">${S.mass.on ? 'Cancelar selección' : 'Seleccionar'}</button><button class="btn small" onclick="orderToggle()">${S.matOrder ? 'Terminar de ordenar' : 'Ordenar'}</button>${retiredUnits().length ? `<button class="btn small" onclick="openView('retired','')">Bajas (${retiredUnits().length})</button>` : ''}<button class="btn small" onclick="openLegend()">Leyenda de colores</button>${panelBtns()}</div>${filterBar(groups)}${tagBar()}${massBar()}${matPanelHtml()}`
+    + `<div class="actions" style="margin-top:10px"><button class="btn small" onclick="openCategories()">Gestionar categorías</button><button class="btn small" onclick="openBrands()">Gestionar marcas</button><button class="btn small" onclick="openView('avail','')">Disponibilidad</button><button class="btn small" onclick="openView('profit','')">Rentabilidad</button><button class="btn small" onclick="massToggle()">${S.mass.on ? 'Cancelar selección' : 'Seleccionar'}</button><button class="btn small" onclick="toggleAllCats()">Abrir / cerrar todo</button><button class="btn small" onclick="orderToggle()">${S.matOrder ? 'Terminar de ordenar' : 'Ordenar'}</button>${retiredUnits().length ? `<button class="btn small" onclick="openView('retired','')">Bajas (${retiredUnits().length})</button>` : ''}<button class="btn small" onclick="openLegend()">Leyenda de colores</button>${panelBtns()}</div>${filterBar(groups)}${tagBar()}${massBar()}${matPanelHtml()}`
     + (S.models.length ? (names.length || !anyFilter() ? body : '') : `<div class="empty">Aún no hay material.<br>Pulsa «+ Modelo» para añadir el primer equipo.</div>`);
 }
 
@@ -708,8 +721,8 @@ function modelView(id){
   if (m.is_bulk){
     const lines = S.bulkRes.filter(b => b.model_id === id).map(b => ({b, p:projById(b.project_id)})).filter(x => x.p && x.b.state !== 'returned')
       .sort((x,y) => new Date(x.p.starts_at) - new Date(y.p.starts_at));
-    return head + galleryHtml('m', id) + docsHtml(m) + notesHtml('model', id) + `<div class="info"><b>${m.bulk_stock}</b> en stock · <span class="sub">por cantidad, sin número de serie</span>${bulkRepair(m) ? ` · <span style="color:var(--warn);font-weight:600">${bulkRepair(m)} en reparación</span>` : ''}</div>
-      <div class="actions"><button class="btn" onclick="openModelForm('${id}')">Editar</button>${m.consumable ? `<button class="btn" onclick="openStock('${id}','bought')">He comprado…</button><button class="btn" onclick="openStock('${id}','used')">He usado…</button>` : ''}<button class="btn" onclick="openMerge('${id}')">Unir con otro modelo…</button><button class="btn" onclick="openChanges('equipment_models','${id}')">Cambios</button><button class="btn danger" onclick="deleteModel('${id}')">Eliminar</button></div>
+    return head + galleryHtml('m', id) + docsHtml(m) + notesHtml('model', id) + `<div class="info"><b>${m.bulk_stock}</b> en stock · <span class="sub">por cantidad, sin número de serie</span>${kitBulkUsed(id) ? ` · <b>${kitBulkUsed(id)}</b> en kits (${kitBulkAvail(m)} libres para kits)` : ''}${bulkRepair(m) ? ` · <span style="color:var(--warn);font-weight:600">${bulkRepair(m)} en reparación</span>` : ''}</div>
+      <div class="actions"><button class="btn" onclick="openModelForm('${id}')">Editar</button><button class="btn" onclick="openModelForm('','${id}')">Duplicar</button>${m.consumable ? `<button class="btn" onclick="openStock('${id}','bought')">He comprado…</button><button class="btn" onclick="openStock('${id}','used')">He usado…</button>` : ''}<button class="btn" onclick="openMerge('${id}')">Unir con otro modelo…</button><button class="btn" onclick="openChanges('equipment_models','${id}')">Cambios</button><button class="btn danger" onclick="deleteModel('${id}')">Eliminar</button></div>
       <div class="group">Reservado en ${W.p}</div>
       ${lines.length ? `<div class="list">${lines.map(({b,p}) => `<div class="row tap" onclick="go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))}</div></div>
         <span class="badge ${RES_CLASS[b.state]}">${RES_STATE[b.state]}</span><div class="count">×${b.qty}</div></div>`).join('')}</div>`
@@ -718,7 +731,7 @@ function modelView(id){
   const us = S.units.filter(u => u.model_id === id).sort(unitCmp);
   return head + galleryHtml('m', id) + docsHtml(m) + accsHtml(m) + notesHtml('model', id)
     + `<div class="actions">
-      <button class="btn" onclick="openModelForm('${id}')">Editar</button><button class="btn" onclick="openNumber('${id}')">Numerar…</button><button class="btn" onclick="openMoveUnits('${id}')">Mover unidades…</button><button class="btn" onclick="openMerge('${id}')">Unir con otro modelo…</button>
+      <button class="btn" onclick="openModelForm('${id}')">Editar</button><button class="btn" onclick="openModelForm('','${id}')">Duplicar</button><button class="btn" onclick="openNumber('${id}')">Numerar…</button><button class="btn" onclick="openMoveUnits('${id}')">Mover unidades…</button><button class="btn" onclick="openMerge('${id}')">Unir con otro modelo…</button>
       <button class="btn" onclick="printLabels(S.units.filter(u=>u.model_id==='${id}').map(u=>u.id))">Etiquetas QR</button>
       <button class="btn" onclick="openChanges('equipment_models','${id}')">Cambios</button><button class="btn danger" onclick="deleteModel('${id}')">Eliminar</button>
     </div>
@@ -760,10 +773,11 @@ async function pickPhoto(input){
     const im = $('#f-prev'); im.src = URL.createObjectURL(pendingPhoto); im.hidden = false; $('#f-nophoto').hidden = true;
   } catch(e){ pendingPhoto = null; toast('No se pudo leer la imagen', true); }
 }
-function openModelForm(id){
-  const m = id ? modelById(id) : {is_bulk:false};
+function openModelForm(id, from){
+  const src = from ? modelById(from) : null, m = id ? modelById(id) : (src ? Object.assign({}, src, {name:(src.name || '') + ' (copia)', photo_url:null, bulk_stock:1}) : {is_bulk:false});
+  S.dupFrom = id ? null : (src ? src.id : null);
   pendingPhoto = null;
-  openModal(`<h2>${id?'Editar modelo':'Nuevo modelo'}</h2>
+  openModal(`<h2>${id ? 'Editar modelo' : src ? 'Duplicar modelo' : 'Nuevo modelo'}</h2>
     <label for="f-name">Nombre</label><input id="f-name" value="${esc(m.name||'')}" placeholder="Ej. Robin 300">
     <label for="f-brand">Marca (elige una de las que ya usas o escribe una nueva)</label>
     <input id="f-brand" list="brand-list" value="${esc(m.brand||'')}" placeholder="Ej. Robe" autocomplete="off">
@@ -786,7 +800,7 @@ function openModelForm(id){
       <option value="bulk" ${m.is_bulk?'selected':''}>Por cantidad (cables, consumibles…)</option></select>
     <div id="blk-ser" ${m.is_bulk?'hidden':''}>${id?'':`<label for="f-n">Unidades que tienes ahora (los números de serie los pones después)</label><input id="f-n" type="number" min="0" value="1" inputmode="numeric">`}
       <label for="f-lamp">Vida útil de la lámpara en horas (opcional, para avisos)</label><input id="f-lamp" type="number" min="0" value="${m.lamp_life_hours||''}" inputmode="numeric"></div>
-    <div id="blk-bulk" ${m.is_bulk?'':'hidden'}><label for="f-stock">Cantidad en stock</label><input id="f-stock" type="number" min="0" value="${m.bulk_stock||0}" inputmode="numeric">
+    <div id="blk-bulk" ${m.is_bulk?'':'hidden'}><label for="f-stock">Cantidad en stock</label><input id="f-stock" type="number" min="0" value="${id ? (m.bulk_stock || 0) : (m.bulk_stock || 1)}" inputmode="numeric">
       <label class="chkrow"><input type="checkbox" id="f-cons" ${m.consumable?'checked':''}>Es un consumible (se gasta y no vuelve)</label>
       <label for="f-min">Avisar cuando queden menos de (stock mínimo, opcional)</label><input id="f-min" type="number" min="0" value="${m.min_stock!=null?m.min_stock:''}" inputmode="numeric"></div>
     <label for="f-rate">Tarifa por día y unidad (€, opcional)</label><input id="f-rate" type="number" min="0" step="0.01" value="${m.day_rate!=null?m.day_rate:''}" inputmode="decimal">
@@ -796,6 +810,7 @@ function openModelForm(id){
     <div class="three"><input id="f-dw" type="number" min="0" step="0.1" placeholder="ancho" value="${m.width_cm!=null?m.width_cm:''}" inputmode="decimal" aria-label="Ancho en cm">
       <input id="f-dh" type="number" min="0" step="0.1" placeholder="alto" value="${m.height_cm!=null?m.height_cm:''}" inputmode="decimal" aria-label="Alto en cm">
       <input id="f-dd" type="number" min="0" step="0.1" placeholder="fondo" value="${m.depth_cm!=null?m.depth_cm:''}" inputmode="decimal" aria-label="Fondo en cm"></div>
+    <label for="f-fam">Familia (opcional: para agrupar y ordenar dentro de su categoría)</label><input id="f-fam" list="fam-list" autocomplete="off" value="${esc(m.family||'')}" placeholder="Vacío = se calcula sola con el nombre"><datalist id="fam-list">${[...new Set(S.models.map(x => famOf(x)))].sort((a, b) => a.localeCompare(b, 'es')).map(f => `<option value="${esc(f)}">`).join('')}</datalist>
     <label for="f-tags">Palabras clave (separadas por comas)</label><input id="f-tags" list="tag-list" autocomplete="off" value="${esc((m.tags||[]).join(', '))}" placeholder="Ej. exterior, IP65, LED"><datalist id="tag-list">${allTags().map(t => `<option value="${esc(t[1])}">`).join('')}</datalist>
     <label for="f-dmx">Modos DMX (uno por línea: nombre y canales)</label><textarea id="f-dmx" style="min-height:70px" placeholder="Estándar: 16&#10;Extendido: 24">${esc(dmxText(m))}</textarea>
     <label for="f-owner">Propietario (solo si el material NO es tuyo)</label><input id="f-owner" list="owner-list" autocomplete="off" value="${esc(m.owner||'')}" placeholder="Vacío = es tuyo"><datalist id="owner-list">${[...new Set(S.models.map(x => x.owner).filter(Boolean))].map(o => `<option value="${esc(o)}">`).join('')}</datalist>
@@ -837,6 +852,7 @@ async function saveModel(id){
   else {
     const row = await db(sb.from('equipment_models').insert(payload).select().single());
     mid = row.id;
+    if (S.dupFrom){ const as = S.accs.filter(a => a.model_id === S.dupFrom); if (as.length) await db(sb.from('model_accessories').insert(as.map(a => ({model_id:row.id, name:a.name, qty:a.qty})))); S.dupFrom = null; }
     const n = bulk ? 0 : (parseInt($('#f-n').value) || 0);
     if (n > 0) await db(sb.from('units').insert(Array.from({length:n}, () => ({model_id:row.id}))));
   }
@@ -928,30 +944,31 @@ function printDoc(cls, html, pageCss){
 }
 
 /* ============ MATERIAL: kits y flight cases ============ */
-const kitUnits = k => S.kitItems.filter(i => i.kit_id === k.id && i.unit_id).map(i => unitById(i.unit_id)).filter(Boolean);
-const kitBulk = k => S.kitItems.filter(i => i.kit_id === k.id && i.model_id).map(i => ({item:i, model:modelById(i.model_id), qty:i.qty})).filter(x => x.model);
+const kitUnits = k => S.kitItems.filter(i => i.kit_id === k.id && i.unit_id).map(i => unitById(i.unit_id)).filter(Boolean).sort(unitRankCmp);
+const kitBulk = k => S.kitItems.filter(i => i.kit_id === k.id && i.model_id).map(i => ({item:i, model:modelById(i.model_id), qty:i.qty})).filter(x => x.model).sort((a, b) => (S.modelRank.get(a.model.id) ?? 1e9) - (S.modelRank.get(b.model.id) ?? 1e9));
 
 function kitsList(){
-  return bar('Material', {actions:`<button class="btn primary small" onclick="openKitForm()">+ Kit</button>`}) + matSeg()
-    + (S.kits.length ? `<div class="list">${S.kits.map(k => `<div class="row tap" onclick="openView('kit','${k.id}')">
+  const ks = S.kits.slice().sort(kitOrder);
+  return bar('Material', {actions:`${ks.length > 1 ? `<button class="btn small" onclick="kitOrderToggle()">${S.kitOrder ? 'Terminar de ordenar' : 'Ordenar'}</button>` : ''}<button class="btn primary small" onclick="openKitForm()">+ Kit</button>`}) + matSeg()
+    + (ks.length ? `<div class="list">${ks.map((k, i) => `<div class="row ${S.kitOrder ? '' : 'tap'}" ${S.kitOrder ? '' : `onclick="openView('kit','${k.id}')"`}>
         <div class="grow"><b>${esc(k.name)}</b><div class="sub">${kitUnits(k).length} equipos · ${kitBulk(k).length} líneas por cantidad${k.missing_note ? ' · <span style="color:var(--warn);font-weight:600">incompleto</span>' : ''}</div></div>
-        <span class="code sub">${esc(k.code)}</span></div>`).join('')}</div>`
+        ${S.kitOrder ? `<div style="display:flex;gap:4px"><button class="btn small" aria-label="Subir ${esc(k.name)}" ${i === 0 ? 'disabled' : ''} onclick="moveKit('${k.id}',-1)">▲</button><button class="btn small" aria-label="Bajar ${esc(k.name)}" ${i === ks.length - 1 ? 'disabled' : ''} onclick="moveKit('${k.id}',1)">▼</button></div>` : `<span class="code sub">${esc(k.code)}</span>`}</div>`).join('')}</div>`
       : `<div class="empty">Aún no hay kits.<br>Un kit es un flight case o un pack que reservas y escaneas de una vez.<br>Pulsa «+ Kit» para crear el primero.</div>`);
 }
 function kitView(id){
   const k = kitById(id);
   if (!k) return bar('Kits', {back:true});
   const us = kitUnits(k), bs = kitBulk(k);
-  const unitRows = S.kitItems.filter(i => i.kit_id === id && i.unit_id).map(i => { const u = unitById(i.unit_id); if (!u) return '';
+  const unitRows = kitGroupedRows(S.kitItems.filter(i => i.kit_id === id && i.unit_id && unitById(i.unit_id)).sort((a, b) => unitRankCmp(unitById(a.unit_id), unitById(b.unit_id))), i => catName(modelById(unitById(i.unit_id).model_id)), i => { const u = unitById(i.unit_id);
     return `<div class="row urow">${unitTile(u)}<div class="grow"><b>${esc(unitModelName(u))}</b><div class="sub">${unitSub(u)}</div></div>
-      <button class="btn small" aria-label="Quitar del kit" onclick="removeKitItem('${i.id}')">✕</button></div>`; }).join('');
-  const bulkRows = bs.map(({item, model, qty}) => `<div class="row"><div class="grow"><b>${esc(model.name)}</b></div><div class="count">×${qty}</div>
-      <button class="btn small" aria-label="Quitar del kit" onclick="removeKitItem('${item.id}')">✕</button></div>`).join('');
+      <button class="btn small" aria-label="Quitar del kit" onclick="removeKitItem('${i.id}')">✕</button></div>`; });
+  const bulkRows = kitGroupedRows(bs, x => catName(x.model), ({item, model, qty}) => `<div class="row"><div class="grow"><b>${esc(model.name)}</b></div><div class="count">×${qty}</div>
+      <button class="btn small" aria-label="Quitar del kit" onclick="removeKitItem('${item.id}')">✕</button></div>`);
   return bar(k.name, {back:true, actions:favBtn('kit', id)})
     + `<div class="info" style="text-align:center"><div class="qrbox">${qrSvg(k.code)}</div><div class="sub">Código del kit <span class="code">${esc(k.code)}</span></div>${labelStatusHtml('k', k)}
        ${k.notes?`<div style="margin-top:8px;text-align:left">${esc(k.notes)}</div>`:''}${kitSpecs(k)}</div>
     ${kitMissingHtml(k)}
-    <div class="actions"><button class="btn" onclick="openKitForm('${id}')">Editar</button><button class="btn" onclick="printKitLabel('${id}')">Imprimir etiqueta</button><button class="btn" onclick="printKitList('${id}')">Imprimir lista de contenido</button><button class="btn" onclick="openChanges('kits','${id}')">Cambios</button><button class="btn danger" onclick="deleteKit('${id}')">Eliminar</button></div>
+    <div class="actions"><button class="btn" onclick="openKitForm('${id}')">Editar</button><button class="btn" onclick="duplicateKit('${id}')">Duplicar</button><button class="btn" onclick="printKitLabel('${id}')">Imprimir etiqueta</button><button class="btn" onclick="printKitList('${id}')">Imprimir lista de contenido</button><button class="btn" onclick="openChanges('kits','${id}')">Cambios</button><button class="btn danger" onclick="deleteKit('${id}')">Eliminar</button></div>
     <div class="group">Equipos (${us.length})</div>
     ${us.length ? `<div class="list">${unitRows}</div>` : `<div class="empty" style="margin:20px 24px">Sin equipos con número de serie.</div>`}
     <div class="group">Por cantidad (${bs.length})</div>
@@ -1057,7 +1074,7 @@ function showsList(){
       <div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))}${p.venue?' · '+esc(p.venue):''}</div></div>
       ${p.status!=='confirmed'?`<span class="badge ${p.status==='cancelled'?'bad':p.status==='done'?'ok':''}">${PROJ_STATUS[p.status]}</span>`:''}${p.payment_status==='invoiced'?'<span class="badge warn">Facturado</span>':p.payment_status==='paid'?'<span class="badge ok">Cobrado</span>':''}
       <div class="count" title="Piezas reservadas">${pieces(p)}</div></div>`;
-  return bar(whMode() ? 'Carga' : ('' + W.P + ''), {actions:whMode() ? '' : `<button class="btn small" onclick="openTemplates('')">Plantillas</button><button class="btn primary small" onclick="openProjectForm()">+ ${W.S}</button>`}) + (whMode() ? '' : showsSeg() + showStatusBar())
+  return bar(whMode() ? 'Carga' : ('' + W.P + ''), {actions:whMode() ? '' : `<button class="btn small" onclick="openTemplates('')">Plantillas</button><button class="btn primary small" onclick="openProjectForm()">+ ${W.S}</button>`}) + (whMode() ? '' : showsSeg() + showStatusBar() + icsBar())
     + (S.projects.length ? `${up.length?`<div class="group">Próximos</div><div class="list">${up.map(rowH).join('')}</div>`:''}
        ${past.length?`<div class="group">Pasados</div><div class="list">${past.map(rowH).join('')}</div>`:''}`
       : `<div class="empty">Aún no hay ${W.p}.<br>Pulsa «+ ${W.S}» para crear el primero.</div>`);
@@ -1162,10 +1179,11 @@ function projectView(id){
       <button class="btn" onclick="openQuote('${id}')">Presupuesto</button>
       <button class="btn" onclick="printContract('${id}')">Contrato</button>
       <button class="btn" onclick="openTemplates('${id}')">Plantillas…</button>
+      <button class="btn" onclick="openView('van','${id}')">Furgoneta</button>
       <button class="btn" onclick="openDmxPatch('${id}')">Patch DMX</button>
       <button class="btn" onclick="openDuplicate('${id}')">Duplicar</button>
       <button class="btn" onclick="openChanges('projects','${id}')">Cambios</button><button class="btn danger" onclick="deleteProject('${id}')">Eliminar</button></div>
-    <div class="actions"><a class="btn" style="text-decoration:none" target="_blank" rel="noopener" href="${esc(gcalUrl(p))}">Añadir a Google Calendar</a><button class="btn" onclick="printRider('${id}')">Rider técnico</button></div>
+    <div class="actions"><a class="btn" style="text-decoration:none" target="_blank" rel="noopener" href="${esc(gcalUrl(p))}">Añadir a Google Calendar</a><button class="btn" onclick="downloadShowIcs('${id}')">Archivo .ics</button><button class="btn" onclick="openMsgMenu('${id}')">Mensajes…</button><button class="btn" onclick="printRider('${id}')">Rider técnico</button></div>
     ${paymentCard(p)}${loadCard(p)}
     <div class="group" style="display:flex;align-items:center;gap:8px"><span style="flex:1">Material (${total} piezas)</span>${Object.keys(byModel).length > 1 ? `<button class="btn small" onclick="foldShow('${id}')">${Object.keys(byModel).some(mid => S.catOpen[`s:${id}:${mid}`] !== false) ? 'Plegar todo' : 'Desplegar todo'}</button>` : ''}</div>
     ${kitIds.length?`<div class="list">${kitsH}</div>`:''}
@@ -1176,7 +1194,7 @@ function projectView(id){
     <div class="group">Técnicos (${as.length})</div>
     ${as.length?`<div class="list">${as.map(a => { const t = techById(a.technician_id); if(!t) return '';
       return `<div class="row"><div class="grow"><b>${esc(t.name)}</b><div class="sub">${esc([a.role, a.call_time?'Llamada '+fmtDT(a.call_time):''].filter(Boolean).join(' · '))}</div></div>
-      ${t.phone?`<a class="btn small" style="text-decoration:none" target="_blank" rel="noopener" href="${waLink(t, a, p)}">WhatsApp</a>`:''}
+      ${(t.phone || t.email) ? `<button class="btn small" onclick="openCompose('${id}','tec_convocatoria','${t.id}')">Mensaje</button>` : ''}
       <button class="btn small" aria-label="Quitar" onclick="removeAssign('${a.id}')">✕</button></div>`; }).join('')}</div>`:`<div class="empty" style="margin:20px 24px">Aún no hay técnicos asignados.</div>`}
     <div class="actions"><button class="btn primary" onclick="openAddAssign('${id}')">+ Añadir técnico</button></div>${showDocsHtml(id)}${notesHtml('project', id)}`;
 }
@@ -1812,7 +1830,7 @@ function calendarView(){
   const max = Math.max(1, ...info.map(x => x.pc)), todayK = ymd(new Date());
   const cells = info.map(({d, ps, pc}) => {
     const k = ymd(d);
-    return `<button class="cal-day ${d.getMonth()!==mo?'off':''} ${k===todayK?'today':''} ${k===S.calDay?'sel':''}" onclick="selDay('${k}')"
+    return `<button class="cal-day ${d.getMonth()!==mo?'off':''} ${k===todayK?'today':''} ${k===S.calDay?'sel':''}" onclick="selDay('${k}')" ondragover="calOver(event)" ondragleave="calLeave(event)" ondrop="calDrop(event,'${k}')"
       style="${pc?`background:color-mix(in srgb, var(--accent) ${Math.round(pc/max*38)}%, var(--panel))`:''}" aria-label="${d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}: ${ps.length} ${W.s}${ps.length===1?'':'s'}">
       <span class="n">${d.getDate()}</span>
       <span class="dots">${ps.slice(0,3).map(p => `<i class="dot ${(p.status==='draft'||p.status==='quoted')?'draft':p.status==='done'?'done':''}"></i>`).join('')}</span>
@@ -1822,7 +1840,7 @@ function calendarView(){
   if (S.calDay){
     const d = new Date(S.calDay + 'T00:00:00'), x = info.find(i => ymd(i.d) === S.calDay) || {ps:projsOn(d), pc:0};
     detail = `<div class="group">${esc(d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'}))}${x.pc?` · ${x.pc} piezas en uso`:''}</div>`
-      + (x.ps.length ? `<div class="list">${x.ps.map(p => `<div class="row tap" onclick="openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))} → ${esc(fmtDT(p.ends_at))}</div></div><div class="count">${pieces(p)}</div></div>`).join('')}</div>`
+      + (x.ps.length ? `<div class="list">${x.ps.map(p => `<div class="row tap" ${(p.status === 'done' || p.status === 'cancelled') ? '' : `draggable="true" ondragstart="calDrag(event,'${p.id}')" ondragend="CALDRAG=null"`} onclick="openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))} → ${esc(fmtDT(p.ends_at))}</div></div>${(p.status === 'done' || p.status === 'cancelled') ? '' : `<button class="btn small" onclick="event.stopPropagation();openMoveShow('${p.id}')">Mover…</button>`}<div class="count">${pieces(p)}</div></div>`).join('')}</div>`
         : `<div class="empty" style="margin:20px 24px">No hay ${W.p} este día.</div>`);
   }
   return bar(('' + W.P + ''), {actions:`<button class="btn primary small" onclick="openProjectForm()">+ ${W.S}</button>`}) + showsSeg()
@@ -1830,7 +1848,7 @@ function calendarView(){
         <h2>${esc(first.toLocaleDateString('es-ES',{month:'long',year:'numeric'}).replace(/^./, c => c.toUpperCase()))}</h2>
         <button class="btn small" onclick="calToday()">Hoy</button><button class="btn small" onclick="calNav(1)" aria-label="Mes siguiente">›</button></div>
       <div class="cal-grid">${['L','M','X','J','V','S','D'].map(l => `<div class="cal-dow">${l}</div>`).join('')}${cells}</div>
-      <div class="sub" style="margin-top:8px">El número de cada día son las piezas en uso. Cuanto más oscuro, más carga. Punto redondo: confirmado. Hueco: borrador. Cuadrado: hecho.</div></div>` + detail;
+      <div class="sub" style="margin-top:8px">El número de cada día son las piezas en uso. Cuanto más oscuro, más carga. Punto redondo: confirmado. Hueco: borrador. Cuadrado: hecho. Para cambiar un ${W.s} de día, arrástralo desde la lista de abajo hasta el día nuevo, o pulsa «Mover…».</div></div>` + detail;
 }
 function openDuplicate(pid){
   const p = projById(pid), d = new Date(p.starts_at); d.setDate(d.getDate() + 7);
@@ -2611,7 +2629,9 @@ async function schemaMissing(){
     ['esquema_v14.sql', sb.from('kits').select('missing_note').limit(1)],
     ['esquema_v15.sql', sb.from('quote_versions').select('id').limit(1)],
     ['esquema_v15.sql', sb.from('units').select('purchase_price').limit(1)],
-    ['esquema_v16.sql', sb.from('notes').select('id').limit(1)]
+    ['esquema_v16.sql', sb.from('notes').select('id').limit(1)],
+    ['esquema_v17.sql', sb.from('equipment_models').select('family').limit(1)],
+    ['esquema_v17.sql', sb.from('kits').select('sort_order').limit(1)]
   ];
   const rs = await Promise.all(probes.map(p => Promise.resolve(p[1]).then(r => r, e => ({error:e}))));
   return [...new Set(probes.filter((p, i) => rs[i].error && isSchemaErr(rs[i].error)).map(p => p[0]))];
@@ -2842,11 +2862,12 @@ const catKey = c => norm(c).replace(/ /g, '_');
 const catPos = n => { const i = S.categories.findIndex(c => c.name === n); return i < 0 ? 1e6 : i; };
 const catOrder = (a, b) => { const w = n => n === 'Kits' ? 0 : n === 'Sin categoría' ? 2 : 1; return w(a) - w(b) || catPos(a) - catPos(b) || a.localeCompare(b, 'es'); };
 function catSection(key, title, countTxt, rowsHtml, pre){
-  const open = S.catOpen[key] !== false;
+  const open = catIsOpen(key);
+  if (key.startsWith('m:')) return `<button type="button" class="cat-head" data-ck="${key}" onclick="toggleCat('${key}')" aria-expanded="${open}"><span>${open ? '▾' : '▸'}</span><span class="grow">${esc(title)}</span><span class="sub">${esc(countTxt)}</span></button><div class="cat-body" data-open="${open ? 1 : 0}" ${open ? '' : 'hidden'}>${pre || ''}<div class="list" style="margin:0">${rowsHtml}</div></div>`;
   return `<button type="button" class="cat-head" onclick="toggleCat('${key}')" aria-expanded="${open}"><span>${open ? '▾' : '▸'}</span><span class="grow">${esc(title)}</span><span class="sub">${esc(countTxt)}</span></button>`
     + (open ? `${pre || ''}<div class="list" style="margin:0">${rowsHtml}</div>` : '');
 }
-function toggleCat(key){ S.catOpen[key] = S.catOpen[key] === false; key.startsWith('o:') ? renderOutList() : render(); }
+function toggleCat(key){ S.catOpen[key] = !catIsOpen(key); key.startsWith('o:') ? renderOutList() : render(); }
 
 /* ============ LISTA DE CARGA (marcar lo que sale) ============ */
 function loadModel(p){
@@ -3861,7 +3882,7 @@ function moreView(){
     + `<div class="actions"><button class="btn" onclick="openSearch()">Buscar en todo</button><button class="btn" onclick="openNotes()">Notas y recordatorios${S.notes.some(n => !n.done) ? ' (' + S.notes.filter(n => !n.done).length + ')' : ''}</button></div>`
     + incidenceCard()
     + (al.length ? `<div class="group">Avisos</div><div class="actions"><button class="btn" style="color:var(--warn)" onclick="openAlerts()">Mantenimiento: ${al.length} aviso${al.length === 1 ? '' : 's'}</button>${repairCount() ? repairBtn() : ''}</div>` : (repairCount() ? `<div class="group">Reparaciones</div><div class="actions">${repairBtn()}</div>` : ''))
-    + `<div class="group">${esc(W.P)}, clientes y cobros</div><div class="actions"><button class="btn" onclick="openView('clients','')">Clientes (${S.clients.length})</button><button class="btn" onclick="go('techs')">Técnicos (${S.techs.length})</button><button class="btn" onclick="openPayments()">${esc(payHeadline())}</button><button class="btn" onclick="openBusiness()">Datos del negocio y presupuesto</button><button class="btn" onclick="openDurationPricing()">Tarifa por duración</button><button class="btn" onclick="openContractEditor()">Contrato (plantilla)</button></div>`
+    + `<div class="group">${esc(W.P)}, clientes y cobros</div><div class="actions"><button class="btn" onclick="openView('clients','')">Clientes (${S.clients.length})</button><button class="btn" onclick="go('techs')">Técnicos (${S.techs.length})</button><button class="btn" onclick="openPayments()">${esc(payHeadline())}</button><button class="btn" onclick="openBusiness()">Datos del negocio y presupuesto</button><button class="btn" onclick="openDurationPricing()">Tarifa por duración</button><button class="btn" onclick="openContractEditor()">Contrato (plantilla)</button><button class="btn" onclick="openMsgTemplates()">Plantillas de mensajes</button></div>`
     + pendingBtn()
     + `<div class="group">Inventario</div><div class="actions"><button class="btn" onclick="go('material');openView('labels','')">Gestor de etiquetas</button><button class="btn" onclick="openImport()">Importar desde Excel o CSV</button><button class="btn" onclick="openLegend()">Leyenda de colores</button></div>
     <div class="group">Datos y copias</div>
@@ -4028,6 +4049,7 @@ function modelExtras(id, bulk){
   const m = id ? modelById(id) : {}, ex = {};
   const set = (k, v, cur) => { const empty = v == null || v === '' || v === false || (Array.isArray(v) && !v.length); if (JSON.stringify(v == null ? null : v) !== JSON.stringify(cur == null ? null : cur) && !(!id && empty)) ex[k] = v; };
   set('tags', canonTags($('#f-tags').value), m.tags && m.tags.length ? m.tags : []);
+  set('family', ($('#f-fam').value || '').trim() || null, m.family || null);
   set('dmx_modes', bulk ? null : parseDmx($('#f-dmx').value), m.dmx_modes || null);
   set('owner', $('#f-owner').value.trim() || null, m.owner || null);
   set('rent_cost', nf('#f-rentcost'), m.rent_cost != null ? Number(m.rent_cost) : null);
@@ -4153,8 +4175,9 @@ async function delSavedFilter(i){ const c = Object.assign({}, S.settings.app_con
 // ---- orden manual de modelos dentro de su categoría ----
 function orderToggle(){ S.matOrder = !S.matOrder; if (S.matOrder) S.mass = {on:false, sel:new Set()}; render(); }
 async function moveModel(id, dir){
-  const m = modelById(id), list = S.models.filter(x => (x.category_id || null) === (m.category_id || null)).slice().sort(modelOrder), i = list.findIndex(x => x.id === id), j = i + dir;
-  if (j < 0 || j >= list.length) return; [list[i], list[j]] = [list[j], list[i]];
+  const m = modelById(id), fk = famKey(m), inCat = S.models.filter(x => (x.category_id || null) === (m.category_id || null)), list = inCat.filter(x => famKey(x) === fk).slice().sort(modelOrder);
+  if (list.length < 2){ const keys = famBlocks(inCat); return moveFamilyAt(m.category_id || '', keys.indexOf(fk), dir); }
+  const i = list.findIndex(x => x.id === id), j = i + dir; if (j < 0 || j >= list.length) return; [list[i], list[j]] = [list[j], list[i]];
   await Promise.all(list.map((x, k) => (x.sort_order === k + 1 ? null : db(sb.from('equipment_models').update({sort_order:k + 1}).eq('id', x.id)))).filter(Boolean));
   await loadAll();
 }
@@ -4285,12 +4308,16 @@ async function stockApply(mid, kind){
 }
 function stockAlerts(){ return S.models.filter(lowStock).map(m => ({m, text:`Reponer: quedan ${m.bulk_stock} (mínimo ${m.min_stock})`, go:`openView('model','${m.id}')`})); }
 
-function matRowCtl(m, idx, total){
+function matRowCtl(m, idx, total, list){
   if (S.mass.on){ const on = S.mass.sel.has(m.id); return {click:`massPick('${m.id}',${!on})`, lead:`<input type="checkbox" class="massck" aria-label="Seleccionar ${esc(m.name)}" ${on ? 'checked' : ''} onclick="event.stopPropagation()" onchange="massPick('${m.id}',this.checked)">`, trail:''}; }
-  if (S.matOrder) return {click:'', lead:'', trail:`<div style="display:flex;flex-direction:column;gap:4px"><button class="btn small" aria-label="Subir ${esc(m.name)}" ${idx === 0 ? 'disabled' : ''} onclick="event.stopPropagation();moveModel('${m.id}',-1)">▲</button><button class="btn small" aria-label="Bajar ${esc(m.name)}" ${idx === total - 1 ? 'disabled' : ''} onclick="event.stopPropagation();moveModel('${m.id}',1)">▼</button></div>`};
+  if (S.matOrder){
+    const L = list || [], k = famKey(m), fam = L.filter(x => famKey(x) === k), multi = fam.length > 1, blocks = famBlocks(L);
+    const pos = multi ? fam.findIndex(x => x.id === m.id) : blocks.indexOf(k), tot = multi ? fam.length : blocks.length;
+    return {click:'', lead:'', trail:`<div style="display:flex;flex-direction:column;gap:4px"><button class="btn small" aria-label="Subir ${esc(m.name)}" ${pos === 0 ? 'disabled' : ''} onclick="event.stopPropagation();moveModel('${m.id}',-1)">▲</button><button class="btn small" aria-label="Bajar ${esc(m.name)}" ${pos === tot - 1 ? 'disabled' : ''} onclick="event.stopPropagation();moveModel('${m.id}',1)">▼</button></div>`};
+  }
   return {click:`openView('model','${m.id}')`, lead:'', trail:''};
 }
-const rowExtraBadges = m => (m.owner ? `<span class="badge">De terceros: ${esc(m.owner)}</span>` : '') + (lowStock(m) ? '<span class="badge bad">Bajo mínimo</span>' : '');
+const rowExtraBadges = m => (m.owner ? `<span class="badge">De terceros: ${esc(m.owner)}</span>` : '') + (lowStock(m) ? '<span class="badge bad">Bajo mínimo</span>' : '') + (m.is_bulk && kitBulkUsed(m.id) ? `<span class="badge">${kitBulkUsed(m.id)} en kits</span>` : '');
 
 /* ============ LISTAS DE COMPROBACIÓN V1.06: accesorios, piezas del kit, etiqueta con contenido ============ */
 const accText = a => (a.qty > 1 ? a.qty + '× ' : '') + a.name;
@@ -4873,12 +4900,12 @@ const tourSeen = () => { try { return localStorage.getItem('tourSeen') === '1'; 
 function todayView(){
   const shows = todayShows(), late = lateShows(), ns = notesOpen().filter(n => noteDue(n) != null && noteDue(n) <= 7), pay = payBuckets(), al = maintAlerts();
   const showRow = p => { const d = tdDiff(p.starts_at), on = new Date(p.starts_at) <= Date.now() && new Date(p.ends_at) >= Date.now(), s = showProgress(p);
-    return `<div class="row tap" onclick="go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${on ? 'En curso · hasta ' + esc(dayLabel(p.ends_at)) : esc(dayLabel(p.starts_at)) + ' · ' + esc(tdTime(p.starts_at))}${p.venue ? ' · ' + esc(p.venue) : ''}</div><div class="sub">${esc(progTxt(p))}</div></div>
-      ${p.status !== 'confirmed' ? `<span class="badge">${esc(PROJ_STATUS[p.status])}</span>` : ''}${d <= 1 && s.planned ? `<button class="btn small primary" onclick="event.stopPropagation();go('shows');openView('load','${p.id}')">Cargar</button>` : ''}</div>`; };
+    return `<div class="row tap" onclick="go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${on ? 'En curso · hasta ' + esc(dayLabel(p.ends_at)) : esc(dayLabel(p.starts_at)) + ' · ' + esc(tdTime(p.starts_at))}${p.venue ? ' · ' + esc(p.venue) : ''}</div><div class="sub">${esc(progTxt(p))}</div>${d <= 1 && s.planned ? `<div style="margin-top:6px"><button class="btn small primary" onclick="event.stopPropagation();go('shows');openView('load','${p.id}')">Cargar</button></div>` : ''}</div>
+      ${p.status !== 'confirmed' ? `<span class="badge">${esc(PROJ_STATUS[p.status])}</span>` : ''}</div>`; };
   const crew = shows.flatMap(p => S.assigns.filter(a => a.project_id === p.id).map(a => ({a, p, t:techById(a.technician_id)}))).filter(x => x.t).sort((x, y) => new Date(x.a.call_time || x.p.starts_at) - new Date(y.a.call_time || y.p.starts_at)).slice(0, 8);
   const fl = favs().map(favItem).filter(Boolean);
   return bar('Hoy', {actions:`<button class="btn small" onclick="openSearch()">Buscar</button><button class="btn primary small" onclick="openNote()">+ Nota</button>`})
-    + `<div class="sub" style="margin:10px 18px 0;text-transform:capitalize">${esc(new Date().toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'long'}))}</div>`
+    + `<div class="sub" style="margin:10px 18px 0">${esc(capFirst(new Date().toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'long'})))}</div>`
     + (!tourSeen() ? `<div class="info"><b>¿Un paseo rápido por la app?</b><div class="sub">Un minuto para ver dónde está cada cosa.</div><div class="actions" style="margin:8px 0 0"><button class="btn small primary" onclick="openTour(0)">Ver el paseo</button><button class="btn small" onclick="tourDone()">No, gracias</button></div></div>` : '')
     + `<div class="actions"><button class="btn" onclick="go('scan')">Escanear</button><button class="btn" onclick="go('shows');openProjectForm()">+ ${esc(W.S)}</button>${S.notes.some(n => !n.done) ? `<button class="btn" onclick="openNotes()">Notas (${S.notes.filter(n => !n.done).length})</button>` : ''}</div>`
     + (late.length ? `<div class="group" style="color:var(--bad)">Material sin devolver</div><div class="list">${late.map(p => `<div class="row tap" onclick="go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub" style="color:var(--bad);font-weight:600">Debía volver el ${esc(fmtD(p.ends_at))} · ${esc(progTxt(p))}</div></div></div>`).join('')}</div>` : '')
@@ -4967,6 +4994,422 @@ document.addEventListener('keydown', e => {
   else if (/^[1-9]$/.test(e.key) && navTabs()[+e.key - 1]) go(navTabs()[+e.key - 1][0]);
   else if (e.key === 'n' && !whMode()){ if (S.tab === 'material') openModelForm(); else if (S.tab === 'shows') openProjectForm(); else if (S.tab === 'today') openNote(); }
 });
+
+/* ============ COMUNICACIÓN V1.10: plantillas de mensajes, WhatsApp, email y calendario ============ */
+const MSG_TPL = {
+  tec_convocatoria:{label:'Convocar a un técnico', who:'tec', subject:'{show}: convocatoria', text:'{saludo}\nTe convoco para {show}.\nLugar: {lugar}\n{llamada_txt}\nFunción: {funcion}\nAñadir a tu calendario: {calendario}\n¿Me confirmas? Gracias.\n{empresa}'},
+  cli_confirmacion:{label:'Confirmar el show al cliente', who:'cli', subject:'Confirmación: {show}', text:'{saludo}\nTe confirmo {show} el {fecha} a las {hora}.\nLugar: {lugar}\nSi hay cualquier cambio, avísame. Un saludo,\n{empresa}'},
+  cli_presupuesto:{label:'Enviar el presupuesto', who:'cli', adj:'quote', subject:'Presupuesto: {show}', text:'{saludo}\nTe envío el presupuesto de {show} ({fecha}): {total} IVA incluido.\n{pago}\nCualquier duda, dime. Un saludo,\n{empresa}'},
+  cli_factura:{label:'Enviar la factura', who:'cli', adj:'invoice', subject:'Factura {factura}: {show}', text:'{saludo}\nTe adjunto la factura {factura} de {show} por {total}.\nVencimiento: {vencimiento}\n{pago}\nGracias,\n{empresa}'},
+  cli_recordatorio_pago:{label:'Recordar un pago pendiente', who:'cli', subject:'Recordatorio de pago: {show}', text:'{saludo}\nTe recuerdo que la factura {factura} de {show} por {total} está pendiente de pago{vencida_txt}.\nSi ya la has pagado, ignora este mensaje. Gracias,\n{empresa}'},
+  cli_recogida:{label:'Avisar de la recogida del material', who:'cli', subject:'Recogida del material: {show}', text:'{saludo}\nPasamos a recoger el material de {show} el {fecha_fin} a las {hora_fin}.\nLugar: {lugar}\nGracias,\n{empresa}'}
+};
+const MSG_VARS = ['saludo', 'nombre', 'show', 'fecha', 'hora', 'fecha_fin', 'hora_fin', 'lugar', 'total', 'funcion', 'llamada_txt', 'calendario', 'empresa', 'factura', 'vencimiento', 'pago', 'vencida_txt'];
+const msgTpl = k => Object.assign({}, MSG_TPL[k], (appCfg().msgTemplates || {})[k] || {});
+const msgDate = iso => new Date(iso).toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'long'});
+function msgVars(p, o){
+  o = o || {}; const c = p.client_id ? clientById(p.client_id) : null, b = S.settings || {}, t = o.tech || null, a = o.assign || null, late = (p.payment_status === 'invoiced') ? daysLate(p) : 0;
+  return {
+    nombre: t ? t.name : ((c && (c.contact_name || c.name)) || p.client || ''), saludo:'Hola' + ((t ? t.name : ((c && (c.contact_name || c.name)) || p.client || '')) ? ' ' + (t ? t.name : ((c && (c.contact_name || c.name)) || p.client || '')) : '') + ',', show:p.name, fecha:msgDate(p.starts_at), hora:tdTime(p.starts_at), fecha_fin:msgDate(p.ends_at), hora_fin:tdTime(p.ends_at), lugar:p.venue || '',
+    total:projectTotal(p) > 0 ? eur(projectTotal(p)) : '', funcion:a && a.role || '', llamada_txt:a && a.call_time ? 'Llamada: ' + fmtDT(a.call_time) : 'Inicio: ' + fmtDT(p.starts_at),
+    calendario:t ? gcalUrl(p, {start:a && a.call_time, role:a && a.role}) : '', empresa:b.business_name || '', factura:p.invoice_number || '', vencimiento:p.due_date ? fmtDay(p.due_date) : '', pago:b.payment_terms ? String(b.payment_terms).split('\n')[0] : '', vencida_txt:late > 0 ? ` (venció hace ${late} día${late === 1 ? '' : 's'})` : ''
+  };
+}
+// Una línea con un campo vacío se omite entera (así no salen «Lugar: » ni «Función: » sin nada)
+function fillMsg(tpl, vars){
+  const out = [];
+  String(tpl || '').split('\n').forEach(line => {
+    let empty = false; const r = line.replace(/\{(\w+)\}/g, (m, k) => { if (!(k in vars)) return m; if (!String(vars[k] || '').trim()){ empty = true; return ''; } return vars[k]; });
+    if (empty && /\{\w+\}/.test(line)) return; out.push(r);
+  });
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+const waNumber = ph => { let d = String(ph || '').replace(/\D/g, ''); if (d.length === 9) d = '34' + d; return d; };
+const waUrl = (ph, text) => `https://wa.me/${waNumber(ph)}?text=${encodeURIComponent(text)}`;
+const mailUrl = (to, subject, body) => `mailto:${encodeURIComponent(to || '').replace(/%40/g, '@')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body).replace(/%0A/g, '%0D%0A')}`;
+function openExternal(url){ const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); }
+// ---- compositor: el mismo texto sirve para WhatsApp, email o copiar ----
+let CM = null;
+function cmRecipient(){
+  const p = projById(CM.pid);
+  if (msgTpl(CM.key).who === 'tec'){ const t = techById(CM.techId); return {name:t ? t.name : '', phone:t && t.phone, email:t && t.email}; }
+  const c = p.client_id ? clientById(p.client_id) : null; return {name:(c && (c.contact_name || c.name)) || p.client || '', phone:c && c.phone, email:c && c.email};
+}
+function cmVars(){ const p = projById(CM.pid), tech = CM.techId ? techById(CM.techId) : null, assign = tech ? S.assigns.find(a => a.project_id === p.id && a.technician_id === tech.id) : null; return msgVars(p, {tech, assign}); }
+function openCompose(pid, key, techId){ CM = {pid, key, techId:techId || null}; drawCompose(); cmFill(); }
+function drawCompose(){
+  const p = projById(CM.pid), tpl = msgTpl(CM.key), r = cmRecipient(), same = Object.keys(MSG_TPL).filter(k => MSG_TPL[k].who === tpl.who);
+  openModal(`<h2>Mensaje</h2><div class="sub">${esc(p.name)} · para <b>${esc(r.name || 'sin nombre')}</b></div>
+    <div class="sub">${esc([r.phone ? 'Móvil ' + r.phone : 'Sin móvil', r.email ? r.email : 'sin email'].join(' · '))}</div>
+    <label for="cm-key">Qué quieres decir</label><select id="cm-key" onchange="CM.key=this.value;cmFill()">${same.map(k => `<option value="${k}" ${k === CM.key ? 'selected' : ''}>${esc(msgTpl(k).label)}</option>`).join('')}</select>
+    <label for="cm-sub">Asunto (solo para el email)</label><input id="cm-sub">
+    <label for="cm-text">Mensaje (puedes cambiarlo antes de enviar)</label><textarea id="cm-text" style="min-height:190px"></textarea>
+    <div id="cm-hint"></div>
+    <button class="btn primary block" style="margin-top:10px" onclick="cmSend('wa')">${r.phone ? 'Enviar por WhatsApp' : 'Abrir WhatsApp (elegiré el contacto)'}</button>
+    <button class="btn block" onclick="cmSend('mail')">${r.email ? 'Enviar por email' : 'Abrir el correo (escribiré la dirección)'}</button>
+    <button class="btn block" onclick="cmCopy()">Copiar el texto</button><button class="btn block" onclick="closeModal()">Cerrar</button>`);
+}
+function cmFill(){
+  const tpl = msgTpl(CM.key), v = cmVars(); $('#cm-sub').value = fillMsg(tpl.subject, v); $('#cm-text').value = fillMsg(tpl.text, v);
+  const sel = $('#cm-key'); if (sel) sel.value = CM.key;
+  $('#cm-hint').innerHTML = tpl.adj === 'quote' ? `<div class="info"><b>Ojo con el adjunto</b><div class="sub">El correo no puede llevar el PDF desde aquí. Abre el presupuesto, guárdalo como PDF y adjúntalo.</div><div style="margin-top:6px"><button class="btn small" onclick="closeModal();openQuote('${CM.pid}')">Abrir el presupuesto</button></div></div>` : tpl.adj === 'invoice' ? `<div class="info"><b>Ojo con el adjunto</b><div class="sub">Esta app no emite facturas: adjunta la que hayas hecho con tu programa de facturación.</div></div>` : '';
+}
+function cmSend(ch){
+  const r = cmRecipient(), text = $('#cm-text').value.trim(), sub = $('#cm-sub').value.trim(); if (!text) return toast('El mensaje está vacío', true);
+  if (ch === 'wa') return openExternal(waUrl(r.phone, text));
+  let url = mailUrl(r.email, sub, text);
+  if (url.length > 1900){ cmCopy(true); url = mailUrl(r.email, sub, 'El texto es largo: pégalo aquí (ya está copiado).'); }
+  openExternal(url);
+}
+function cmCopy(quiet){ const t = $('#cm-text').value; navigator.clipboard.writeText(t).then(() => toast(quiet ? 'Texto largo: copiado, pégalo en el correo' : 'Texto copiado'), () => toast('No se pudo copiar', true)); }
+function openMsgMenu(pid){
+  const p = projById(pid), c = p.client_id ? clientById(p.client_id) : null, crew = S.assigns.filter(a => a.project_id === pid).map(a => ({a, t:techById(a.technician_id)})).filter(x => x.t);
+  openModal(`<h2>Mensajes</h2><div class="sub">${esc(p.name)}</div>
+    <div class="group" style="margin:12px 0 6px">Al cliente${p.client || c ? ' · ' + esc((c && c.name) || p.client) : ''}</div>
+    <div class="list" style="margin:0">${Object.keys(MSG_TPL).filter(k => MSG_TPL[k].who === 'cli').map(k => `<div class="row urow tap" onclick="openCompose('${pid}','${k}')"><div class="grow"><b>${esc(msgTpl(k).label)}</b></div></div>`).join('')}</div>
+    <div class="group" style="margin:12px 0 6px">Al equipo (${crew.length})</div>
+    ${crew.length ? `<div class="list" style="margin:0">${crew.map(x => `<div class="row urow tap" onclick="openCompose('${pid}','tec_convocatoria','${x.t.id}')"><div class="grow"><b>${esc(x.t.name)}</b><div class="sub">${esc([x.a.role, x.t.phone || 'sin móvil'].filter(Boolean).join(' · '))}</div></div></div>`).join('')}</div>` : '<div class="sub">Aún no hay técnicos asignados.</div>'}
+    <button class="btn block" style="margin-top:12px" onclick="openMsgTemplates()">Editar las plantillas</button><button class="btn block" onclick="closeModal()">Cerrar</button>`);
+}
+function openMsgTemplates(){
+  const ov = appCfg().msgTemplates || {};
+  openModal(`<h2>Plantillas de mensajes</h2><div class="sub">Son los textos de partida de WhatsApp y email. Antes de enviar siempre puedes cambiarlos.</div>
+    <div class="list" style="margin:12px 0">${Object.keys(MSG_TPL).map(k => `<div class="row urow tap" onclick="editMsgTpl('${k}')"><div class="grow"><b>${esc(MSG_TPL[k].label)}</b><div class="sub">${esc(MSG_TPL[k].who === 'tec' ? 'Para técnicos' : 'Para clientes')}${ov[k] ? ' · modificada' : ''}</div></div></div>`).join('')}</div>
+    <button class="btn block" onclick="closeModal()">Cerrar</button>`);
+}
+function editMsgTpl(k){
+  const t = msgTpl(k);
+  openModal(`<h2>${esc(MSG_TPL[k].label)}</h2><label for="mt-sub">Asunto (email)</label><input id="mt-sub" value="${esc(t.subject)}"><label for="mt-text">Mensaje</label><textarea id="mt-text" style="min-height:200px">${esc(t.text)}</textarea>
+    <div class="sub" style="margin-top:6px">Campos que se rellenan solos: ${MSG_VARS.map(v => '{' + v + '}').join(' ')}. Si en una línea falta algún dato (por ejemplo el lugar), esa línea no sale.</div>
+    <button class="btn primary block" style="margin-top:10px" onclick="saveMsgTpl('${k}')">Guardar</button><button class="btn block" onclick="resetMsgTpl('${k}')">Restaurar el texto original</button><button class="btn block" onclick="openMsgTemplates()">Volver</button>`);
+}
+async function saveMsgTpl(k){
+  const sub = $('#mt-sub').value, text = $('#mt-text').value; if (!text.trim()) return toast('El mensaje no puede estar vacío', true);
+  const c = Object.assign({}, appCfg()), m = Object.assign({}, c.msgTemplates || {});
+  if (sub === MSG_TPL[k].subject && text === MSG_TPL[k].text) delete m[k]; else m[k] = {subject:sub, text};
+  c.msgTemplates = m; S.settings.app_config = c; if (await persistConfig()){ toast('Plantilla guardada'); openMsgTemplates(); }
+}
+async function resetMsgTpl(k){ const c = Object.assign({}, appCfg()), m = Object.assign({}, c.msgTemplates || {}); delete m[k]; c.msgTemplates = m; S.settings.app_config = c; if (await persistConfig()){ toast('Texto original restaurado'); editMsgTpl(k); } }
+// ---- calendario: archivo .ics de un show o de todos (118) ----
+const icsStamp = d => new Date(d).toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+const icsEsc = s => String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+function icsFold(line){
+  const enc = new TextEncoder(), out = []; let cur = '', n = 0;
+  for (const ch of line){ const b = enc.encode(ch).length; if (n + b > (out.length ? 74 : 75)){ out.push(cur); cur = ''; n = 0; } cur += ch; n += b; }
+  out.push(cur); return out.join('\r\n ');
+}
+function icsVevent(p, status){
+  const crew = S.assigns.filter(a => a.project_id === p.id).map(a => { const t = techById(a.technician_id); return t ? t.name + (a.role ? ' (' + a.role + ')' : '') : ''; }).filter(Boolean);
+  const desc = [p.client ? 'Cliente: ' + p.client : '', crew.length ? 'Equipo: ' + crew.join(', ') : '', p.notes || ''].filter(Boolean).join('\n');
+  const l = ['BEGIN:VEVENT', `UID:${p.id}@rentapp`, 'DTSTAMP:' + icsStamp(Date.now()), 'DTSTART:' + icsStamp(p.starts_at), 'DTEND:' + icsStamp(p.ends_at), 'SUMMARY:' + icsEsc(p.name), 'STATUS:' + status];
+  if (p.venue) l.push('LOCATION:' + icsEsc(p.venue)); if (desc) l.push('DESCRIPTION:' + icsEsc(desc));
+  l.push('BEGIN:VALARM', 'TRIGGER:-P1D', 'ACTION:DISPLAY', 'DESCRIPTION:' + icsEsc(p.name + ' es mañana'), 'END:VALARM', 'END:VEVENT'); return l;
+}
+const icsDoc = events => ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//RentApp//ES', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:' + icsEsc((S.settings && S.settings.business_name) || 'RentApp'), ...events.flat(), 'END:VCALENDAR'].map(icsFold).join('\r\n') + '\r\n';
+function downloadShowIcs(pid){
+  const p = projById(pid); if (!p) return;
+  download(new Blob([icsDoc([icsVevent(p, p.status === 'confirmed' || p.status === 'done' ? 'CONFIRMED' : p.status === 'cancelled' ? 'CANCELLED' : 'TENTATIVE')])], {type:'text/calendar'}), 'show-' + (p.name || 'evento').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.ics');
+  toast('Archivo .ics descargado: ábrelo con tu calendario para añadirlo');
+}
+function downloadAllIcs(){
+  const from = Date.now() - 30 * DAY_MS, ps = S.projects.filter(p => ['confirmed', 'quoted', 'done'].includes(p.status) && new Date(p.ends_at) >= from).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
+  if (!ps.length) return toast('No hay ' + W.p + ' confirmados o presupuestados para el calendario', true);
+  download(new Blob([icsDoc(ps.map(p => icsVevent(p, p.status === 'quoted' ? 'TENTATIVE' : 'CONFIRMED')))], {type:'text/calendar'}), 'calendario-' + (W.p || 'shows') + '.ics');
+  toast(`Calendario con ${ps.length} ${ps.length === 1 ? W.s : W.p}: ábrelo con tu calendario`);
+}
+const icsBar = () => `<div class="actions" style="margin-top:6px"><button class="btn small" onclick="downloadAllIcs()">Calendario de todos los ${esc(W.p)} (.ics)</button></div>`;
+
+/* ============ V1.11: planificador de furgoneta, calendario arrastrable y dos columnas ============ */
+// ---- furgonetas (medidas en cm; sin tocar la base de datos) ----
+const DEFAULT_VANS = [
+  {name:'Ford Transit Custom Kombi L2 · con la segunda fila de asientos', L:205.7, W:139.2, H:143.3, payload:1000, doorW:140, doorH:131.6},
+  {name:'Ford Transit Custom Kombi L2 · segunda fila desmontada (orientativo)', L:300, W:139.2, H:143.3, payload:1000, doorW:140, doorH:131.6}
+];
+const vanList = () => (Array.isArray(appCfg().vans) && appCfg().vans.length ? appCfg().vans : DEFAULT_VANS).map(v => Object.assign({doorW:0, doorH:0}, v));
+S.vanOpt = {van:0, stack:true, persons:2};
+const dimsOk = o => o && Number(o.width_cm) > 0 && Number(o.height_cm) > 0 && Number(o.depth_cm) > 0;
+function vanItems(p){
+  const items = [], missing = new Map(), kitsDone = new Set(), bulk = {n:0, kg:0, m3:0}, rs = S.reservations.filter(r => r.project_id === p.id && r.state !== 'returned');
+  let noWeight = 0;
+  rs.forEach(r => {
+    const u = unitById(r.unit_id), m = u && modelById(u.model_id); if (!m) return;
+    const kit = r.kit_id ? kitById(r.kit_id) : null;
+    if (kit && dimsOk(kit)){
+      if (kitsDone.has(kit.id)) return; kitsDone.add(kit.id);
+      const us = rs.filter(x => x.kit_id === kit.id).map(x => unitById(x.unit_id)).filter(Boolean);
+      items.push({id:'k:' + kit.id, label:'Kit «' + kit.name + '»', w:Number(kit.width_cm), h:Number(kit.height_cm), d:Number(kit.depth_cm), kg:(Number(kit.weight_kg) || 0) + us.reduce((s, x) => s + (Number((modelById(x.model_id) || {}).weight_kg) || 0), 0), kind:'kit'}); return;
+    }
+    if (!dimsOk(m)){ const e = missing.get(m.id) || {id:m.id, name:m.name, n:0}; e.n++; missing.set(m.id, e); return; }
+    if (m.weight_kg == null) noWeight++;
+    items.push({id:'u:' + u.id, label:unitLabel(u), w:Number(m.width_cm), h:Number(m.height_cm), d:Number(m.depth_cm), kg:Number(m.weight_kg) || 0, kind:'unit'});
+  });
+  S.bulkRes.filter(b => b.project_id === p.id && b.state !== 'returned').forEach(b => { const m = modelById(b.model_id); if (!m) return; bulk.n += b.qty; bulk.kg += b.qty * (Number(m.weight_kg) || 0); if (dimsOk(m)) bulk.m3 += b.qty * m.width_cm * m.height_cm * m.depth_cm / 1e6; });
+  return {items, missing:[...missing.values()], bulk, noWeight};
+}
+function mrSplit(free, p){
+  const out = [];
+  for (const f of free){
+    if (p.x >= f.x + f.w - 1e-9 || p.x + p.w <= f.x + 1e-9 || p.y >= f.y + f.d - 1e-9 || p.y + p.d <= f.y + 1e-9){ out.push(f); continue; }
+    if (p.x > f.x) out.push({x:f.x, y:f.y, w:p.x - f.x, d:f.d});
+    if (p.x + p.w < f.x + f.w) out.push({x:p.x + p.w, y:f.y, w:f.x + f.w - p.x - p.w, d:f.d});
+    if (p.y > f.y) out.push({x:f.x, y:f.y, w:f.w, d:p.y - f.y});
+    if (p.y + p.d < f.y + f.d) out.push({x:f.x, y:p.y + p.d, w:f.w, d:f.y + f.d - p.y - p.d});
+  }
+  const eq = (a, b) => a.x === b.x && a.y === b.y && a.w === b.w && a.d === b.d, inn = (a, b) => a.x >= b.x && a.y >= b.y && a.x + a.w <= b.x + b.w && a.y + a.d <= b.y + b.d;
+  return out.filter((a, i) => a.w > 0.01 && a.d > 0.01 && !out.some((b, j) => i !== j && inn(a, b) && (!eq(a, b) || j < i)));
+}
+// Coloca cajas (con su peso) en la furgoneta: suelo primero, y encima de otra caja solo si pesa igual o más. Largo = eje x (cabina → puertas), ancho = eje y.
+function vanPack(items, van, opt){
+  opt = Object.assign({stack:true}, opt || {});
+  const sorted = items.slice().sort((a, b) => b.kg - a.kg || (b.w * b.d) - (a.w * a.d) || b.h - a.h || String(a.id).localeCompare(String(b.id)));
+  const surfaces = [{z:0, kgLimit:Infinity, free:[{x:0, y:0, w:van.L, d:van.W}]}], placed = [], unplaced = [];
+  for (const it of sorted){
+    let best = null;
+    for (const s of surfaces){
+      if (s.z > 0 && !opt.stack) continue; if (s.z + it.h > van.H + 1e-9 || it.kg > s.kgLimit + 1e-9) continue;
+      for (const [a, b, rot] of (it.w === it.d ? [[it.w, it.d, false]] : [[it.w, it.d, false], [it.d, it.w, true]])){
+        for (const f of s.free){ if (a <= f.w + 1e-9 && b <= f.d + 1e-9){ const sc = Math.min(f.w - a, f.d - b) + Math.max(f.w - a, f.d - b) / 1000; if (!best || s.z < best.s.z - 1e-9 || (Math.abs(s.z - best.s.z) < 1e-9 && sc < best.sc)) best = {s, f, a, b, rot, sc}; } }
+      }
+      if (best && best.s === s) break;       // la superficie más baja que sirve
+    }
+    if (!best){
+      const fitsFloor = (it.w <= van.L && it.d <= van.W) || (it.d <= van.L && it.w <= van.W);
+      unplaced.push(Object.assign({}, it, {why:it.h > van.H + 1e-9 ? 'es más alto que la furgoneta' : !fitsFloor ? 'no cabe en el suelo' : 'ya no queda sitio'})); continue;
+    }
+    const p = {x:best.f.x, y:best.f.y, w:best.a, d:best.b};
+    best.s.free = mrSplit(best.s.free, p);
+    surfaces.push({z:best.s.z + it.h, kgLimit:it.kg, free:[{x:p.x, y:p.y, w:p.w, d:p.d}]});
+    placed.push(Object.assign({}, it, {x:p.x, y:p.y, z:best.s.z, pw:p.w, pd:p.d, rot:best.rot}));
+  }
+  placed.sort((a, b) => a.x - b.x || a.z - b.z || a.y - b.y); placed.forEach((p, i) => p.n = i + 1);       // n = orden de carga (del fondo hacia las puertas)
+  return {placed, unplaced};
+}
+function vanPlan(p){
+  const van = vanList()[Math.min(S.vanOpt.van, vanList().length - 1)], src = vanItems(p), res = vanPack(src.items, van, {stack:S.vanOpt.stack});
+  const kgItems = src.items.reduce((s, i) => s + i.kg, 0), kgAll = kgItems + src.bulk.kg, people = S.vanOpt.persons * 80, free = van.payload - people - kgAll;
+  const vol = res.placed.reduce((s, i) => s + i.w * i.d * i.h, 0) / 1e6, volVan = van.L * van.W * van.H / 1e6;
+  const door = van.doorW > 0 && van.doorH > 0 ? src.items.filter(i => ![[i.w, i.h], [i.d, i.h], [i.w, i.d], [i.d, i.w], [i.h, i.w], [i.h, i.d]].some(([a, b]) => a <= van.doorW && b <= van.doorH)) : [];
+  return Object.assign({van, src, kgItems, kgAll, people, free, vol, volVan, door}, res, {fits:!res.unplaced.length && !src.missing.length});
+}
+// ---- pantalla del planificador ----
+function vanSvgTop(pl){
+  const v = pl.van, sc = Math.min(330 / v.L, 200 / v.W), W = v.L * sc, H = v.W * sc;
+  const box = b => `<rect x="${(b.x * sc).toFixed(1)}" y="${(b.y * sc).toFixed(1)}" width="${(b.pw * sc).toFixed(1)}" height="${(b.pd * sc).toFixed(1)}" fill="${b.z > 0 ? '#9fb0d0' : '#d5dcea'}" fill-opacity="${b.z > 0 ? 0.85 : 1}" stroke="#1b1f27" stroke-width="${b.z > 0 ? 2 : 1}"/><text x="${((b.x + b.pw / 2) * sc).toFixed(1)}" y="${((b.y + b.pd / 2) * sc + 4).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" fill="#1b1f27">${b.n}${b.z > 0 ? '↑' : ''}</text>`;
+  return `<svg viewBox="-4 -18 ${(W + 8).toFixed(0)} ${(H + 26).toFixed(0)}" width="100%" role="img" aria-label="Vista desde arriba de la furgoneta"><text x="0" y="-5" font-size="11" fill="#657084">◀ Cabina</text><text x="${W.toFixed(0)}" y="-5" font-size="11" text-anchor="end" fill="#657084">Puertas ▶</text><rect x="0" y="0" width="${W.toFixed(1)}" height="${H.toFixed(1)}" fill="#fff" stroke="#657084" stroke-width="1.5"/>${pl.placed.map(box).join('')}</svg>`;
+}
+function vanSvgSide(pl){
+  const v = pl.van, sc = Math.min(330 / v.L, 130 / v.H), W = v.L * sc, H = v.H * sc;
+  return `<svg viewBox="-4 -4 ${(W + 8).toFixed(0)} ${(H + 22).toFixed(0)}" width="100%" role="img" aria-label="Vista de lado de la furgoneta"><rect x="0" y="0" width="${W.toFixed(1)}" height="${H.toFixed(1)}" fill="#fff" stroke="#657084" stroke-width="1.5"/>${pl.placed.map(b => `<rect x="${(b.x * sc).toFixed(1)}" y="${(H - (b.z + b.h) * sc).toFixed(1)}" width="${(b.pw * sc).toFixed(1)}" height="${(b.h * sc).toFixed(1)}" fill="${b.z > 0 ? '#9fb0d0' : '#d5dcea'}" fill-opacity="0.7" stroke="#1b1f27" stroke-width="1"/>`).join('')}<text x="2" y="${(H + 14).toFixed(0)}" font-size="10" fill="#657084">suelo</text></svg>`;
+}
+function vanView(pid){
+  const p = projById(pid); if (!p) return bar('Furgoneta', {back:true});
+  const pl = vanPlan(p), v = pl.van, vs = vanList(), empty = !pl.placed.length && !pl.unplaced.length && !pl.src.missing.length && !pl.src.bulk.n, pct = Math.round(100 * pl.kgAll / Math.max(1, v.payload - pl.people)), bad = pl.free < 0;
+  const g = new Map(); pl.placed.forEach(b => { const k = b.label.replace(/ \d+ ·.*$/, ''); g.set(k, (g.get(k) || 0) + 1); });
+  return bar('Furgoneta', {back:true}) + `<div class="sub" style="margin:8px 18px 0">${esc(p.name)}</div>
+    <div class="pad"><label for="vn-sel">Furgoneta</label><select id="vn-sel" onchange="S.vanOpt.van=+this.value;render()">${vs.map((x, i) => `<option value="${i}" ${i === S.vanOpt.van ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
+      <div class="sub" style="margin:4px 0">Carga ${fmtNum(v.L, 1)} × ${fmtNum(v.W, 1)} × ${fmtNum(v.H, 1)} cm · ${v.payload} kg de carga útil</div>
+      <label class="chkrow"><input type="checkbox" id="vn-st" ${S.vanOpt.stack ? 'checked' : ''} onchange="S.vanOpt.stack=this.checked;render()"><span>Apilar cajas (solo sobre otra que pese lo mismo o más)</span></label>
+      <label for="vn-pe">Personas a bordo (80 kg cada una, restan carga útil)</label><input id="vn-pe" type="number" min="0" max="9" value="${S.vanOpt.persons}" inputmode="numeric" onchange="S.vanOpt.persons=Math.max(0,parseInt(this.value)||0);render()">
+      <div class="actions" style="margin:8px 0 0"><button class="btn small" onclick="openVans()">Editar furgonetas</button></div></div>
+    <div class="info"><b style="color:var(--${(pl.fits && !bad) || empty ? 'ok' : 'bad'})">${empty ? 'No hay material pendiente de cargar' : pl.fits ? 'Cabe todo lo que tiene medidas' : (pl.unplaced.length ? `No cabe: ${pl.unplaced.length} bulto${pl.unplaced.length === 1 ? '' : 's'} se quedan fuera` : 'Faltan medidas de algunos equipos')}</b>
+      <div class="sub">${pl.placed.length} bulto${pl.placed.length === 1 ? '' : 's'} colocado${pl.placed.length === 1 ? '' : 's'} · ocupan ${fmtNum(pl.vol, 2)} m³ de ${fmtNum(pl.volVan, 2)} m³ (${Math.round(100 * pl.vol / pl.volVan)} %)</div>
+      <div style="margin-top:6px"><b style="color:var(--${bad ? 'bad' : pct >= 90 ? 'warn' : 'ink'})">Peso ${fmtNum(pl.kgAll, 0)} kg</b> de ${fmtNum(v.payload - pl.people, 0)} kg disponibles${pl.people ? ` (${pl.people} kg son de las personas)` : ''} · ${bad ? `te pasas ${fmtNum(-pl.free, 0)} kg` : `sobran ${fmtNum(pl.free, 0)} kg`}</div></div>
+    ${bad ? `<div class="info"><b style="color:var(--bad)">Exceso de peso</b><div class="sub">Necesitas otra furgoneta o dos viajes. Mira la carga útil exacta en tu permiso de circulación.</div></div>` : ''}
+    <div class="group">Vista desde arriba (cabina a la izquierda, puertas a la derecha)</div><div class="pad">${vanSvgTop(pl)}</div>
+    <div class="group">Vista de lado</div><div class="pad">${vanSvgSide(pl)}</div>
+    <div class="sub" style="margin:6px 18px">Los números son el orden de carga: del fondo hacia las puertas. «↑» = va encima de otra caja. Es una ayuda para planificar: no tiene en cuenta los pasos de rueda ni cómo atas la carga.</div>
+    ${pl.unplaced.length ? `<div class="group" style="color:var(--bad)">No caben (${pl.unplaced.length})</div><div class="list">${pl.unplaced.map(b => `<div class="row urow"><div class="grow"><b>${esc(b.label)}</b><div class="sub">${fmtNum(b.w, 0)}×${fmtNum(b.h, 0)}×${fmtNum(b.d, 0)} cm · ${fmtNum(b.kg, 1)} kg · ${esc(b.why)}</div></div></div>`).join('')}</div>` : ''}
+    ${pl.src.missing.length ? `<div class="group" style="color:var(--warn)">Sin medidas (${pl.src.missing.reduce((s, m) => s + m.n, 0)})</div><div class="list">${pl.src.missing.map(m => `<div class="row urow tap" onclick="go('material');setMat('equipos');openView('model','${m.id}')"><div class="grow"><b>${esc(m.name)} × ${m.n}</b><div class="sub">Pon ancho, alto y fondo en la ficha del modelo</div></div></div>`).join('')}</div>` : ''}
+    ${pl.door.length ? `<div class="group" style="color:var(--warn)">No pasan por la puerta trasera (${pl.door.length})</div><div class="list">${pl.door.slice(0, 8).map(b => `<div class="row urow"><div class="grow"><b>${esc(b.label)}</b><div class="sub">${fmtNum(b.w, 0)}×${fmtNum(b.h, 0)}×${fmtNum(b.d, 0)} cm · puerta ${fmtNum(v.doorW, 0)}×${fmtNum(v.doorH, 0)} cm</div></div></div>`).join('')}</div>` : ''}
+    ${pl.src.bulk.n ? `<div class="info"><b>Material por cantidad: ${pl.src.bulk.n} piezas</b><div class="sub">${fmtNum(pl.src.bulk.kg, 0)} kg${pl.src.bulk.m3 ? ` · ≈ ${fmtNum(pl.src.bulk.m3, 2)} m³ sueltos` : ''}. No salen en el dibujo: cuenta con un hueco para cables y cajas pequeñas.</div></div>` : ''}
+    ${pl.noWeightTxt || pl.src.noWeight ? `<div class="sub" style="margin:6px 18px;color:var(--warn)">${pl.src.noWeight} equipo${pl.src.noWeight === 1 ? '' : 's'} sin peso anotado: se cuentan como 0 kg.</div>` : ''}
+    ${pl.placed.length ? `<div class="group">Orden de carga (${pl.placed.length})</div><div class="list">${pl.placed.map(b => `<div class="row urow"><div class="count" style="min-width:26px;font-size:15px">${b.n}</div><div class="grow"><b>${esc(b.label)}</b><div class="sub">${fmtNum(b.w, 0)}×${fmtNum(b.h, 0)}×${fmtNum(b.d, 0)} cm · ${fmtNum(b.kg, 1)} kg · ${b.z > 0 ? 'encima' : 'en el suelo'}</div></div></div>`).join('')}</div>` : '<div class="empty">Este ' + esc(W.s) + ' aún no tiene material con medidas.</div>'}`;
+}
+function openVans(){
+  const vs = vanList();
+  openModal(`<h2>Furgonetas</h2><div class="sub">Medidas del espacio de carga útil, en cm. Mídelo tú: las de ficha son de partida y cambian con la versión y los asientos.</div>
+    <div id="vn-rows">${vs.map(vanRow).join('')}</div>
+    <div class="actions" style="margin:8px 0"><button class="btn small" onclick="vanAdd()">+ Otra furgoneta</button><button class="btn small" onclick="vanReset()">Restaurar las de partida</button></div>
+    <button class="btn primary block" onclick="saveVans()">Guardar</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
+}
+const vanRow = v => `<div class="info van-row" style="margin:10px 0"><label>Nombre</label><input class="vr-n" value="${esc(v.name)}">
+  <div class="two"><div><label>Largo útil</label><input class="vr-L" type="number" step="0.1" min="1" value="${v.L}" inputmode="decimal"></div><div><label>Ancho útil</label><input class="vr-W" type="number" step="0.1" min="1" value="${v.W}" inputmode="decimal"></div>
+  <div><label>Alto útil</label><input class="vr-H" type="number" step="0.1" min="1" value="${v.H}" inputmode="decimal"></div><div><label>Carga útil (kg)</label><input class="vr-P" type="number" step="1" min="1" value="${v.payload}" inputmode="decimal"></div>
+  <div><label>Puerta: ancho</label><input class="vr-dW" type="number" step="0.1" min="0" value="${v.doorW || 0}" inputmode="decimal"></div><div><label>Puerta: alto</label><input class="vr-dH" type="number" step="0.1" min="0" value="${v.doorH || 0}" inputmode="decimal"></div></div>
+  <button class="btn small" onclick="this.closest('.van-row').remove()">Quitar esta furgoneta</button></div>`;
+function vanAdd(){ $('#vn-rows').insertAdjacentHTML('beforeend', vanRow({name:'Mi furgoneta', L:250, W:130, H:130, payload:1000, doorW:130, doorH:120})); }
+function vanReset(){ $('#vn-rows').innerHTML = DEFAULT_VANS.map(vanRow).join(''); }
+async function saveVans(){
+  const vs = [...document.querySelectorAll('#vn-rows .van-row')].map(r => ({name:r.querySelector('.vr-n').value.trim() || 'Furgoneta', L:parseFloat(r.querySelector('.vr-L').value), W:parseFloat(r.querySelector('.vr-W').value), H:parseFloat(r.querySelector('.vr-H').value), payload:parseFloat(r.querySelector('.vr-P').value), doorW:parseFloat(r.querySelector('.vr-dW').value) || 0, doorH:parseFloat(r.querySelector('.vr-dH').value) || 0}));
+  if (!vs.length) return toast('Deja al menos una furgoneta', true); if (vs.some(v => !(v.L > 0 && v.W > 0 && v.H > 0 && v.payload > 0))) return toast('Largo, ancho, alto y carga útil tienen que ser mayores que 0', true);
+  const c = Object.assign({}, appCfg()); c.vans = vs; S.settings.app_config = c; S.vanOpt.van = 0;
+  if (await persistConfig()){ closeModal(); toast('Furgonetas guardadas'); render(); }
+}
+// ---- calendario: mover un show a otro día arrastrándolo (47) ----
+const moveDelta = (p, dayKey) => Math.round((tdStart(dayKey + 'T12:00:00') - tdStart(p.starts_at)) / DAY_MS);
+function shiftIso(iso, days){ const d = new Date(iso); d.setDate(d.getDate() + days); return d.toISOString(); }
+function moveConflicts(p, days){
+  const s = new Date(shiftIso(p.starts_at, days)), e = new Date(shiftIso(p.ends_at, days)), out = [];
+  const others = id => { const q = projById(id); return q && q.id !== p.id && q.status !== 'cancelled' && new Date(q.starts_at) < e && new Date(q.ends_at) > s ? q : null; };
+  S.reservations.filter(r => r.project_id === p.id && r.state !== 'returned').forEach(r => {
+    const hit = S.reservations.find(x => x.unit_id === r.unit_id && x.project_id !== p.id && x.state !== 'returned' && others(x.project_id)); if (!hit) return;
+    out.push({t:'unit', rid:r.id, label:unitLabel(unitById(r.unit_id) || {}), other:others(hit.project_id).name});
+  });
+  [...new Set(S.bulkRes.filter(b => b.project_id === p.id && b.state !== 'returned').map(b => b.model_id))].forEach(mid => {
+    const m = modelById(mid); if (!m) return; const mine = S.bulkRes.filter(b => b.project_id === p.id && b.model_id === mid && b.state !== 'returned').reduce((a, b) => a + b.qty, 0);
+    const used = S.bulkRes.filter(b => b.model_id === mid && b.project_id !== p.id && b.state !== 'returned' && others(b.project_id)).reduce((a, b) => a + b.qty, 0), short = used + mine - (m.bulk_stock - bulkRepair(m));
+    if (short > 0) out.push({t:'bulk', mid, short:Math.min(short, mine), label:`${m.name}: faltan ${Math.min(short, mine)}`, other:'otros shows'});
+  });
+  return out;
+}
+let MV = null;
+function askMoveShow(pid, dayKey){
+  const p = projById(pid); if (!p) return;
+  if (p.status === 'done' || p.status === 'cancelled') return toast(`Un ${W.s} ${p.status === 'done' ? 'hecho' : 'cancelado'} no se mueve`, true);
+  if (S.reservations.some(r => r.project_id === pid && r.state === 'out') || S.bulkRes.some(b => b.project_id === pid && b.state === 'out')) return toast('Tiene material fuera del almacén: devuélvelo antes de moverlo', true);
+  const days = moveDelta(p, dayKey); if (!days) return;
+  const cf = moveConflicts(p, days); MV = {pid, days, cf};
+  const ns = shiftIso(p.starts_at, days), ne = shiftIso(p.ends_at, days);
+  openModal(`<h2>Mover ${esc(W.s)}</h2><div class="sub">${esc(p.name)}</div>
+    <div class="info" style="margin:10px 0"><div>Antes: <b>${esc(fmtDT(p.starts_at))}</b></div><div>Después: <b>${esc(fmtDT(ns))}</b> → ${esc(fmtDT(ne))}</div><div class="sub">${days > 0 ? `${days} día${days === 1 ? '' : 's'} más tarde` : `${-days} día${days === -1 ? '' : 's'} antes`}. Los técnicos se mueven con él y su hora de llamada también.</div></div>
+    ${cf.length ? `<div class="info"><b style="color:var(--bad)">Hay material ocupado esos días (${cf.length})</b><div class="list" style="margin:8px 0 0">${cf.map(c => `<div class="row urow"><div class="grow"><b>${esc(c.label)}</b><div class="sub">${esc(c.other)}</div></div></div>`).join('')}</div><div class="sub">Si lo mueves igualmente, ese material se quita de este ${esc(W.s)}.</div></div>` : ''}
+    <button class="btn ${cf.length ? 'danger' : 'primary'} block" onclick="doMoveShow()">${cf.length ? 'Mover y quitar ese material' : 'Mover'}</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
+}
+async function doMoveShow(){
+  const m = MV; if (!m) return; const p = projById(m.pid);
+  for (const c of m.cf){ if (c.t === 'unit') await db(sb.from('reservations').delete().eq('id', c.rid)); else { const lines = S.bulkRes.filter(b => b.project_id === p.id && b.model_id === c.mid && b.state !== 'returned'); let left = c.short; for (const b of lines){ if (left <= 0) break; const q = Math.min(b.qty, left); left -= q; if (q >= b.qty) await db(sb.from('bulk_reservations').delete().eq('id', b.id)); else await db(sb.from('bulk_reservations').update({qty:b.qty - q}).eq('id', b.id)); } } }
+  await db(sb.from('projects').update({starts_at:shiftIso(p.starts_at, m.days), ends_at:shiftIso(p.ends_at, m.days)}).eq('id', p.id));
+  for (const a of S.assigns.filter(x => x.project_id === p.id && x.call_time)) await db(sb.from('crew_assignments').update({call_time:shiftIso(a.call_time, m.days)}).eq('id', a.id));
+  closeModal(); MV = null; S.calDay = ymd(new Date(shiftIso(p.starts_at, m.days))); const nd = new Date(shiftIso(p.starts_at, m.days)); S.calMonth = new Date(nd.getFullYear(), nd.getMonth(), 1);
+  await loadAll(false); render(); toast('Movido');
+}
+function openMoveShow(pid){
+  const p = projById(pid); openModal(`<h2>Mover ${esc(W.s)}</h2><div class="sub">${esc(p.name)}</div><label for="mv-day">Nuevo día de inicio</label><input id="mv-day" type="date" value="${ymd(new Date(p.starts_at))}"><button class="btn primary block" style="margin-top:10px" onclick="askMoveShow('${pid}',$('#mv-day').value)">Continuar</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
+}
+let CALDRAG = null;
+function calDrag(e, pid){ CALDRAG = pid; try { e.dataTransfer.setData('text/plain', pid); e.dataTransfer.effectAllowed = 'move'; } catch (x) {} }
+function calOver(e){ if (!CALDRAG) return; e.preventDefault(); e.currentTarget.classList.add('dropok'); }
+function calLeave(e){ e.currentTarget.classList.remove('dropok'); }
+function calDrop(e, k){ e.preventDefault(); e.currentTarget.classList.remove('dropok'); const pid = CALDRAG || (e.dataTransfer && e.dataTransfer.getData('text/plain')); CALDRAG = null; if (pid) askMoveShow(pid, k); }
+// ---- dos columnas en pantallas anchas (107) ----
+const splitOn = () => window.innerWidth >= 1000 && !whMode() && ['material', 'shows'].includes(S.tab);
+function splitMark(){ if (!S.view) return; document.querySelectorAll('.pl .row[onclick]').forEach(r => { if ((r.getAttribute('onclick') || '').includes("'" + S.view.id + "'")) r.classList.add('sel'); }); }
+let RS_WAS = null;
+window.addEventListener('resize', () => { const on = window.innerWidth >= 1000; if (RS_WAS !== on){ RS_WAS = on; if (S.session) render(); } });
+RS_WAS = window.innerWidth >= 1000;
+
+/* ============ V1.12: familias, orden de kits, duplicar, desplegables cerrados y kits ordenados ============ */
+S.kitOrder = false; S.catForce = false; S.dupFrom = null; S.modelRank = new Map();
+// ---- familias dentro de cada categoría ----
+const famOf = m => ((m && m.family) || '').trim() || modelSize(m.name).family || (m && m.name) || '';
+const famKey = m => norm(famOf(m));
+function resortModels(){
+  const cr = new Map(S.categories.map((c, i) => [c.id, i])), fo = appCfg().familyOrder || {}, mins = new Map();
+  S.models.forEach(m => { const k = (m.category_id || '_') + '|' + famKey(m), v = m.sort_order == null ? 1e9 : m.sort_order; mins.set(k, Math.min(mins.has(k) ? mins.get(k) : 1e9, v)); });
+  const catR = m => cr.has(m.category_id) ? cr.get(m.category_id) : 1e6;
+  S.models.sort((a, b) => {
+    const ca = catR(a), cb = catR(b); if (ca !== cb) return ca - cb;
+    if ((a.category_id || null) === (b.category_id || null)){
+      const fa = famKey(a), fb = famKey(b);
+      if (fa !== fb){
+        const arr = fo[a.category_id || '_'] || [], ia = arr.indexOf(fa), ib = arr.indexOf(fb);
+        if (ia >= 0 || ib >= 0) return (ia < 0 ? 1e6 : ia) - (ib < 0 ? 1e6 : ib) || fa.localeCompare(fb, 'es', {numeric:true});
+        const ma = mins.get((a.category_id || '_') + '|' + fa), mb = mins.get((b.category_id || '_') + '|' + fb); if (ma !== mb) return ma - mb;
+        return fa.localeCompare(fb, 'es', {numeric:true});
+      }
+    }
+    return modelOrder(a, b);
+  });
+  S.modelRank = new Map(S.models.map((m, i) => [m.id, i]));
+}
+const famBlocks = list => { const keys = []; list.forEach(x => { const k = famKey(x); if (!keys.includes(k)) keys.push(k); }); return keys; };
+function famHead(list, idx){
+  const m = list[idx], prev = list[idx - 1], k = famKey(m); if (prev && famKey(prev) === k) return '';
+  const n = list.filter(x => famKey(x) === k).length; if (n < 2) return '';
+  const blocks = famBlocks(list), bi = blocks.indexOf(k), cat = m.category_id || '';
+  return `<div class="fam-head"><span class="grow">${esc(famOf(m))} <span class="sub">${n} modelos</span></span>${S.matOrder ? `<button class="btn small" aria-label="Subir la familia ${esc(famOf(m))}" ${bi === 0 ? 'disabled' : ''} onclick="moveFamilyAt('${cat}',${bi},-1)">▲</button><button class="btn small" aria-label="Bajar la familia ${esc(famOf(m))}" ${bi === blocks.length - 1 ? 'disabled' : ''} onclick="moveFamilyAt('${cat}',${bi},1)">▼</button>` : ''}</div>`;
+}
+async function moveFamilyAt(cat, bi, dir){
+  const list = S.models.filter(x => (x.category_id || '') === cat), keys = famBlocks(list), j = bi + dir; if (bi < 0 || j < 0 || j >= keys.length) return;
+  [keys[bi], keys[j]] = [keys[j], keys[bi]];
+  const c = Object.assign({}, appCfg()); c.familyOrder = Object.assign({}, c.familyOrder || {}, {[cat || '_']:keys}); S.settings.app_config = c;
+  if (await persistConfig()){ resortModels(); render(); }
+}
+// ---- desplegables: en Material empiezan CERRADOS (y se abren solos al buscar o filtrar) ----
+function catIsOpen(key){ return key.startsWith('m:') ? (!!S.catForce || S.catOpen[key] === true) : S.catOpen[key] !== false; }
+function toggleAllCats(){ const hs = [...document.querySelectorAll('.cat-head[data-ck]')], anyClosed = hs.some(h => h.getAttribute('aria-expanded') === 'false'); hs.forEach(h => S.catOpen[h.dataset.ck] = anyClosed); render(); }
+function filterRows(v){
+  v = String(v || '').toLowerCase().trim();
+  document.querySelectorAll('[data-s]').forEach(el => el.hidden = !!v && !el.dataset.s.includes(v));
+  document.querySelectorAll('.fam-head').forEach(f => f.hidden = !!v);
+  document.querySelectorAll('.cat-body').forEach(b => {
+    const any = !!b.querySelector('[data-s]:not([hidden])'), head = b.previousElementSibling;
+    if (v){ b.hidden = !any; if (head && head.classList.contains('cat-head')) head.hidden = !any; }
+    else { b.hidden = b.dataset.open !== '1'; if (head && head.classList.contains('cat-head')) head.hidden = false; }
+  });
+}
+// ---- orden de los kits ----
+const kitOrder = (a, b) => (a.sort_order == null ? 1e9 : a.sort_order) - (b.sort_order == null ? 1e9 : b.sort_order) || byName(a, b);
+function kitOrderToggle(){ S.kitOrder = !S.kitOrder; render(); }
+async function moveKit(id, dir){
+  const list = S.kits.slice().sort(kitOrder), i = list.findIndex(k => k.id === id), j = i + dir; if (i < 0 || j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  await Promise.all(list.map((k, n) => (k.sort_order === n + 1 ? null : db(sb.from('kits').update({sort_order:n + 1}).eq('id', k.id)))).filter(Boolean));
+  await loadAll();
+}
+// ---- kits ordenados por categoría, familia y número ----
+const unitRankCmp = (a, b) => (a && b) ? ((S.modelRank.get(a.model_id) ?? 1e9) - (S.modelRank.get(b.model_id) ?? 1e9)) || unitCmp(a, b) : 0;
+const catHead = n => `<div class="fam-head"><span class="grow">${esc(n)}</span></div>`;
+function kitGroupedRows(items, catOf, rowOf){
+  let last = null; return items.map(x => { const c = catOf(x), h = c !== last ? catHead(c) : ''; last = c; return h + rowOf(x); }).join('');
+}
+// ---- duplicar kits y modelos ----
+async function duplicateKit(id){
+  const k = kitById(id); if (!k) return; const bulk = kitBulk(k), pieces = kitPiecesOf(id), units = kitUnits(k), short = bulk.filter(b => b.qty > kitBulkAvail(b.model));
+  let full = true;
+  if (short.length) full = confirm(`No hay libres suficientes para copiar el kit entero:\n${short.map(b => `• ${b.model.name}: el kit lleva ${b.qty} y quedan ${kitBulkAvail(b.model)} libres`).join('\n')}\n\nAceptar = copiar las cantidades completas igualmente (te pasarás del stock).\nCancelar = copiar solo lo que haya libre.`);
+  const row = await db(sb.from('kits').insert({name:k.name + ' (copia)', notes:k.notes || null, weight_kg:k.weight_kg, width_cm:k.width_cm, height_cm:k.height_cm, depth_cm:k.depth_cm}).select().single());
+  const lines = bulk.map(b => ({kit_id:row.id, model_id:b.model.id, qty:full ? b.qty : Math.min(b.qty, kitBulkAvail(b.model))})).filter(l => l.qty > 0);
+  if (lines.length) await db(sb.from('kit_items').insert(lines));
+  if (pieces.length) await db(sb.from('kit_pieces').insert(pieces.map(p => ({kit_id:row.id, name:p.name, qty:p.qty}))));
+  await loadAll(); openView('kit', row.id);
+  toast(`Kit duplicado: ${lines.length} línea${lines.length === 1 ? '' : 's'} por cantidad${pieces.length ? ` y ${pieces.length} pieza${pieces.length === 1 ? '' : 's'}` : ''}.${units.length ? ` Sus ${units.length} equipos con número de serie no se copian: cada uno solo puede estar en un kit.` : ''}`);
+}
+// ---- añadir contenido al kit: por categorías, desplegables cerrados y buscador ----
+function openKitContents(kid){
+  const inKit = new Set(S.kitItems.filter(i => i.unit_id).map(i => i.unit_id)), cats = new Map();
+  S.models.forEach(m => { const c = catName(m); if (!cats.has(c)) cats.set(c, []); cats.get(c).push(m); });
+  const sections = [...cats.keys()].sort(catOrder).map(n => {
+    let free = 0, rows = '', last = null;
+    const fcount = {}; cats.get(n).forEach(m => { const k = famKey(m); fcount[k] = (fcount[k] || 0) + 1; });
+    cats.get(n).forEach(m => {
+      const fam = famOf(m), head = (famKey(m) !== last && fcount[famKey(m)] > 1) ? `<div class="group kc-fam" style="margin:10px 0 2px" data-kc="${esc(norm(fam))}">${esc(fam)}</div>` : ''; 
+      if (!m.is_bulk){
+        const us = S.units.filter(u => u.model_id === m.id && !inKit.has(u.id)).sort(unitCmp); if (!us.length) return; free += us.length; last = famKey(m);
+        rows += head + `<div class="group" style="margin:6px 0 2px;font-size:13px" data-kc="${esc(norm(m.name))}">${esc(m.name)}</div>` + us.map(u => `<label class="chkrow" data-kc="${esc(norm(m.name + ' ' + (u.serial_number || '') + ' ' + u.code))}"><input type="checkbox" data-u="${u.id}" onchange="kcCount()">${unitTile(u)}${u.serial_number ? '<span>' + esc(u.serial_number) + '</span>' : '<span class="code sub">' + esc(u.code) + '</span>'}</label>`).join('');
+      } else {
+        const av = kitBulkAvail(m), inK = kitBulkUsed(m.id); free += av; last = famKey(m);
+        rows += head + `<div class="row" data-kc="${esc(norm(m.name))}" style="padding-left:0;padding-right:0;border:0"><div class="grow"><b>${colorDot(m)}${esc(m.name)}</b><div class="sub">Disponibles para kits: ${av} de ${m.bulk_stock || 0}${inK ? ` (${inK} ya en kits)` : ''}</div></div>
+          <input type="number" min="0" max="${av}" value="0" ${av ? '' : 'disabled'} data-b="${m.id}" oninput="clampQty(this);kcCount()" style="width:80px" inputmode="numeric" aria-label="Cantidad de ${esc(m.name)}"></div>`;
+      }
+    });
+    return rows ? `<details class="kc-cat"><summary><span class="grow">${esc(n)}</span><span class="sub kc-sel"></span><span class="sub">${free} libres</span></summary>${rows}</details>` : '';
+  }).join('');
+  openModal(`<h2>Añadir al kit</h2><div class="sub">Solo aparecen equipos que no están en otro kit. Abre una categoría para ver lo que hay.</div>
+    <input id="kc-q" type="search" placeholder="Buscar por nombre o nº de serie" oninput="kcFilter(this.value)" style="margin:8px 0">
+    <div id="kc-list">${sections || '<div class="empty" style="margin:20px 0">No queda nada libre para añadir.</div>'}</div>
+    <button class="btn primary block" id="kc-btn" style="margin-top:12px" onclick="saveKitContents('${kid}')">Añadir al kit</button>`);
+}
+function kcFilter(v){
+  v = norm(v || '');
+  document.querySelectorAll('#kc-list [data-kc]').forEach(e => e.hidden = !!v && !e.dataset.kc.includes(v));
+  document.querySelectorAll('#kc-list details').forEach(d => { const any = !!d.querySelector('[data-kc]:not([hidden]):not(.kc-fam):not(.group)') ; d.hidden = !!v && !any; if (v) d.open = any; });
+}
+function kcCount(){
+  let total = 0;
+  document.querySelectorAll('#kc-list details').forEach(d => { const n = d.querySelectorAll('input[data-u]:checked').length + [...d.querySelectorAll('input[data-b]')].reduce((s, i) => s + (parseInt(i.value) || 0), 0); total += n; const s = d.querySelector('.kc-sel'); if (s) s.textContent = n ? `${n} elegido${n === 1 ? '' : 's'}` : ''; });
+  const b = $('#kc-btn'); if (b) b.textContent = total ? `Añadir al kit (${total})` : 'Añadir al kit';
+}
 
 /* ============ Arranque ============ */
 S.queue = lsGet(QUEUE_KEY, []); S.failed = lsGet(FAIL_KEY, []);
