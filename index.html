@@ -19,7 +19,7 @@
 :root{
   --bg:#E6E9EE; --panel:#FFFFFF; --ink:#1B1F27; --muted:#657084; --line:#D3D8E0;
   --accent:#2457F5; --accent-ink:#FFFFFF;
-  --ok:#1B7F46; --okbg:#DDF1E5; --warn:#9A6200; --warnbg:#FBEBCB; --bad:#B8321F; --badbg:#F8DCD7; --info:#1B4FC9; --infobg:#DCE6FF;
+  --ok:#1B7F46; --okbg:#DDF1E5; --warn:#9A6200; --warnbg:#FBEBCB; --bad:#B8321F; --badbg:#F8DCD7; --info:#1B4FC9; --infobg:#DCE6FF; --incbg:#F2A100; --inctx:#1F1500; --repbg:#C62828; --reptx:#FFFFFF; --bajabg:#374151; --bajatx:#FFFFFF;
   --r:10px;
 }
 @media (prefers-color-scheme: dark){
@@ -27,14 +27,14 @@
     color-scheme:dark;
     --bg:#14181F; --panel:#1E242E; --ink:#E8ECF2; --muted:#9AA5B8; --line:#2E3644;
     --accent:#6C8DFF; --accent-ink:#0E1320;
-    --ok:#5ED08C; --okbg:#173525; --warn:#F0B84A; --warnbg:#3A2E10; --bad:#FF8A78; --badbg:#3E1D18; --info:#8FB0FF; --infobg:#1A2A52;
+    --ok:#5ED08C; --okbg:#173525; --warn:#F0B84A; --warnbg:#3A2E10; --bad:#FF8A78; --badbg:#3E1D18; --info:#8FB0FF; --infobg:#1A2A52; --incbg:#F5B400; --inctx:#1F1500; --repbg:#D13A30; --reptx:#FFFFFF; --bajabg:#6B7280; --bajatx:#FFFFFF;
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
   --bg:#14181F; --panel:#1E242E; --ink:#E8ECF2; --muted:#9AA5B8; --line:#2E3644;
   --accent:#6C8DFF; --accent-ink:#0E1320;
-  --ok:#5ED08C; --okbg:#173525; --warn:#F0B84A; --warnbg:#3A2E10; --bad:#FF8A78; --badbg:#3E1D18; --info:#8FB0FF; --infobg:#1A2A52;
+  --ok:#5ED08C; --okbg:#173525; --warn:#F0B84A; --warnbg:#3A2E10; --bad:#FF8A78; --badbg:#3E1D18; --info:#8FB0FF; --infobg:#1A2A52; --incbg:#F5B400; --inctx:#1F1500; --repbg:#D13A30; --reptx:#FFFFFF; --bajabg:#6B7280; --bajatx:#FFFFFF;
 }
 :root[data-theme="light"]{color-scheme:light}
 .seg.four button{font-size:14px;padding-left:2px;padding-right:2px;white-space:nowrap}
@@ -116,6 +116,12 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .badge.warn{background:var(--warnbg);color:var(--warn)}
 .badge.bad{background:var(--badbg);color:var(--bad)}
 .badge.fuera{background:var(--infobg);color:var(--info)}
+.badge.inc{background:var(--incbg);color:var(--inctx)}.badge.inc::before{content:"⚠ "}
+.badge.rep{background:var(--repbg);color:var(--reptx)}.badge.rep::before{content:"✖ "}
+.badge.baja{background:var(--bajabg);color:var(--bajatx)}
+.info.kg{border-left:4px solid var(--accent)}
+.kg-detail{margin-top:6px}
+.kg-detail .info{margin:8px 0 0;background:transparent}
 .empty{margin:40px 24px;text-align:center;color:var(--muted)}
 .search{margin:12px 16px 0}
 label{display:block;font-size:14px;color:var(--muted);margin:12px 0 4px}
@@ -313,7 +319,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = 'V1.22';   // siguiente: V1.23, V1.24…
+const APP_VERSION = 'V1.23';   // siguiente: V1.24, V1.25…
 // Cómo llamas a los shows (Más > Ajustes de la app): Show / Bolo / Evento… Todas las opciones son masculinas y el plural lleva «s».
 const W = {s:'show', p:'shows', S:'Show', P:'Shows'};
 const capFirst = x => x ? x.charAt(0).toUpperCase() + x.slice(1) : x;
@@ -342,7 +348,7 @@ const UNIT_STATUS = {ok:'Operativa', repair:'En reparación', lost:'Perdida', re
 // Etiqueta de estado de una unidad: Operativa (verde) · Fuera (azul, está en un show) · Incompleta / En reparación (aviso) · Perdida / De baja (rojo)
 function unitBadges(u){
   const out = S.reservations.some(r => r.unit_id === u.id && r.state === 'out'), b = [];
-  const cond = u.status === 'repair' ? ['warn', UNIT_STATUS.repair] : (u.status === 'lost' || u.status === 'retired') ? ['bad', UNIT_STATUS[u.status]] : (u.missing_note ? ['warn', 'Incompleta'] : null);
+  const cond = u.status === 'repair' ? ['rep', UNIT_STATUS.repair] : (u.status === 'lost' || u.status === 'retired') ? ['baja', UNIT_STATUS[u.status]] : (u.missing_note ? ['inc', 'Incompleta'] : null);
   if (out) b.push(['fuera', 'Fuera']);
   if (cond) b.push(cond); else if (!out) b.push(['ok', UNIT_STATUS.ok]);
   return b.map(([c, t]) => `<span class="badge ${c}">${esc(t)}</span>`).join('');
@@ -1010,7 +1016,7 @@ function kitsList(){
   const ks = S.kits.slice().sort(kitOrder);
   return bar('Material', {actions:`${ks.length > 1 ? `<button class="btn small" onclick="kitOrderToggle()">${S.kitOrder ? 'Terminar de ordenar' : 'Ordenar'}</button>` : ''}<button class="btn primary small" onclick="openKitForm()">+ Kit</button>`}) + matSeg()
     + (ks.length ? `<div class="list">${ks.map((k, i) => `<div class="row ${S.kitOrder ? '' : 'tap'}" ${S.kitOrder ? '' : `onclick="openView('kit','${k.id}')"`}>
-        <div class="grow"><b>${esc(k.name)}</b><div class="sub">${plu(kitUnits(k).length, 'equipo', 'equipos')} · ${plu(kitBulk(k).length, 'línea', 'líneas')} por cantidad${k.missing_note ? ' · <span style="color:var(--warn);font-weight:600">incompleto</span>' : ''}</div></div>
+        <div class="grow"><b>${esc(k.name)}</b><div class="sub">${plu(kitUnits(k).length, 'equipo', 'equipos')} · ${plu(kitBulk(k).length, 'línea', 'líneas')} por cantidad${k.missing_note ? ' · <span class="badge inc">Incompleto</span>' : ''}</div></div>
         ${S.kitOrder ? `<div style="display:flex;gap:4px"><button class="btn small" aria-label="Subir ${esc(k.name)}" ${i === 0 ? 'disabled' : ''} onclick="moveKit('${k.id}',-1)">▲</button><button class="btn small" aria-label="Bajar ${esc(k.name)}" ${i === ks.length - 1 ? 'disabled' : ''} onclick="moveKit('${k.id}',1)">▼</button></div>` : `<span class="code sub">${esc(k.code)}</span>`}</div>`).join('')}</div>`
       : `<div class="empty">Aún no hay kits.<br>Un kit es un flight case o un pack que reservas y escaneas de una vez.<br>Pulsa «+ Kit» para crear el primero.</div>`);
 }
@@ -2462,6 +2468,11 @@ const quickReturn = () => { try { return localStorage.getItem('quickReturn') ===
 function setQuick(on){ try { localStorage.setItem('quickReturn', on ? '1' : '0'); } catch(e){} }
 let condBulk = [];
 // Hoja de estado al devolver: equipos y, si los hay, líneas de cables. Devuelve {units, bulks} o null si se cancela.
+let condGroups = [];
+function kitPiecesCard(ki){
+  const k = condKits[ki], kit = kitById(k.kit_id) || {};
+  return `<div class="info" style="margin:10px 0 0" id="kp-${ki}"><b>Kit «${esc(kit.name || '')}»</b>${kit.missing_note ? `<div class="sub bad">Salió incompleto: ${esc(kit.missing_note)}</div>` : ''}<div class="sub" style="margin-top:6px;font-weight:700">Piezas que deben volver</div>${k.pieces.map((p, pj) => `<label class="chkrow"><input type="checkbox" checked onchange="kpToggle(${ki},${pj},this.checked)"><span>${esc(accText(p))}</span></label>`).join('')}</div>`;
+}
 function askConditionEx(units, bulks, title, kits){
   return new Promise(resolve => {
     condState = units.map(u => ({unit_id:u.id, cond:'ok', note:'', acc:modelAccs(u.model_id).map(a => ({...a, ok:true}))}));
@@ -2469,20 +2480,53 @@ function askConditionEx(units, bulks, title, kits){
     condBulk = bulks.map(x => ({bulk_id:x.b.id, cond:'ok', n:'', note:'', qty:x.qty, max:x.b.qty, baja:false}));
     condResolve = resolve;
     const chips = (fn, i) => ['ok','repair','incomplete'].map(c => `<button type="button" class="chip ${c==='ok'?'sel':''}" data-c="${c}" onclick="${fn}(${i},'${c}')">${COND[c]}</button>`).join('');
-    openModal(`<h2>Estado al devolver</h2><div class="sub">${esc(title)}</div>
-      ${units.map((u, i) => `<div class="info" style="margin:10px 0 0" id="cb-${i}"><b>${esc(unitLabel(u))}</b>${u.missing_note ? `<div class="sub bad">Salió incompleto: ${esc(u.missing_note)}</div>` : ''}
+    const unitCard = (u, i) => `<div class="info" style="margin:10px 0 0" id="cb-${i}"><b>${esc(unitLabel(u))}</b>${u.missing_note ? `<div class="sub bad">Salió incompleto: ${esc(u.missing_note)}</div>` : ''}
         <div class="legend" style="margin:8px 0 0">${chips('setCond', i)}</div>${accBlock(i)}
-        <div id="cn-${i}" hidden><label for="cnt-${i}" id="cnl-${i}">Qué falta</label><textarea id="cnt-${i}" style="min-height:60px" oninput="condState[${i}].note=this.value"></textarea>${photoField('u', i)}</div></div>`).join('')}
-      ${bulks.map((x, j) => { const m = modelById(x.b.model_id) || {};
-        return `<div class="info" style="margin:10px 0 0" id="bb-${j}"><b>${colorDot(m)}${esc(m.name || '')}</b><div class="sub">Vuelven ${x.qty} de ${x.b.qty}${x.b.kit_id ? ' · Kit «' + esc((kitById(x.b.kit_id) || {}).name || '') + '»' : ''}</div>
+        <div id="cn-${i}" hidden><label for="cnt-${i}" id="cnl-${i}">Qué falta</label><textarea id="cnt-${i}" style="min-height:60px" oninput="condState[${i}].note=this.value"></textarea>${photoField('u', i)}</div></div>`;
+    const bulkCard = (x, j) => { const m = modelById(x.b.model_id) || {};
+      return `<div class="info" style="margin:10px 0 0" id="bb-${j}"><b>${colorDot(m)}${esc(m.name || '')}</b><div class="sub">Vuelven ${x.qty} de ${x.b.qty}${x.b.kit_id ? ' · Kit «' + esc((kitById(x.b.kit_id) || {}).name || '') + '»' : ''}</div>
           <div class="legend" style="margin:8px 0 0">${chips('setCondB', j)}</div>
           <div id="bn-${j}" hidden><label for="bnc-${j}" id="bnl-${j}">¿Cuántos faltan?</label><input id="bnc-${j}" type="number" min="1" inputmode="numeric" oninput="condBulk[${j}].n=this.value">
             <label class="chkrow" id="bbjl-${j}" hidden style="margin-top:6px"><input type="checkbox" id="bbj-${j}" onchange="condBulk[${j}].baja=this.checked"><span>Dar de baja los que faltan (ya no volverán: se restan del stock)</span></label>
-            <label for="bnt-${j}">Nota (opcional)</label><textarea id="bnt-${j}" style="min-height:60px" oninput="condBulk[${j}].note=this.value"></textarea>${photoField('b', j)}</div></div>`; }).join('')}
-      ${kitBlocks()}
+            <label for="bnt-${j}">Nota (opcional)</label><textarea id="bnt-${j}" style="min-height:60px" oninput="condBulk[${j}].note=this.value"></textarea>${photoField('b', j)}</div></div>`; };
+    // los packs (kits) salen juntos: un solo control para «vuelve todo completo» y, si hace falta, el detalle uno a uno
+    const G = new Map(), grp = kid => { if (!G.has(kid)) G.set(kid, {kid, ui:[], bj:[], ki:[]}); return G.get(kid); };
+    units.forEach((u, i) => { const k = unitKit(u); if (k) grp(k.id).ui.push(i); });
+    bulks.forEach((x, j) => { if (x.b.kit_id && kitById(x.b.kit_id)) grp(x.b.kit_id).bj.push(j); });
+    condKits.forEach((k, ki) => grp(k.kit_id).ki.push(ki));
+    condGroups = [...G.values()].sort((a, b) => ((kitById(a.kid) || {}).name || '').localeCompare((kitById(b.kid) || {}).name || '', 'es'));
+    const inKit = new Set(); condGroups.forEach(g => { g.ui.forEach(i => inKit.add('u' + i)); g.bj.forEach(j => inKit.add('b' + j)); });
+    const packH = condGroups.map((g, gi) => { const kit = kitById(g.kid) || {};
+      return `<div class="info kg" id="kg-${gi}"><b>Kit «${esc(kit.name || '')}»</b>
+        <div class="sub">${[g.ui.length ? plu(g.ui.length, 'equipo', 'equipos') : '', g.bj.length ? plu(g.bj.length, 'línea', 'líneas') + ' por cantidad' : '', g.ki.length ? 'piezas sueltas' : ''].filter(Boolean).join(' · ')}</div>
+        ${kit.missing_note ? `<div class="sub bad">Salió incompleto: ${esc(kit.missing_note)}</div>` : ''}
+        <div class="legend" style="margin:8px 0 0"><button type="button" class="chip sel" data-m="all" onclick="kgAll(${gi})">Vuelve todo completo</button><button type="button" class="chip" data-m="det" onclick="kgDetail(${gi})">Revisar uno a uno</button></div>
+        <div class="kg-detail" id="kgd-${gi}" hidden>${g.ui.map(i => unitCard(units[i], i)).join('')}${g.bj.map(j => bulkCard(bulks[j], j)).join('')}${g.ki.map(ki => kitPiecesCard(ki)).join('')}</div></div>`; }).join('');
+    openModal(`<h2>Estado al devolver</h2><div class="sub">${esc(title)}</div>
+      ${packH}
+      ${units.map((u, i) => inKit.has('u' + i) ? '' : unitCard(u, i)).join('')}
+      ${bulks.map((x, j) => inKit.has('b' + j) ? '' : bulkCard(x, j)).join('')}
       <button class="btn primary block" onclick="confirmCond()">Confirmar devolución</button>
       <button class="btn block" onclick="closeModal()">Cancelar</button>`);
   });
+}
+function kgOk(g){
+  return g.ui.every(i => condState[i].cond === 'ok' && condState[i].acc.every(a => a.ok)) && g.bj.every(j => condBulk[j].cond === 'ok') && g.ki.every(ki => condKits[ki].pieces.every(p => p.ok));
+}
+function kgSync(){
+  (condGroups || []).forEach((g, gi) => {
+    const d = $('#kgd-' + gi), box = $('#kg-' + gi); if (!d || !box) return;
+    const ok = kgOk(g); if (!ok) d.hidden = false;
+    const det = !d.hidden; box.querySelector('[data-m="all"]').classList.toggle('sel', !det && ok); box.querySelector('[data-m="det"]').classList.toggle('sel', det || !ok);
+  });
+}
+function kgDetail(gi){ $('#kgd-' + gi).hidden = false; kgSync(); }
+function kgAll(gi){
+  const g = condGroups[gi];
+  g.ui.forEach(i => { const st = condState[i]; setCond(i, 'ok'); st.note = ''; st.autoNote = false; const t = $('#cnt-' + i); if (t) t.value = ''; st.acc.forEach(a => a.ok = true); document.querySelectorAll(`#ac-${i} input[type=checkbox]`).forEach(c => c.checked = true); });
+  g.bj.forEach(j => { setCondB(j, 'ok'); condBulk[j].note = ''; const t = $('#bnt-' + j); if (t) t.value = ''; });
+  g.ki.forEach(ki => { condKits[ki].pieces.forEach(p => p.ok = true); document.querySelectorAll(`#kp-${ki} input[type=checkbox]`).forEach(c => c.checked = true); });
+  $('#kgd-' + gi).hidden = true; kgSync();
 }
 // Solo equipos (escaneo de un QR): devuelve la lista de equipos o null
 function askCondition(units, title){ return askConditionEx(units, [], title).then(r => r ? r.units : null); }
@@ -2492,16 +2536,18 @@ function setCond(i, c){
   const box = $('#cn-' + i); box.hidden = c === 'ok';
   $('#cnl-' + i).textContent = c === 'incomplete' ? 'Qué falta' : 'Qué le pasa (opcional)';
   if (!box.hidden) $('#cnt-' + i).focus();
+  kgSync();
 }
 function setCondB(j, c){
   const b = condBulk[j]; b.cond = c; b.baja = false; if (c === 'ok') condPhotoClear('b', j);
   const bj = $('#bbj-' + j); if (bj) bj.checked = false; const bjl = $('#bbjl-' + j); if (bjl) bjl.hidden = c !== 'incomplete';
   document.querySelectorAll(`#bb-${j} .chip`).forEach(x => x.classList.toggle('sel', x.dataset.c === c));
-  const box = $('#bn-' + j); box.hidden = c === 'ok'; if (c === 'ok') return;
+  const box = $('#bn-' + j); box.hidden = c === 'ok'; if (c === 'ok'){ kgSync(); return; }
   const inp = $('#bnc-' + j);
   $('#bnl-' + j).textContent = c === 'incomplete' ? '¿Cuántos faltan?' : '¿Cuántos van a reparación? (no estarán disponibles hasta que los marques como reparados)';
   inp.max = c === 'incomplete' ? Math.max(1, b.max - 1) : b.qty;
   b.n = c === 'incomplete' ? String(Math.max(1, b.max - b.qty)) : '1'; inp.value = b.n; inp.focus();
+  kgSync();
 }
 function confirmCond(){
   for (const b of condBulk){          // los cables necesitan una cantidad válida
@@ -4356,7 +4402,7 @@ function matRowCtl(m, idx, total, list){
   }
   return {click:`openView('model','${m.id}')`, lead:'', trail:''};
 }
-const rowExtraBadges = m => (m.owner ? `<span class="badge">De terceros: ${esc(m.owner)}</span>` : '') + (lowStock(m) ? '<span class="badge bad">Bajo mínimo</span>' : '') + (m.is_bulk && kitBulkUsed(m.id) ? `<span class="badge">${kitBulkUsed(m.id)} en kits</span><span class="badge">${libresTxt(kitBulkAvail(m))}</span>` : '');
+const rowExtraBadges = m => (m.owner ? `<span class="badge">De terceros: ${esc(m.owner)}</span>` : '') + (lowStock(m) ? '<span class="badge inc">Bajo mínimo</span>' : '') + (m.is_bulk && kitBulkUsed(m.id) ? `<span class="badge">${kitBulkUsed(m.id)} en kits</span><span class="badge">${libresTxt(kitBulkAvail(m))}</span>` : '');
 
 /* ============ LISTAS DE COMPROBACIÓN V1.06: accesorios, piezas del kit, etiqueta con contenido ============ */
 const accText = a => (a.qty > 1 ? a.qty + '× ' : '') + a.name;
@@ -4421,7 +4467,7 @@ function kitBlocks(){
   return condKits.map((k, ki) => { const kit = kitById(k.kit_id) || {};
     return `<div class="info" style="margin:10px 0 0" id="kp-${ki}"><b>Kit «${esc(kit.name || '')}»</b>${kit.missing_note ? `<div class="sub bad">Salió incompleto: ${esc(kit.missing_note)}</div>` : ''}<div class="sub" style="margin-top:6px;font-weight:700">Piezas que deben volver</div>${k.pieces.map((p, pj) => `<label class="chkrow"><input type="checkbox" checked onchange="kpToggle(${ki},${pj},this.checked)"><span>${esc(accText(p))}</span></label>`).join('')}</div>`; }).join('');
 }
-function kpToggle(ki, pj, on){ condKits[ki].pieces[pj].ok = on; }
+function kpToggle(ki, pj, on){ condKits[ki].pieces[pj].ok = on; kgSync(); }
 // ---- lista de contenido para pegar en la tapa del kit: el tamaño de letra se ajusta solo para que quepa ----
 function kitListHtml(kt, lay){
   const L = kitContentLines(kt), Wd = lay === 'full' ? 58.9 : 34, Ht = lay === 'full' ? 22 : 15, tfs = lay === 'full' ? 8.5 : 6.5;
