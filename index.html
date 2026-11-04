@@ -62,6 +62,7 @@ body.wh nav.tabs button{font-size:17px;padding-top:16px;padding-bottom:16px}
 .actions .btn,.pad .btn.small,.info .btn.small{max-width:100%;white-space:normal;text-align:center}
 @media (max-width:340px){nav.tabs button{font-size:12px;padding-left:0;padding-right:0}.bar h1{font-size:20px}}
 .btn.block{white-space:normal;text-align:center}
+nav.tabs button.wide{flex:1.7 1 0}
 .toast{pointer-events:none}.toast .toastbtn{pointer-events:auto}
 .dn-row{padding:9px 0;border-top:1px solid var(--line)}
 .dn-row.off{opacity:.55}
@@ -137,6 +138,8 @@ input[type=date]{min-width:0;max-width:100%}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--panel);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
 nav.tabs button{flex:1 1 0;min-width:0;border:0;background:none;color:var(--muted);font:inherit;font-size:14px;font-weight:600;padding:14px 0 13px;border-top:3px solid transparent;cursor:pointer;white-space:nowrap}
 nav.tabs button.on{color:var(--ink);border-top-color:var(--accent)}
+@media (max-width:380px){nav.tabs button{font-size:12.5px}}
+@media (max-width:340px){nav.tabs button{font-size:11.5px}}
 .modal-back{position:fixed;inset:0;background:rgba(10,14,22,.55);display:none;align-items:flex-end;justify-content:center;z-index:20}
 .modal-back.open{display:flex}
 .sheet{background:var(--panel);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
@@ -319,7 +322,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = 'V1.23';   // siguiente: V1.24, V1.25…
+const APP_VERSION = 'V1.24';   // siguiente: V1.25, V1.26…
 // Cómo llamas a los shows (Más > Ajustes de la app): Show / Bolo / Evento… Todas las opciones son masculinas y el plural lleva «s».
 const W = {s:'show', p:'shows', S:'Show', P:'Shows'};
 const capFirst = x => x ? x.charAt(0).toUpperCase() + x.slice(1) : x;
@@ -486,8 +489,11 @@ function loadSnapshot(){
 }
 async function loadAll(draw=true){
   const tables = ['categories','equipment_models','units','projects','reservations','technicians','crew_assignments','kits','kit_items','bulk_reservations','maintenance_logs','clients','bulk_logs'];
-  let rs, st;
-  try { [rs, st] = await Promise.all([Promise.all(tables.map(t => fetchAll(t))), sb.from('settings').select('*').eq('id', 1).maybeSingle()]); }
+  const optT = ['custom_labels','photos','model_docs','model_accessories','kit_pieces','quote_versions','show_templates','template_items','notes'];
+  let rs, st, ro = [], dd = {error:true};
+  try { [rs, st, ro, dd] = await Promise.all([Promise.all(tables.map(t => fetchAll(t))), sb.from('settings').select('*').eq('id', 1).maybeSingle(),
+    Promise.all(optT.map(t => Promise.resolve(fetchAll(t)).then(r => r, e => ({error:e})))),
+    (async () => { try { return await sb.from('delivery_notes').select('id,project_id,kind,number,when_at,signer_name,signed_at,created_at').order('created_at', {ascending:false}).limit(2000); } catch (e) { return {error:e}; } })()]); }
   catch(e){ rs = [{error:e}]; st = {}; }
   const bad = rs.find(r => r.error) || (st.error ? st : null);
   if (bad){
@@ -504,15 +510,9 @@ async function loadAll(draw=true){
     toast(errMsg(bad.error), true); return;
   }
   [S.categories, S.models, S.units, S.projects, S.reservations, S.techs, S.assigns, S.kits, S.kitItems, S.bulkRes, S.maint, S.clients, S.bulkLogs] = rs.map(r => r.data);
-  try { const cl = await fetchAll('custom_labels'); S.customLabels = cl.error ? [] : (cl.data || []).slice().sort(byName); } catch (e) { S.customLabels = []; }      // las pegatinas personalizadas no impiden abrir la app si falta esquema_v10.sql
-  try { const ph = await fetchAll('photos'); S.photos = ph.error ? [] : (ph.data || []); } catch (e) { S.photos = []; }
-  try { const dc = await fetchAll('model_docs'); S.docs = dc.error ? [] : (dc.data || []); } catch (e) { S.docs = []; }
-  try { const ac = await fetchAll('model_accessories'); S.accs = ac.error ? [] : (ac.data || []); } catch (e) { S.accs = []; }
-  try { const kp = await fetchAll('kit_pieces'); S.kitPieces = kp.error ? [] : (kp.data || []); } catch (e) { S.kitPieces = []; }
-  try { const qv = await fetchAll('quote_versions'); S.quoteVersions = qv.error ? [] : (qv.data || []); } catch (e) { S.quoteVersions = []; }
-  try { const tt = await fetchAll('show_templates'), ti = await fetchAll('template_items'); S.templates = tt.error ? [] : (tt.data || []); S.tplItems = ti.error ? [] : (ti.data || []); } catch (e) { S.templates = []; S.tplItems = []; }
-  try { const nn = await fetchAll('notes'); S.notes = nn.error ? [] : (nn.data || []); } catch (e) { S.notes = []; }
-  try { const dd = await sb.from('delivery_notes').select('id,project_id,kind,number,when_at,signer_name,signed_at,created_at').order('created_at', {ascending:false}).limit(2000); S.dnotes = dd.error ? [] : (dd.data || []); } catch (e) { S.dnotes = []; }
+  const od = i => (ro[i] && !ro[i].error) ? (ro[i].data || []) : [];      // lo opcional (pegatinas, fotos, notas…) no impide abrir la app si falta un esquema
+  S.customLabels = od(0).slice().sort(byName); S.photos = od(1); S.docs = od(2); S.accs = od(3); S.kitPieces = od(4); S.quoteVersions = od(5); S.templates = od(6); S.tplItems = od(7); S.notes = od(8);
+  S.dnotes = (dd && !dd.error) ? (dd.data || []) : [];
   S.clients.sort(byName); S.categories.sort(catCmp); S.techs.sort(byName); S.kits.sort(kitOrder);
   S.units.sort((a,b) => String(a.created_at).localeCompare(String(b.created_at)));
   S.projects.sort((a,b) => new Date(a.starts_at) - new Date(b.starts_at));
@@ -556,7 +556,7 @@ function bar(title, {back=false, actions=''} = {}){
 }
 function navHTML(){
   const t = navTabs();
-  return `<nav class="tabs">${t.map(([k,l]) => `<button class="${(S.tab===k || (k==='more' && S.tab==='techs'))?'on':''}" onclick="go('${k}')">${l}${k === 'more' ? navBadgeHtml() : ''}</button>`).join('')}</nav>`;
+  return `<nav class="tabs">${t.map(([k,l]) => `<button class="${(S.tab===k || (k==='more' && S.tab==='techs'))?'on':''}${k === 'scan' ? ' wide' : ''}" onclick="go('${k}')">${l}${k === 'more' ? navBadgeHtml() : ''}</button>`).join('')}</nav>`;
 }
 
 let lastKey = '';
@@ -1065,8 +1065,17 @@ async function deleteKit(id){
   S.view = null; await loadAll(); undoBar(`Kit «${k.name}» eliminado`, tid);
 }
 async function removeKitItem(id){
-  await db(sb.from('kit_items').delete().eq('id', id));
-  await loadAll(); toast('Quitado del kit');
+  const it = S.kitItems.find(x => x.id === id); if (!it) return;
+  // si el kit está ahora en un show, esa pieza pasa a ir suelta en el show (así el pack no queda «roto» y la devolución sale bien)
+  const act = it.unit_id ? S.reservations.filter(r => r.unit_id === it.unit_id && r.kit_id === it.kit_id && r.state !== 'returned')
+    : S.bulkRes.filter(b => b.kit_id === it.kit_id && b.model_id === it.model_id && b.state !== 'returned');
+  if (act.length){ const p = projById(act[0].project_id); if (!confirm(`Este kit está ahora en ${p ? '«' + p.name + '»' : 'un ' + W.s}. Si quitas esto del kit, seguirá en el ${W.s} como pieza suelta. ¿Quitar?`)) return; }
+  S.kitItems = S.kitItems.filter(x => x.id !== id); act.forEach(r => { r.kit_id = null; });      // se ve al momento, sin esperar al servidor
+  render(); toast('Quitado del kit');
+  try {
+    await db(sb.from('kit_items').delete().eq('id', id));
+    for (const r of act) await db(sb.from(it.unit_id ? 'reservations' : 'bulk_reservations').update({kit_id:null}).eq('id', r.id));
+  } catch (e) { await loadAll(); }      // si no se pudo guardar, vuelve a aparecer
 }
 async function saveKitContents(kid){
   const rows = [];
@@ -1552,7 +1561,7 @@ function scanProjects(){
 function scanView(){
   const ps = scanProjects();
   if (!ps.find(p => p.id === S.scan.project)) S.scan.project = (ps.find(p => new Date(p.ends_at) >= Date.now()) || ps[0] || {}).id || '';
-  return bar('Escanear', {actions:whMode() ? '' : '<button class="btn small" onclick="openWarehouse()">Modo almacén</button>'})
+  return bar('Entrada / Salida', {actions:whMode() ? '' : '<button class="btn small" onclick="openWarehouse()">Modo almacén</button>'})
     + `<div class="pad" style="margin-top:12px">
       <div class="seg four"><button id="m-out" onclick="setMode('out')">Salida</button><button id="m-in" onclick="setMode('in')">Devolución</button><button id="m-count" onclick="setMode('count')">Recuento</button><button id="m-info" onclick="setMode('info')">Consultar</button></div>
       <div id="proj-wrap"><label for="scan-proj">${W.S} al que sale el material</label>
@@ -2469,6 +2478,12 @@ function setQuick(on){ try { localStorage.setItem('quickReturn', on ? '1' : '0')
 let condBulk = [];
 // Hoja de estado al devolver: equipos y, si los hay, líneas de cables. Devuelve {units, bulks} o null si se cancela.
 let condGroups = [];
+// el kit de un equipo al devolverlo: el de su reserva en el show (igual que lo ve la ficha del show); solo si no tiene reserva, el kit donde está guardado
+const condKitId = u => {
+  const rs = S.reservations.filter(r => r.unit_id === u.id && r.state !== 'returned');
+  if (rs.length){ const r = rs.find(x => x.state === 'out') || rs[0]; return r.kit_id && kitById(r.kit_id) ? r.kit_id : null; }
+  const k = unitKit(u); return k ? k.id : null;
+};
 function kitPiecesCard(ki){
   const k = condKits[ki], kit = kitById(k.kit_id) || {};
   return `<div class="info" style="margin:10px 0 0" id="kp-${ki}"><b>Kit «${esc(kit.name || '')}»</b>${kit.missing_note ? `<div class="sub bad">Salió incompleto: ${esc(kit.missing_note)}</div>` : ''}<div class="sub" style="margin-top:6px;font-weight:700">Piezas que deben volver</div>${k.pieces.map((p, pj) => `<label class="chkrow"><input type="checkbox" checked onchange="kpToggle(${ki},${pj},this.checked)"><span>${esc(accText(p))}</span></label>`).join('')}</div>`;
@@ -2491,7 +2506,7 @@ function askConditionEx(units, bulks, title, kits){
             <label for="bnt-${j}">Nota (opcional)</label><textarea id="bnt-${j}" style="min-height:60px" oninput="condBulk[${j}].note=this.value"></textarea>${photoField('b', j)}</div></div>`; };
     // los packs (kits) salen juntos: un solo control para «vuelve todo completo» y, si hace falta, el detalle uno a uno
     const G = new Map(), grp = kid => { if (!G.has(kid)) G.set(kid, {kid, ui:[], bj:[], ki:[]}); return G.get(kid); };
-    units.forEach((u, i) => { const k = unitKit(u); if (k) grp(k.id).ui.push(i); });
+    units.forEach((u, i) => { const kid = condKitId(u); if (kid) grp(kid).ui.push(i); });
     bulks.forEach((x, j) => { if (x.b.kit_id && kitById(x.b.kit_id)) grp(x.b.kit_id).bj.push(j); });
     condKits.forEach((k, ki) => grp(k.kit_id).ki.push(ki));
     condGroups = [...G.values()].sort((a, b) => ((kitById(a.kid) || {}).name || '').localeCompare((kitById(b.kid) || {}).name || '', 'es'));
@@ -4072,7 +4087,7 @@ const whCfg = () => { try { return JSON.parse(localStorage.getItem('warehouse') 
 const whMode = () => !!(whCfg() && whCfg().on);
 function applyWh(){ document.body.classList.toggle('wh', whMode()); }
 function openWarehouse(){
-  openModal(`<h2>Modo almacén</h2><div class="sub">Deja solo <b>Escanear</b> y la <b>carga de cada ${esc(W.s)}</b>, con botones grandes. Oculta Material, clientes, cobros, presupuestos y ajustes. Es para que un ayudante cargue y descargue sin ver el resto.</div>
+  openModal(`<h2>Modo almacén</h2><div class="sub">Deja solo <b>Entrada/Salida</b> y la <b>carga de cada ${esc(W.s)}</b>, con botones grandes. Oculta Material, clientes, cobros, presupuestos y ajustes. Es para que un ayudante cargue y descargue sin ver el resto.</div>
     <label for="wh-pin">PIN para salir (4 cifras, opcional)</label><input id="wh-pin" inputmode="numeric" maxlength="4" placeholder="Vacío = sin PIN">
     <div class="sub" style="margin-top:6px"><b>No es una medida de seguridad:</b> quien sepa cerrar sesión o borrar los datos del navegador puede salir. Sirve para evitar toques por error.</div>
     <button class="btn primary block" onclick="enterWarehouse()">Activar modo almacén</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
@@ -4900,7 +4915,7 @@ async function lpPdf(share){
 }
 /* ============ USO DIARIO V1.09: Hoy, buscador, favoritos, notas, tour, gestos y atajos ============ */
 S.notes = []; S.favOnly = false;
-const navTabs = () => whMode() ? [['scan', 'Escanear'], ['shows', 'Carga'], ['more', 'Más']] : [['scan', 'Escanear'], ['shows', '' + W.P], ['material', 'Material'], ['today', 'Hoy'], ['more', 'Más']];
+const navTabs = () => whMode() ? [['scan', 'Entrada/Salida'], ['shows', 'Carga'], ['more', 'Más']] : [['scan', 'Entrada/Salida'], ['shows', '' + W.P], ['material', 'Material'], ['today', 'Hoy'], ['more', 'Más']];
 const DAY_MS = 864e5, tdStart = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
 const tdDiff = iso => Math.round((tdStart(iso) - tdStart(Date.now())) / DAY_MS);
 const tdTime = iso => new Date(iso).toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
@@ -4993,7 +5008,7 @@ function todayView(){
   return bar('Hoy', {actions:`<button class="btn small" onclick="openSearch()">Buscar</button><button class="btn primary small" onclick="openNote()">+ Nota</button>`})
     + `<div class="sub" style="margin:10px 18px 0">${esc(capFirst(new Date().toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'long'})))}</div>`
     + (!tourSeen() ? `<div class="info"><b>¿Un paseo rápido por la app?</b><div class="sub">Un minuto para ver dónde está cada cosa.</div><div class="actions" style="margin:8px 0 0"><button class="btn small primary" onclick="openTour(0)">Ver el paseo</button><button class="btn small" onclick="tourDone()">No, gracias</button></div></div>` : '')
-    + `<div class="actions"><button class="btn" onclick="go('scan')">Escanear</button><button class="btn" onclick="go('shows');openProjectForm()">+ ${esc(W.S)}</button>${S.notes.some(n => !n.done) ? `<button class="btn" onclick="openNotes()">Notas (${S.notes.filter(n => !n.done).length})</button>` : ''}</div>`
+    + `<div class="actions"><button class="btn" onclick="go('scan')">Entrada / Salida</button><button class="btn" onclick="go('shows');openProjectForm()">+ ${esc(W.S)}</button>${S.notes.some(n => !n.done) ? `<button class="btn" onclick="openNotes()">Notas (${S.notes.filter(n => !n.done).length})</button>` : ''}</div>`
     + (late.length ? `<div class="group" style="color:var(--bad)">Material sin devolver</div><div class="list">${late.map(p => `<div class="row tap" onclick="go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub" style="color:var(--bad);font-weight:600">Debía volver el ${esc(fmtD(p.ends_at))} · ${esc(progTxt(p))}</div></div></div>`).join('')}</div>` : '')
     + `<div class="group">${esc(W.P[0].toUpperCase() + W.P.slice(1))} de hoy y de los próximos 7 días</div>${shows.length ? `<div class="list">${shows.map(showRow).join('')}</div>` : `<div class="empty" style="margin:16px 24px">No hay ${esc(W.p)} en los próximos 7 días.</div>`}`
     + (ns.length ? `<div class="group">Recordatorios</div><div class="list">${ns.slice(0, 5).map(noteRow).join('')}</div>${ns.length > 5 ? `<div class="actions"><button class="btn small" onclick="openNotes()">Ver las ${ns.length}</button></div>` : ''}` : '')
@@ -5038,7 +5053,7 @@ const TOUR = [
   ['Hoy', 'Tu pantalla de inicio: ' + '{p} de hoy y de la semana, material que sigue fuera, recordatorios, técnicos convocados y lo pendiente. Desde aquí puedes cargar un ' + '{s}, escanear o escribir una nota.'],
   ['Material', 'Tus modelos y cada equipo con su número de serie y su QR. Hay kits (flight cases), categorías, palabras clave, favoritos (★), fotos, manuales en PDF y la rentabilidad de cada equipo.'],
   ['{P}', 'Cada ' + '{s}' + ' pasa por Borrador, Presupuestado, Confirmado y Hecho. Al confirmar se avisa de lo que falta. Desde su ficha: lista de carga, presupuesto con versiones, contrato, patch DMX, plantillas y cierre.'],
-  ['Escanear', 'Salida, Devolución, Recuento y Consultar. Funciona sin conexión y se puede deshacer la última lectura. En «Modo almacén» solo quedan Escanear y la carga, con botones grandes.'],
+  ['Entrada / Salida', 'Salida, Devolución, Recuento y Consultar. Funciona sin conexión y se puede deshacer la última lectura. En «Modo almacén» solo quedan Entrada/Salida y la carga, con botones grandes.'],
   ['Etiquetas', 'En Material > Etiquetas: hojas A4, rollos Brother o Dymo, diseño editable, perfiles de impresión y PDF. Imprime siempre antes la hoja de prueba.'],
   ['Más', 'Clientes, técnicos, cobros, copias de seguridad, papelera, historial, estado del sistema y ajustes. Haz una copia completa de vez en cuando.'],
   ['Gestos y atajos', 'Desliza desde el borde izquierdo para volver y tira hacia abajo para actualizar. En el ordenador: Ctrl/⌘ + K busca, / también, 1–5 cambian de pestaña y ? muestra todos los atajos.']
