@@ -62,6 +62,8 @@ body.wh nav.tabs button{font-size:17px;padding-top:16px;padding-bottom:16px}
 .actions .btn,.pad .btn.small,.info .btn.small{max-width:100%;white-space:normal;text-align:center}
 @media (max-width:340px){nav.tabs button{font-size:12px;padding-left:0;padding-right:0}.bar h1{font-size:20px}}
 .btn.block{white-space:normal;text-align:center}
+.login h1.brand{background:#000;border-radius:22px;padding:34px 30px;margin:0 0 18px;display:flex;justify-content:center}
+.login h1.brand svg{width:100%;max-width:300px;height:auto;display:block}
 nav.tabs button.wide{flex:1.7 1 0}
 .toast{pointer-events:none}.toast .toastbtn{pointer-events:auto}
 .dn-row{padding:9px 0;border-top:1px solid var(--line)}
@@ -322,7 +324,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = 'V1.24';   // siguiente: V1.25, V1.26…
+const APP_VERSION = 'V1.26';   // siguiente: V1.27, V1.28…
 // Cómo llamas a los shows (Más > Ajustes de la app): Show / Bolo / Evento… Todas las opciones son masculinas y el plural lleva «s».
 const W = {s:'show', p:'shows', S:'Show', P:'Shows'};
 const capFirst = x => x ? x.charAt(0).toUpperCase() + x.slice(1) : x;
@@ -528,7 +530,7 @@ async function loadAll(draw=true){
 /* ============ Sesión ============ */
 function loginHTML(){
   return `<div class="login">
-    <h1>RentApp</h1>
+    <h1 class="brand"><svg viewBox="0 0 1169.4 284.1" role="img" aria-label="RentApp" xmlns="http://www.w3.org/2000/svg"><path d="M123.9 181.2Q123.9 172.2 124.2 167.1Q124.5 162.0 124.5 158.1Q124.5 144.3 117.89999999999999 138.15Q111.29999999999998 132.0 96.6 132.0H45.0V218.7H0.0V0.0H117.29999999999998Q134.1 0.0 146.25 5.700000000000003Q158.4 11.400000000000006 164.55 20.700000000000003Q170.7 30.0 173.39999999999998 39.45Q176.1 48.900000000000006 176.1 59.099999999999994Q176.1 98.69999999999999 139.2 113.1Q147.29999999999998 116.39999999999999 151.2 118.35Q155.1 120.3 159.14999999999998 124.80000000000001Q163.2 129.3 164.55 132.9Q165.9 136.5 167.25 146.1Q168.6 155.7 168.89999999999998 165.0Q169.2 174.29999999999998 169.5 192.6Q169.5 205.2 179.1 210.6V218.7H130.79999999999998Q126.6 210.89999999999998 125.25 203.7Q123.9 196.5 123.9 181.2ZM131.1 65.4Q131.1 48.599999999999994 123.3 43.05Q115.5 37.5 99.3 37.5H45.0V94.5H99.3Q115.19999999999999 94.5 123.14999999999999 88.8Q131.1 83.1 131.1 65.4Z M265.79999999999995 54.0Q276.29999999999995 54.0 286.19999999999993 56.39999999999999Q296.09999999999997 58.79999999999998 306.44999999999993 65.1Q316.79999999999995 71.4 324.44999999999993 81.15Q332.09999999999997 90.89999999999999 336.9 106.94999999999999Q341.7 122.99999999999999 341.7 143.7Q341.7 147.3 341.4 150.89999999999998H232.79999999999998Q233.09999999999997 160.2 234.45 166.95Q235.79999999999998 173.7 239.25 180.14999999999998Q242.7 186.6 249.45 190.05Q256.2 193.5 266.4 193.5Q290.4 193.5 298.5 173.1H339.9Q333.0 197.1 312.6 211.35Q292.2 225.6 264.9 225.6Q230.39999999999998 225.6 210.59999999999997 203.25Q190.79999999999998 180.89999999999998 190.79999999999998 141.89999999999998Q190.79999999999998 101.1 210.89999999999998 77.55Q230.99999999999997 54.0 265.79999999999995 54.0ZM297.9 122.99999999999999Q296.4 105.3 288.15 95.69999999999999Q279.9 86.1 265.2 86.1Q237.59999999999997 86.1 233.39999999999998 122.99999999999999Z M359.4 56.69999999999999H401.4V80.1Q418.79999999999995 54.0 450.0 54.0Q475.79999999999995 54.0 490.04999999999995 68.7Q504.29999999999995 83.4 504.29999999999995 110.1V218.7H462.29999999999995V118.8Q462.29999999999995 89.69999999999999 435.29999999999995 89.69999999999999Q420.0 89.69999999999999 410.7 98.39999999999999Q401.4 107.1 401.4 121.49999999999999V218.7H359.4Z M603.6 60.0V87.9H580.2V176.1Q580.2 186.89999999999998 582.9000000000001 190.34999999999997Q585.6 193.79999999999998 594.0 193.79999999999998Q597.3 193.79999999999998 603.6 192.89999999999998V222.29999999999998Q593.4 225.6 579.3 225.6Q538.2 225.6 538.2 187.5V87.9H517.5V60.0H538.2V16.5H580.2V60.0Z M769.8 174.6H687.9L673.1999999999999 218.7H627.3L705.0 0.0H754.8L830.4 218.7H784.1999999999999ZM757.5 137.1 729.0 51.599999999999994 700.5 137.1Z M929.0999999999999 54.0Q959.6999999999999 54.0 978.3 78.6Q996.8999999999999 103.19999999999999 996.8999999999999 140.1Q996.8999999999999 177.0 977.55 201.45Q958.1999999999999 225.89999999999998 929.0999999999999 225.89999999999998Q899.0999999999999 225.89999999999998 884.0999999999999 199.5V284.09999999999997H842.0999999999999V56.69999999999999H884.0999999999999V80.69999999999999Q899.0999999999999 54.0 929.0999999999999 54.0ZM919.4999999999999 190.79999999999998Q935.0999999999999 190.79999999999998 944.9999999999999 176.7Q954.8999999999999 162.6 954.8999999999999 140.7Q954.8999999999999 117.6 945.1499999999999 103.35Q935.3999999999999 89.1 919.4999999999999 89.1Q903.5999999999999 89.1 893.8499999999999 103.19999999999999Q884.0999999999999 117.3 884.0999999999999 140.1Q884.0999999999999 162.89999999999998 893.8499999999999 176.84999999999997Q903.5999999999999 190.79999999999998 919.4999999999999 190.79999999999998Z M1101.6 54.0Q1132.1999999999998 54.0 1150.7999999999997 78.6Q1169.3999999999999 103.19999999999999 1169.3999999999999 140.1Q1169.3999999999999 177.0 1150.0499999999997 201.45Q1130.6999999999998 225.89999999999998 1101.6 225.89999999999998Q1071.6 225.89999999999998 1056.6 199.5V284.09999999999997H1014.5999999999999V56.69999999999999H1056.6V80.69999999999999Q1071.6 54.0 1101.6 54.0ZM1092.0 190.79999999999998Q1107.6 190.79999999999998 1117.5 176.7Q1127.3999999999999 162.6 1127.3999999999999 140.7Q1127.3999999999999 117.6 1117.6499999999999 103.35Q1107.8999999999999 89.1 1092.0 89.1Q1076.1 89.1 1066.35 103.19999999999999Q1056.6 117.3 1056.6 140.1Q1056.6 162.89999999999998 1066.35 176.84999999999997Q1076.1 190.79999999999998 1092.0 190.79999999999998Z" fill="#fff"/></svg></h1>
     <p class="sub">Entra con el usuario que creaste en Supabase.</p>
     <label for="l-email">Email</label>
     <input id="l-email" type="email" autocomplete="username" autocapitalize="off">
@@ -1012,14 +1014,37 @@ function printDoc(cls, html, pageCss){
 const kitUnits = k => S.kitItems.filter(i => i.kit_id === k.id && i.unit_id).map(i => unitById(i.unit_id)).filter(Boolean).sort(unitRankCmp);
 const kitBulk = k => S.kitItems.filter(i => i.kit_id === k.id && i.model_id).map(i => ({item:i, model:modelById(i.model_id), qty:i.qty})).filter(x => x.model).sort((a, b) => (S.modelRank.get(a.model.id) ?? 1e9) - (S.modelRank.get(b.model.id) ?? 1e9));
 
+
+// Estado de un kit (igual que en las unidades): Fuera si va en un show; En reparación / Incompleto según lo que lleva dentro; si no, Operativo
+function kitState(k){
+  const us = kitUnits(k);
+  const out = S.reservations.some(r => r.state === 'out' && (r.kit_id === k.id || us.some(u => u.id === r.unit_id))) || S.bulkRes.some(b => b.state === 'out' && b.kit_id === k.id);
+  const rep = us.filter(u => u.status === 'repair'), gone = us.filter(u => u.status === 'lost' || u.status === 'retired'), inc = us.filter(u => u.status !== 'repair' && u.missing_note), reasons = [];
+  if (rep.length) reasons.push(plu(rep.length, 'equipo', 'equipos') + ' en reparación');
+  if (k.missing_note) reasons.push('falta ' + k.missing_note);
+  if (inc.length) reasons.push(plu(inc.length, 'equipo incompleto', 'equipos incompletos'));
+  if (gone.length) reasons.push(plu(gone.length, 'equipo perdido o de baja', 'equipos perdidos o de baja'));
+  return {out, rep:rep.length > 0, inc:!!(k.missing_note || inc.length || gone.length), reasons};
+}
+function kitBadgeList(k){
+  const st = kitState(k), b = [];
+  if (st.out) b.push(['fuera', 'Fuera']);
+  if (st.rep) b.push(['rep', 'En reparación']); else if (st.inc) b.push(['inc', 'Incompleto']);
+  if (!b.length) b.push(['ok', 'Operativo']);
+  return b.map(([c, t]) => `<span class="badge ${c}">${t}</span>`);
+}
+const kitBadges = k => `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">${kitBadgeList(k).join('')}</div>`;
+const kitReasonHtml = k => { const r = kitState(k).reasons; return r.length ? ` · <span style="color:var(--warn);font-weight:600">${esc(r.join(' · '))}</span>` : ''; };
 function kitsList(){
   const ks = S.kits.slice().sort(kitOrder);
   return bar('Material', {actions:`${ks.length > 1 ? `<button class="btn small" onclick="kitOrderToggle()">${S.kitOrder ? 'Terminar de ordenar' : 'Ordenar'}</button>` : ''}<button class="btn primary small" onclick="openKitForm()">+ Kit</button>`}) + matSeg()
+    + (ks.length && !S.kitOrder ? `<div class="sub" style="margin:8px 18px 0">Operativo = listo · Fuera = en un ${esc(W.s)} · Incompleto o En reparación = aviso</div>` : '')
     + (ks.length ? `<div class="list">${ks.map((k, i) => `<div class="row ${S.kitOrder ? '' : 'tap'}" ${S.kitOrder ? '' : `onclick="openView('kit','${k.id}')"`}>
-        <div class="grow"><b>${esc(k.name)}</b><div class="sub">${plu(kitUnits(k).length, 'equipo', 'equipos')} · ${plu(kitBulk(k).length, 'línea', 'líneas')} por cantidad${k.missing_note ? ' · <span class="badge inc">Incompleto</span>' : ''}</div></div>
-        ${S.kitOrder ? `<div style="display:flex;gap:4px"><button class="btn small" aria-label="Subir ${esc(k.name)}" ${i === 0 ? 'disabled' : ''} onclick="moveKit('${k.id}',-1)">▲</button><button class="btn small" aria-label="Bajar ${esc(k.name)}" ${i === ks.length - 1 ? 'disabled' : ''} onclick="moveKit('${k.id}',1)">▼</button></div>` : `<span class="code sub">${esc(k.code)}</span>`}</div>`).join('')}</div>`
+        <div class="grow"><b>${esc(k.name)}</b><div class="sub">${plu(kitUnits(k).length, 'equipo', 'equipos')} · ${plu(kitBulk(k).length, 'línea', 'líneas')} por cantidad${kitReasonHtml(k)}</div></div>
+        ${S.kitOrder ? `<div style="display:flex;gap:4px"><button class="btn small" aria-label="Subir ${esc(k.name)}" ${i === 0 ? 'disabled' : ''} onclick="moveKit('${k.id}',-1)">▲</button><button class="btn small" aria-label="Bajar ${esc(k.name)}" ${i === ks.length - 1 ? 'disabled' : ''} onclick="moveKit('${k.id}',1)">▼</button></div>` : kitBadges(k)}</div>`).join('')}</div>`
       : `<div class="empty">Aún no hay kits.<br>Un kit es un flight case o un pack que reservas y escaneas de una vez.<br>Pulsa «+ Kit» para crear el primero.</div>`);
 }
+
 function kitView(id){
   const k = kitById(id);
   if (!k) return bar('Kits', {back:true});
@@ -1030,7 +1055,7 @@ function kitView(id){
   const bulkRows = kitGroupedRows(bs, x => catName(x.model), ({item, model, qty}) => `<div class="row"><div class="grow"><b>${esc(model.name)}</b></div><div class="count">×${qty}</div>
       <button class="btn small" aria-label="Quitar del kit" onclick="removeKitItem('${item.id}')">✕</button></div>`);
   return bar(k.name, {back:true, actions:favBtn('kit', id)})
-    + `<div class="info" style="text-align:center"><div class="qrbox">${qrSvg(k.code)}</div><div class="sub">Código del kit <span class="code">${esc(k.code)}</span></div>${labelStatusHtml('k', k)}
+    + `<div class="info" style="text-align:center"><div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:10px">${kitBadgeList(k).join('')}</div>${kitState(k).reasons.length ? `<div class="sub" style="color:var(--warn);font-weight:600;margin:-4px 0 10px">${esc(kitState(k).reasons.join(' · '))}</div>` : ''}<div class="qrbox">${qrSvg(k.code)}</div><div class="sub">Código del kit <span class="code">${esc(k.code)}</span></div>${labelStatusHtml('k', k)}
        ${k.notes?`<div style="margin-top:8px;text-align:left">${esc(k.notes)}</div>`:''}${kitSpecs(k)}</div>
     ${kitMissingHtml(k)}
     <div class="actions"><button class="btn" onclick="openKitForm('${id}')">Editar</button><button class="btn" onclick="duplicateKit('${id}')">Duplicar</button><button class="btn" onclick="printKitLabel('${id}')">Imprimir etiqueta</button><button class="btn" onclick="printKitList('${id}')">Imprimir lista de contenido</button><button class="btn" onclick="openChanges('kits','${id}')">Cambios</button><button class="btn danger" onclick="deleteKit('${id}')">Eliminar</button></div>
