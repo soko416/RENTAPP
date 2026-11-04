@@ -51,10 +51,34 @@ body.wh nav.tabs button{font-size:17px;padding-top:16px;padding-bottom:16px}
 .pl .row.sel{background:color-mix(in srgb, var(--accent) 12%, var(--panel));box-shadow:inset 3px 0 0 var(--accent)}
 .split-ph{margin-top:28vh}
 .cal-day.dropok{outline:2px dashed var(--accent);outline-offset:-2px}
+.legend.compact .chip{min-height:32px;display:inline-flex;align-items:center}
 .fam-head{display:flex;align-items:center;gap:8px;padding:8px 16px 4px;font-weight:700;font-size:13px;color:var(--muted);border-top:1px solid var(--line)}
 .fam-head:first-child{border-top:0}
 .kc-cat{border:1px solid var(--line);border-radius:12px;margin:8px 0;padding:0 12px;background:var(--panel)}
 .kc-cat summary{display:flex;align-items:center;gap:8px;padding:12px 0;font-weight:700;cursor:pointer;list-style-position:inside}
+.legend .chip,.legend.compact .chip{min-height:36px}
+.cal-head .btn.small{min-width:44px;min-height:40px}
+.row a:not(.btn),.info a:not(.btn),.sub a:not(.btn),.pad a:not(.btn){display:inline-block;padding:7px 0}
+.actions .btn,.pad .btn.small,.info .btn.small{max-width:100%;white-space:normal;text-align:center}
+@media (max-width:340px){nav.tabs button{font-size:12px;padding-left:0;padding-right:0}.bar h1{font-size:20px}}
+.btn.block{white-space:normal;text-align:center}
+.toast{pointer-events:none}.toast .toastbtn{pointer-events:auto}
+.dn-row{padding:9px 0;border-top:1px solid var(--line)}
+.dn-row.off{opacity:.55}
+.dn-photos{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:8px 0}
+.dn-ph{position:relative;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--panel)}
+.dn-ph img{width:100%;border-radius:6px;display:block}
+.dn-ph input{margin-top:6px}
+.dn-ph>button{position:absolute;top:10px;right:10px}
+#dn-sig{width:100%;aspect-ratio:700/240;background:#fff;border:2px dashed var(--line);border-radius:12px;touch-action:none;display:block}
+.doc .dn-t{width:100%;border-collapse:collapse;font-size:10pt;margin-top:3mm}
+.doc .dn-t th,.doc .dn-t td{border-bottom:.3mm solid #888;padding:1.2mm 2mm;text-align:left;vertical-align:top}
+.doc .dn-t tr.kit td{background:#eee}
+.doc .dn-pg{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}
+.doc .dn-pg figure{margin:0;break-inside:avoid}
+.doc .dn-pg img{width:100%;display:block}
+.doc .dn-sign{margin-top:4mm;break-inside:avoid}
+.doc .dn-sign img{max-height:28mm;max-width:70mm;display:block}
 .undobar{position:fixed;left:16px;right:16px;bottom:calc(100px + env(safe-area-inset-bottom));z-index:31;max-width:560px;margin:0 auto;background:var(--ink);color:var(--bg);padding:10px 12px 10px 14px;border-radius:12px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,.3)}
 .undobar span{flex:1}
 .undobar button{background:transparent;border:1px solid currentColor;color:inherit;border-radius:8px;padding:8px 14px;font:inherit;font-weight:700;cursor:pointer;min-height:40px}
@@ -289,7 +313,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = 'V1.19';   // siguiente: V1.20, V1.21…
+const APP_VERSION = 'V1.22';   // siguiente: V1.23, V1.24…
 // Cómo llamas a los shows (Más > Ajustes de la app): Show / Bolo / Evento… Todas las opciones son masculinas y el plural lleva «s».
 const W = {s:'show', p:'shows', S:'Show', P:'Shows'};
 const capFirst = x => x ? x.charAt(0).toUpperCase() + x.slice(1) : x;
@@ -315,7 +339,6 @@ const fromLocalInput = v => new Date(v).toISOString();
 const opts = (list, sel) => list.map(([v,t]) => `<option value="${esc(v)}" ${v===sel?'selected':''}>${esc(t)}</option>`).join('');
 
 const UNIT_STATUS = {ok:'Operativa', repair:'En reparación', lost:'Perdida', retired:'De baja'};
-const UNIT_CLASS = {ok:'ok', repair:'warn', lost:'bad', retired:'bad'};
 // Etiqueta de estado de una unidad: Operativa (verde) · Fuera (azul, está en un show) · Incompleta / En reparación (aviso) · Perdida / De baja (rojo)
 function unitBadges(u){
   const out = S.reservations.some(r => r.unit_id === u.id && r.state === 'out'), b = [];
@@ -356,12 +379,20 @@ function errMsg(e){
 }
 async function db(promise){
   const r = await promise;
-  if (r.error){ toast(errMsg(r.error), true, true); throw r.error; }
+  if (r.error){ toast(errMsg(r.error), true, true); try { r.error.__toasted = true; } catch (x) {} throw r.error; }
   return r.data;
 }
-function openModal(html){ $('#sheet').innerHTML = html; $('#modal').classList.add('open'); }
+function openModal(html){
+  if (!$('#modal').classList.contains('open')) MODAL_PREV = document.activeElement;
+  const sh = $('#sheet'); sh.innerHTML = html; $('#modal').classList.add('open');
+  sh.setAttribute('role', 'dialog'); sh.setAttribute('aria-modal', 'true'); sh.setAttribute('tabindex', '-1');
+  const h = sh.querySelector('h1,h2'); if (h) sh.setAttribute('aria-label', h.textContent.trim()); else sh.removeAttribute('aria-label');
+  a11yFix(sh); try { sh.focus({preventScroll:true}); } catch (e) {}
+}
 function closeModal(){
+  const was = $('#modal').classList.contains('open');
   $('#modal').classList.remove('open'); $('#sheet').innerHTML='';
+  if (was && MODAL_PREV && document.contains(MODAL_PREV) && MODAL_PREV !== document.body){ try { MODAL_PREV.focus({preventScroll:true}); } catch (e) {} } MODAL_PREV = null;
   if (condResolve){ const r = condResolve; condResolve = null; r(null); }
 }
 function qrSvg(text){
@@ -383,12 +414,16 @@ const S = {
   count:{seen:new Set()}, queue:[], failed:[],
   scan:{project:'', mode:'out', log:[]}
 };
-const modelById = id => S.models.find(m => m.id === id);
-const unitById = id => S.units.find(u => u.id === id);
-const projById = id => S.projects.find(p => p.id === id);
-const techById = id => S.techs.find(t => t.id === id);
-const kitById = id => S.kits.find(k => k.id === id);
-const clientById = id => S.clients.find(c => c.id === id);
+// Búsqueda por id con índice (se rehace solo si cambia la lista o su tamaño): antes recorría toda la lista en cada llamada
+function mkIdx(){ let arr = null, len = -1, map = null; return list => { if (list !== arr || list.length !== len){ arr = list; len = list.length; map = new Map(); for (const x of list) if (!map.has(x.id)) map.set(x.id, x); } return map; }; }
+const plu = (n, one, many) => n + ' ' + (Number(n) === 1 ? one : many);
+const IDX = {models:mkIdx(), units:mkIdx(), projects:mkIdx(), techs:mkIdx(), kits:mkIdx(), clients:mkIdx()};
+const modelById = id => IDX.models(S.models).get(id);
+const unitById = id => IDX.units(S.units).get(id);
+const projById = id => IDX.projects(S.projects).get(id);
+const techById = id => IDX.techs(S.techs).get(id);
+const kitById = id => IDX.kits(S.kits).get(id);
+const clientById = id => IDX.clients(S.clients).get(id);
 // Número «nominal»: el número del final del nº de serie, sin ceros a la izquierda (LB008 → 8, 001 → 1).
 // Solo hasta 4 cifras, para que los números de serie largos del fabricante no se cuelen en el nombre.
 function nominalNumber(u){
@@ -401,7 +436,6 @@ function unitName(u){
   return n == null ? base : `${base} ${n}`;
 }
 // Para listas que ya van bajo el nombre del modelo: el nombre con número, o si no hay número, el nº de serie
-const unitTitleHtml = u => nominalNumber(u) != null ? esc(unitName(u)) : (u.serial_number ? esc(u.serial_number) : '<span class="sub">Sin nº de serie</span>');
 const unitLabel = u => unitName(u) + (u.serial_number ? ' · ' + u.serial_number : '');
 const unitModelName = u => (modelById(u && u.model_id) || {}).name || '';
 // Recuadro con el número de unidad: el 6 de «LedBeam 150 6» (size 'md' = el de la ficha). Sin número, un recuadro vacío para que todo quede alineado.
@@ -472,6 +506,7 @@ async function loadAll(draw=true){
   try { const qv = await fetchAll('quote_versions'); S.quoteVersions = qv.error ? [] : (qv.data || []); } catch (e) { S.quoteVersions = []; }
   try { const tt = await fetchAll('show_templates'), ti = await fetchAll('template_items'); S.templates = tt.error ? [] : (tt.data || []); S.tplItems = ti.error ? [] : (ti.data || []); } catch (e) { S.templates = []; S.tplItems = []; }
   try { const nn = await fetchAll('notes'); S.notes = nn.error ? [] : (nn.data || []); } catch (e) { S.notes = []; }
+  try { const dd = await sb.from('delivery_notes').select('id,project_id,kind,number,when_at,signer_name,signed_at,created_at').order('created_at', {ascending:false}).limit(2000); S.dnotes = dd.error ? [] : (dd.data || []); } catch (e) { S.dnotes = []; }
   S.clients.sort(byName); S.categories.sort(catCmp); S.techs.sort(byName); S.kits.sort(kitOrder);
   S.units.sort((a,b) => String(a.created_at).localeCompare(String(b.created_at)));
   S.projects.sort((a,b) => new Date(a.starts_at) - new Date(b.starts_at));
@@ -538,7 +573,7 @@ function render(){
   const pl0 = app.querySelector('.pl'), pr0 = app.querySelector('.pr'), plTop = pl0 ? pl0.scrollTop : 0, prTop = pr0 ? pr0.scrollTop : 0;
   const body = split ? `<div class="pane pl">${tabBody(S.tab, null)}</div><div class="pane pr">${S.view ? tabBody(S.tab, v) : '<div class="empty split-ph">Elige algo de la lista para verlo aquí.</div>'}</div>` : tabBody(S.tab, v);
   app.className = split ? 'split' : '';
-  app.innerHTML = body + navHTML();
+  app.innerHTML = body + navHTML(); a11yFix(app);
   if (split){ const l = app.querySelector('.pl'), r = app.querySelector('.pr'); if (l) l.scrollTop = plTop; if (r) r.scrollTop = key === lastKey ? prTop : 0; splitMark(); }
   lastKey = key;
   if (y && !split) window.scrollTo(0, y);
@@ -598,21 +633,21 @@ function rentalDays(p, override){
 }
 function quoteCalc(p, opt={}){
   const days = rentalDays(p, opt.days), useD = opt.useDur != null ? opt.useDur : useDur(p), bdays = billedDays(p, days, useD);
-  const disc = opt.disc != null ? opt.disc : Number(p.discount_pct || 0);
-  const vat = opt.vat != null ? opt.vat : Number(p.vat_pct != null ? p.vat_pct : 21);
+  const disc = clampNum(opt.disc != null ? opt.disc : Number(p.discount_pct || 0), 0, 100);
+  const vat = clampNum(opt.vat != null ? opt.vat : Number(p.vat_pct != null ? p.vat_pct : 21), 0, 100);
   const lines = [...projectQty(p)].map(([mid, qty]) => {
     const m = modelById(mid), rate = Number(m && m.day_rate || 0);
-    return {m, qty, rate, sub: qty * rate * bdays};
+    return {m, qty, rate, sub: r2(qty * rate * bdays)};
   }).sort((a,b) => ((a.m&&a.m.name)||'').localeCompare((b.m&&b.m.name)||'', 'es'));
-  const subtotal = lines.reduce((s,l) => s + l.sub, 0), dAmt = subtotal * disc / 100;
-  const base = subtotal - dAmt, vatAmt = base * vat / 100;
-  return {lines, days, bdays, useDur:useD, disc, vat, subtotal, dAmt, base, vatAmt, total: base + vatAmt};
+  const subtotal = r2(lines.reduce((s,l) => s + l.sub, 0)), dAmt = r2(subtotal * disc / 100);
+  const base = r2(subtotal - dAmt), vatAmt = r2(base * vat / 100);
+  return {lines, days, bdays, useDur:useD, disc, vat, subtotal, dAmt, base, vatAmt, total: r2(base + vatAmt)};
 }
-function modelStats(m){
+function modelStats(m, qc){
   let shows = 0, income = 0; const now = Date.now();
   S.projects.forEach(p => {
     if (p.status === 'cancelled' || p.status === 'draft' || p.status === 'quoted' || new Date(p.ends_at) > now) return;
-    const qty = projectQty(p).get(m.id); if (!qty) return;
+    const qty = (qc ? qc.get(p.id) : projectQty(p)).get(m.id); if (!qty) return;
     shows++; income += qty * Number(m.day_rate || 0) * billedDays(p, rentalDays(p)) * (1 - Number(p.discount_pct || 0) / 100);
   });
   return {shows, income};
@@ -730,7 +765,7 @@ function modelView(id){
   if (m.is_bulk){
     const lines = S.bulkRes.filter(b => b.model_id === id).map(b => ({b, p:projById(b.project_id)})).filter(x => x.p && x.b.state !== 'returned')
       .sort((x,y) => new Date(x.p.starts_at) - new Date(y.p.starts_at));
-    return head + galleryHtml('m', id) + docsHtml(m) + notesHtml('model', id) + `<div class="info"><b>${m.bulk_stock}</b> en stock · <span class="sub">por cantidad, sin número de serie</span>${kitBulkUsed(id) ? ` · <b>${kitBulkUsed(id)}</b> en kits (${kitBulkAvail(m)} libres)` : ''}${bulkRepair(m) ? ` · <span style="color:var(--warn);font-weight:600">${bulkRepair(m)} en reparación</span>` : ''}</div>
+    return head + galleryHtml('m', id) + docsHtml(m) + notesHtml('model', id) + `<div class="info"><b>${m.bulk_stock}</b> en stock · <span class="sub">por cantidad, sin número de serie</span>${kitBulkUsed(id) ? ` · <b>${kitBulkUsed(id)}</b> en kits (${libresTxt(kitBulkAvail(m))})` : ''}${bulkRepair(m) ? ` · <span style="color:var(--warn);font-weight:600">${bulkRepair(m)} en reparación</span>` : ''}</div>
       <div class="actions"><button class="btn" onclick="openModelForm('${id}')">Editar</button><button class="btn" onclick="openModelForm('','${id}')">Duplicar</button>${m.consumable ? `<button class="btn" onclick="openStock('${id}','bought')">He comprado…</button><button class="btn" onclick="openStock('${id}','used')">He usado…</button>` : ''}<button class="btn" onclick="openMerge('${id}')">Unir con otro modelo…</button><button class="btn" onclick="openChanges('equipment_models','${id}')">Cambios</button><button class="btn danger" onclick="deleteModel('${id}')">Eliminar</button></div>
       <div class="group">Reservado en ${W.p}</div>
       ${lines.length ? `<div class="list">${lines.map(({b,p}) => `<div class="row tap" onclick="go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))}</div></div>
@@ -850,6 +885,8 @@ async function saveModel(id){
     else cat = (await db(sb.from('categories').insert({name:n, sort_order:nextCatOrder()}).select().single())).id;
   }
   const bulk = id ? !!modelById(id).is_bulk : $('#f-type').value === 'bulk';
+  if (!numsOk([['La tarifa', parseFloat($('#f-rate').value)], ['El peso', nf('#f-wt')], ['La potencia', nf('#f-pw')], ['El ancho', nf('#f-dw')], ['El alto', nf('#f-dh')], ['El fondo', nf('#f-dd')], ['La cantidad en stock', parseInt(($('#f-stock') || {}).value)], ['El número de unidades', parseInt(($('#f-n') || {}).value)]])) return;
+  if (!id && !bulk && !(await confirmBigCount(parseInt(($('#f-n') || {}).value) || 0, 'unidades'))) return;
   const rate = parseFloat($('#f-rate').value), lamp = parseInt($('#f-lamp') ? $('#f-lamp').value : '');
   const payload = {name, brand:canonBrand($('#f-brand').value), category_id:cat||null, notes:$('#f-notes').value.trim()||null,
     is_bulk:bulk, bulk_stock: bulk ? (parseInt($('#f-stock').value)||0) : 0, day_rate: isNaN(rate) ? null : rate,
@@ -879,7 +916,7 @@ async function saveModel(id){
 }
 async function deleteModel(id){
   const n = S.units.filter(u => u.model_id === id).length;
-  if (!confirm(`¿Eliminar este modelo${n?` y sus ${n} unidades`:''}? También se quitará de los ${W.p} y los kits.`)) return;
+  if (!confirm(`¿Eliminar este modelo${n?` y sus ${plu(n, 'unidad', 'unidades')}`:''}? También se quitará de los ${W.p} y los kits.`)) return;
   const m = modelById(id), tid = await trashRun('model', id, `Modelo «${m.name}»`, () => db(sb.from('equipment_models').delete().eq('id', id)));
   S.view = null; await loadAll(); undoBar(`Modelo «${m.name}» eliminado`, tid);
 }
@@ -892,6 +929,8 @@ function openAddUnits(modelId){
     <button class="btn primary block" onclick="saveUnits('${modelId}')">Añadir</button>`);
 }
 async function saveUnits(modelId){
+  if (!$('#u-serials').value.trim() && !(await confirmBigCount(parseInt($('#u-qty').value) || 1, 'unidades'))) return;
+  if (!$('#u-serials').value.trim() && !numsOk([['La cantidad', parseInt($('#u-qty').value)]])) return;
   const serials = $('#u-serials').value.split('\n').map(s => s.trim()).filter(Boolean);
   const rows = serials.length ? serials.map(s => ({model_id:modelId, serial_number:s}))
     : Array.from({length: Math.max(1, parseInt($('#u-qty').value)||1)}, () => ({model_id:modelId}));
@@ -959,7 +998,8 @@ function printDoc(cls, html, pageCss){
   const el = $('#print'); el.className = cls; el.innerHTML = html;
   let st = $('#page-style'); if (!st){ st = document.createElement('style'); st.id = 'page-style'; document.head.appendChild(st); }
   st.textContent = pageCss || '';                      // el tamaño de página solo se fija al imprimir pegatinas
-  setTimeout(() => { window.print(); if (cls === 'labels') setTimeout(askMarkPrinted, 400); }, 150);
+  const waitImgs = () => Promise.all([...el.querySelectorAll('img')].map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; setTimeout(r, 8000); })));
+  setTimeout(async () => { await waitImgs(); window.print(); if (cls === 'labels') setTimeout(askMarkPrinted, 400); }, 150);
 }
 
 /* ============ MATERIAL: kits y flight cases ============ */
@@ -970,7 +1010,7 @@ function kitsList(){
   const ks = S.kits.slice().sort(kitOrder);
   return bar('Material', {actions:`${ks.length > 1 ? `<button class="btn small" onclick="kitOrderToggle()">${S.kitOrder ? 'Terminar de ordenar' : 'Ordenar'}</button>` : ''}<button class="btn primary small" onclick="openKitForm()">+ Kit</button>`}) + matSeg()
     + (ks.length ? `<div class="list">${ks.map((k, i) => `<div class="row ${S.kitOrder ? '' : 'tap'}" ${S.kitOrder ? '' : `onclick="openView('kit','${k.id}')"`}>
-        <div class="grow"><b>${esc(k.name)}</b><div class="sub">${kitUnits(k).length} equipos · ${kitBulk(k).length} líneas por cantidad${k.missing_note ? ' · <span style="color:var(--warn);font-weight:600">incompleto</span>' : ''}</div></div>
+        <div class="grow"><b>${esc(k.name)}</b><div class="sub">${plu(kitUnits(k).length, 'equipo', 'equipos')} · ${plu(kitBulk(k).length, 'línea', 'líneas')} por cantidad${k.missing_note ? ' · <span style="color:var(--warn);font-weight:600">incompleto</span>' : ''}</div></div>
         ${S.kitOrder ? `<div style="display:flex;gap:4px"><button class="btn small" aria-label="Subir ${esc(k.name)}" ${i === 0 ? 'disabled' : ''} onclick="moveKit('${k.id}',-1)">▲</button><button class="btn small" aria-label="Bajar ${esc(k.name)}" ${i === ks.length - 1 ? 'disabled' : ''} onclick="moveKit('${k.id}',1)">▼</button></div>` : `<span class="code sub">${esc(k.code)}</span>`}</div>`).join('')}</div>`
       : `<div class="empty">Aún no hay kits.<br>Un kit es un flight case o un pack que reservas y escaneas de una vez.<br>Pulsa «+ Kit» para crear el primero.</div>`);
 }
@@ -1021,21 +1061,6 @@ async function deleteKit(id){
 async function removeKitItem(id){
   await db(sb.from('kit_items').delete().eq('id', id));
   await loadAll(); toast('Quitado del kit');
-}
-function openKitContents(kid){
-  const inKit = new Set(S.kitItems.filter(i => i.unit_id).map(i => i.unit_id));
-  const serHtml = S.models.filter(m => !m.is_bulk).map(m => {
-    const us = S.units.filter(u => u.model_id === m.id && !inKit.has(u.id)).sort(unitCmp); if (!us.length) return '';
-    return `<div class="group" style="margin:14px 0 2px">${esc(m.name)}</div>` + us.map(u => `<label class="chkrow"><input type="checkbox" data-u="${u.id}">${unitTile(u)}${u.serial_number ? '<span>' + esc(u.serial_number) + '</span>' : '<span class="code sub">' + esc(u.code) + '</span>'}</label>`).join('');
-  }).join('');
-  const bulkHtml = S.models.filter(m => m.is_bulk).map(m => { const av = kitBulkAvail(m), inK = kitBulkUsed(m.id);
-    return `<div class="row" style="padding-left:0;padding-right:0;border:0"><div class="grow"><b>${colorDot(m)}${esc(m.name)}</b>
-      <div class="sub">Disponibles para kits: ${av} de ${m.bulk_stock || 0}${inK ? ` (${inK} ya en kits)` : ''}</div></div>
-      <input type="number" min="0" max="${av}" value="0" ${av ? '' : 'disabled'} data-b="${m.id}" oninput="clampQty(this)" style="width:80px" inputmode="numeric" aria-label="Cantidad de ${esc(m.name)}"></div>`; }).join('');
-  openModal(`<h2>Añadir al kit</h2><div class="sub">Solo aparecen equipos que no están en otro kit.</div>
-    ${serHtml || '<div class="empty" style="margin:20px 0">No quedan equipos con número de serie libres.</div>'}
-    ${bulkHtml ? `<div class="group" style="margin:18px 0 4px">Material por cantidad</div>${bulkHtml}` : ''}
-    <button class="btn primary block" onclick="saveKitContents('${kid}')">Añadir al kit</button>`);
 }
 async function saveKitContents(kid){
   const rows = [];
@@ -1124,6 +1149,7 @@ async function saveProject(id){
   const s = $('#p-start').value, e = $('#p-end').value;
   if (!s || !e) return toast('Indica las dos fechas', true);
   if (new Date(e) <= new Date(s)) return toast('La fecha final debe ser posterior a la inicial', true);
+  if ((new Date(e) - new Date(s)) / 864e5 > 366 && !confirm(`Este ${W.s} dura ${Math.round((new Date(e) - new Date(s)) / 864e5)} días. ¿Es correcto?`)) return;
   const cl = await resolveClient(); if (cl === false) return;
   const payload = {name, client:cl.name, client_id:cl.id, venue:$('#p-venue').value.trim()||null,
     status:$('#p-status').value, starts_at:fromLocalInput(s), ends_at:fromLocalInput(e), notes:$('#p-notes').value.trim()||null, rider_notes:$('#p-rider').value.trim()||null};
@@ -1150,6 +1176,7 @@ async function commitProject(id, payload){
   if (!id) openView('project', pid);
 }
 async function deleteProject(id){
+  if (dnOf(id).length) return toast(`Este ${W.s} tiene albaranes: bórralos antes si de verdad quieres eliminarlo`, true);
   if (!confirm(('¿Eliminar este ' + W.s + ' y sus reservas?'))) return;
   const p = projById(id), tid = await trashRun('project', id, `${W.S} «${p.name}»`, () => db(sb.from('projects').delete().eq('id', id)));
   S.view = null; await loadAll(); undoBar(`${W.S} «${p.name}» eliminado`, tid);
@@ -1163,7 +1190,7 @@ function projectView(id){
 
   const kitsH = kitIds.map(kid => {
     const k = kitById(kid), kr = rs.filter(r => r.kit_id === kid), kb = bs.filter(b => b.kit_id === kid), st = aggState([...kr, ...kb]);
-    return `<div class="row"><div class="grow"><b>${esc(k ? k.name : 'Kit')}</b><div class="sub">${kr.length} equipos${kb.length?` · ${kb.length} línea${kb.length===1?'':'s'} por cantidad`:''}</div></div>
+    return `<div class="row"><div class="grow"><b>${esc(k ? k.name : 'Kit')}</b><div class="sub">${plu(kr.length, 'equipo', 'equipos')}${kb.length?` · ${kb.length} línea${kb.length===1?'':'s'} por cantidad`:''}</div></div>
       <span class="badge ${RES_CLASS[st]}">${RES_STATE[st]}</span>
       ${st==='planned'?`<button class="btn small" aria-label="Quitar kit" onclick="removeKitFromShow('${id}','${kid}')">✕</button>`:''}</div>`;
   }).join('');
@@ -1203,8 +1230,8 @@ function projectView(id){
       <button class="btn" onclick="openDuplicate('${id}')">Duplicar</button>
       <button class="btn" onclick="openChanges('projects','${id}')">Cambios</button><button class="btn danger" onclick="deleteProject('${id}')">Eliminar</button></div>
     <div class="actions"><a class="btn" style="text-decoration:none" target="_blank" rel="noopener" href="${esc(gcalUrl(p))}">Añadir a Google Calendar</a><button class="btn" onclick="downloadShowIcs('${id}')">Archivo .ics</button><button class="btn" onclick="openMsgMenu('${id}')">Mensajes…</button><button class="btn" onclick="printRider('${id}')">Rider técnico</button></div>
-    ${paymentCard(p)}${loadCard(p)}
-    <div class="group" style="display:flex;align-items:center;gap:8px"><span style="flex:1">Material (${total} piezas)</span>${Object.keys(byModel).length > 1 ? `<button class="btn small" onclick="foldShow('${id}')">${Object.keys(byModel).some(mid => S.catOpen[`s:${id}:${mid}`] !== false) ? 'Plegar todo' : 'Desplegar todo'}</button>` : ''}</div>
+    ${paymentCard(p)}${loadCard(p)}${deliveryCard(p)}
+    <div class="group" style="display:flex;align-items:center;gap:8px"><span style="flex:1">Material (${plu(total, 'pieza', 'piezas')})</span>${Object.keys(byModel).length > 1 ? `<button class="btn small" onclick="foldShow('${id}')">${Object.keys(byModel).some(mid => S.catOpen[`s:${id}:${mid}`] !== false) ? 'Plegar todo' : 'Desplegar todo'}</button>` : ''}</div>
     ${kitIds.length?`<div class="list">${kitsH}</div>`:''}
     ${looseR.length?`<div class="list">${unitsH}</div>`:''}
     ${looseB.length?`<div class="list">${bulkH}</div>`:''}
@@ -1241,7 +1268,7 @@ async function saveMaterial(pid){
   for (const inp of document.querySelectorAll('#sheet input[data-m]')){
     const n = parseInt(inp.value) || 0; if (n <= 0) continue;
     const m = modelById(inp.dataset.m), free = m.is_bulk ? bulkFree(p, m.id) : freeUnits(p, m.id).length;
-    if (n > free) return toast(`No hay tantos «${m.name}»: quedan ${free} libres en las fechas de este ${W.s}.`, true);
+    if (n > free) return toast(`No hay tantos «${m.name}»: ${free === 1 ? 'queda 1 libre' : 'quedan ' + free + ' libres'} en las fechas de este ${W.s}.`, true);
   }
   if (!uRows.length && !bulk.length) return toast('Indica cuántas unidades quieres añadir', true);
   if (uRows.length) await db(sb.from('reservations').insert(uRows));
@@ -1279,7 +1306,7 @@ function openAddKit(pid){
   const rows = S.kits.filter(k => !inShow.has(k.id)).map(k => {
     const probs = kitProblem(p, k);
     return `<div class="row"><div class="grow"><b>${esc(k.name)}</b>
-      <div class="sub ${probs.length?'bad':''}">${probs.length ? esc(probs.slice(0,2).join('; ') + (probs.length>2?` y ${probs.length-2} más`:'')) : `${kitUnits(k).length} equipos · ${kitBulk(k).length} líneas por cantidad · libre`}</div></div>
+      <div class="sub ${probs.length?'bad':''}">${probs.length ? esc(probs.slice(0,2).join('; ') + (probs.length>2?` y ${probs.length-2} más`:'')) : `${plu(kitUnits(k).length, 'equipo', 'equipos')} · ${plu(kitBulk(k).length, 'línea', 'líneas')} por cantidad · libre`}</div></div>
       <button class="btn small primary" ${probs.length?'disabled':''} onclick="saveKitToShow('${pid}','${k.id}')">Añadir</button></div>`;
   }).join('');
   openModal(`<h2>Añadir kit</h2><div class="sub">Se reservan todos sus equipos de una vez.</div>
@@ -1320,12 +1347,6 @@ function gcalUrl(p, opt = {}){
   const details = [opt.role ? 'Función: ' + opt.role : '', p.client ? 'Cliente: ' + p.client : '', p.notes || ''].filter(Boolean).join('\n');
   const q = new URLSearchParams({action:'TEMPLATE', text:p.name + (opt.role ? ' (' + opt.role + ')' : ''), dates:f(start) + '/' + f(p.ends_at), details, location:p.venue || ''});
   return 'https://calendar.google.com/calendar/render?' + q.toString();
-}
-function waLink(t, a, p){
-  let ph = (t.phone||'').replace(/\D/g,'');
-  if (ph.length === 9) ph = '34' + ph;
-  const txt = [`${W.S}: ${p.name}`, p.venue?`Lugar: ${p.venue}`:'', a.call_time?`Llamada: ${fmtDT(a.call_time)}`:`Inicio: ${fmtDT(p.starts_at)}`, a.role?`Función: ${a.role}`:'', 'Añadir a tu calendario: ' + gcalUrl(p, {start:a.call_time, role:a.role})].filter(Boolean).join('\n');
-  return `https://wa.me/${ph}?text=${encodeURIComponent(txt)}`;
 }
 
 /* ---- Lista de carga imprimible ---- */
@@ -1369,7 +1390,7 @@ function printPackingList(pid){
 /* ---- Presupuesto ---- */
 function readQuoteInputs(){
   const v = parseFloat($('#q-vat').value);
-  return {days: parseInt($('#q-days').value) || 0, disc: parseFloat($('#q-disc').value) || 0, vat: isNaN(v) ? 21 : v, useDur: $('#q-dur') ? $('#q-dur').checked : null};
+  return {days: Math.max(0, parseInt($('#q-days').value) || 0), disc: clampNum(parseFloat($('#q-disc').value) || 0, 0, 100), vat: isNaN(v) ? 21 : clampNum(v, 0, 100), useDur: $('#q-dur') ? $('#q-dur').checked : null};
 }
 function quoteSummary(q){
   const warn = q.lines.filter(l => !(l.rate > 0)).length;
@@ -1483,9 +1504,10 @@ async function exportJson(){
   toast('Preparando la copia…');
   const ev = await fetchAll('scan_events');
   if (ev.error) return toast(errMsg(ev.error), true);
+  let dnAll = []; try { const dq = await sb.from('delivery_notes').select('*'); dnAll = dq.error ? [] : (dq.data || []); } catch (e) {}
   const data = {exportado: new Date().toISOString(), categories:S.categories, equipment_models:S.models, units:S.units, kits:S.kits, kit_items:S.kitItems,
     projects:S.projects, reservations:S.reservations, bulk_reservations:S.bulkRes, technicians:S.techs, crew_assignments:S.assigns,
-    maintenance_logs:S.maint, bulk_logs:S.bulkLogs, custom_labels:S.customLabels, photos:S.photos, model_docs:S.docs, model_accessories:S.accs, kit_pieces:S.kitPieces, quote_versions:S.quoteVersions, notes:S.notes, show_templates:S.templates, template_items:S.tplItems, clients:S.clients, scan_events:ev.data, settings:S.settings};
+    maintenance_logs:S.maint, bulk_logs:S.bulkLogs, custom_labels:S.customLabels, photos:S.photos, model_docs:S.docs, model_accessories:S.accs, kit_pieces:S.kitPieces, quote_versions:S.quoteVersions, delivery_notes:dnAll, notes:S.notes, show_templates:S.templates, template_items:S.tplItems, clients:S.clients, scan_events:ev.data, settings:S.settings};
   download(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}), `copia-rentapp-${stampName()}.json`);
   markBackup(); render(); toast('Copia descargada');
 }
@@ -1567,13 +1589,13 @@ function updateProgress(){
   const el = $('#progress'); if (!el) return;
   if (S.scan.mode === 'count'){
     const exp = expectedUnits(), seen = exp.filter(u => S.count.seen.has(u.id)).length;
-    el.innerHTML = `${seen} de ${exp.length} equipos del almacén contados` + `<div class="prog"><i style="width:${exp.length ? Math.round(100 * seen / exp.length) : 0}%"></i></div>`;
+    el.innerHTML = `${seen} de ${plu(exp.length, 'equipo', 'equipos')} del almacén contados` + `<div class="prog"><i style="width:${exp.length ? Math.round(100 * seen / exp.length) : 0}%"></i></div>`;
     return;
   }
   if (S.scan.mode !== 'out' || !S.scan.project){ el.textContent = ''; return; }
   const rs = S.reservations.filter(r => r.project_id === S.scan.project);
   const out = rs.filter(r => r.state === 'out').length, ret = rs.filter(r => r.state === 'returned').length;
-  el.textContent = rs.length ? `${out} de ${rs.length} equipos fuera del almacén${ret?` · ${ret} devueltos`:''}` : ('Este ' + W.s + ' aún no tiene equipos reservados.');
+  el.textContent = rs.length ? `${out} de ${plu(rs.length, 'equipo', 'equipos')} fuera del almacén${ret?` · ${ret} devueltos`:''}` : ('Este ' + W.s + ' aún no tiene equipos reservados.');
 }
 function scanMsg(text, kind, undo){
   const id = ++S.scan.seq, m = $('#scan-msg');
@@ -1621,7 +1643,7 @@ async function loopScan(){
     } catch(e){}
     if (code && !(code === lastCode && Date.now() - lastAt < 2500)){
       lastCode = code; lastAt = Date.now();
-      try { await handleCode(code); } catch(e){}
+      try { await handleCode(code); } catch(e){ reportError(e); }
     }
   }
   camTimer = setTimeout(loopScan, 220);
@@ -1636,7 +1658,7 @@ async function handleCode(raw){
     if (S.scan.mode === 'info') return await handleInfo(raw);
     if (code.startsWith('K-') && S.kits.some(k => k.code === code)) return await handleKit(code);
     const f = findUnitByInput(raw);
-    if (f.many) return scanMsg(`Hay ${f.many.length} equipos con el nº ${raw.trim()} (${f.many.map(x => (modelById(x.model_id) || {}).name).join(', ')}). Escribe el código U-… de uno de ellos.`, 'warn');
+    if (f.many) return scanMsg(`Hay ${plu(f.many.length, 'equipo', 'equipos')} con el nº ${raw.trim()} (${f.many.map(x => (modelById(x.model_id) || {}).name).join(', ')}). Escribe el código U-… de uno de ellos.`, 'warn');
     const u = f.u;
     if (!u) return scanMsg('Código no reconocido: ' + raw.trim(), 'bad');
     const label = unitLabel(u), off = !navigator.onLine, pend = off ? ' (pendiente de enviar)' : '';
@@ -1694,7 +1716,7 @@ async function handleKit(code){
     const inc = pendR.map(r => unitById(r.unit_id)).filter(u => u && u.missing_note);
     enqueue({t:'kout', kit_id:kit.id, project_id:pid});
     updateProgress();
-    scanMsg(`Salida del kit «${kit.name}»: ${pendR.length} equipos${pendB.length ? ` y ${pendB.length} línea${pendB.length===1?'':'s'} por cantidad` : ''}${inc.length ? ` · OJO: ${inc.length} incompleto${inc.length===1?'':'s'} (${inc.map(u => unitLabel(u) + ': falta ' + u.missing_note).join('; ')})` : ''}${pend}`, inc.length ? 'warn' : 'ok', {t:'kundo', kit_id:kit.id, project_id:pid});
+    scanMsg(`Salida del kit «${kit.name}»: ${plu(pendR.length, 'equipo', 'equipos')}${pendB.length ? ` y ${pendB.length} línea${pendB.length===1?'':'s'} por cantidad` : ''}${inc.length ? ` · OJO: ${inc.length} incompleto${inc.length===1?'':'s'} (${inc.map(u => unitLabel(u) + ': falta ' + u.missing_note).join('; ')})` : ''}${pend}`, inc.length ? 'warn' : 'ok', {t:'kundo', kit_id:kit.id, project_id:pid});
   } else {
     const rs = S.reservations.filter(r => r.kit_id === kit.id && r.state === 'out'), bs = S.bulkRes.filter(b => b.kit_id === kit.id && b.state === 'out');
     if (!rs.length && !bs.length) return scanMsg(`El kit «${kit.name}» no consta como fuera del almacén.`, 'warn');
@@ -1709,7 +1731,7 @@ async function handleKit(code){
     }
     enqueueMany([{t:'kin', kit_id:kit.id, items, skipBulk, ...kitCheckFields(kcheck.kit_id ? kcheck : null)}, ...bulkOps]);
     const inc = items.filter(i => i.cond !== 'ok').length + bBad + ((kcheck.missing || []).length ? 1 : 0);
-    scanMsg(`Devuelto el kit «${kit.name}»: ${rs.length} equipos${bs.length ? ` y ${bs.length} línea${bs.length===1?'':'s'} por cantidad` : ''}${inc ? ` · ${inc} con incidencia` : ''}${pend}`, inc ? 'warn' : 'ok');
+    scanMsg(`Devuelto el kit «${kit.name}»: ${plu(rs.length, 'equipo', 'equipos')}${bs.length ? ` y ${bs.length} línea${bs.length===1?'':'s'} por cantidad` : ''}${inc ? ` · ${inc} con incidencia` : ''}${pend}`, inc ? 'warn' : 'ok');
   }
 }
 
@@ -1799,10 +1821,10 @@ async function handleCount(code){
   if (code.startsWith('K-') && S.kits.some(x => x.code === code)){
     const k = S.kits.find(x => x.code === code);
     const us = kitUnits(k); us.forEach(u => S.count.seen.add(u.id)); updateProgress();
-    return scanMsg(`Kit «${k.name}»: ${us.length} equipos contados`, 'ok');
+    return scanMsg(`Kit «${k.name}»: ${plu(us.length, 'equipo', 'equipos')} contados`, 'ok');
   }
   const f = findUnitByInput(code);
-  if (f.many) return scanMsg(`Hay ${f.many.length} equipos con el nº ${code}. Escribe el código U-… de uno de ellos.`, 'warn');
+  if (f.many) return scanMsg(`Hay ${plu(f.many.length, 'equipo', 'equipos')} con el nº ${code}. Escribe el código U-… de uno de ellos.`, 'warn');
   const u = f.u;
   if (!u) return scanMsg('Código no reconocido: ' + code, 'bad');
   if (S.count.seen.has(u.id)) return scanMsg('Ya contada: ' + unitLabel(u), 'warn');
@@ -1860,7 +1882,7 @@ function calendarView(){
   let detail = '';
   if (S.calDay){
     const d = new Date(S.calDay + 'T00:00:00'), x = info.find(i => ymd(i.d) === S.calDay) || {ps:projsOn(d), pc:0};
-    detail = `<div class="group">${esc(d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'}))}${x.pc?` · ${x.pc} piezas en uso`:''}</div>`
+    detail = `<div class="group">${esc(d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'}))}${x.pc?` · ${plu(x.pc, 'pieza', 'piezas')} en uso`:''}</div>`
       + (x.ps.length ? `<div class="list">${x.ps.map(p => `<div class="row tap" ${(p.status === 'done' || p.status === 'cancelled') ? '' : `draggable="true" ondragstart="calDrag(event,'${p.id}')" ondragend="CALDRAG=null"`} onclick="openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))} → ${esc(fmtDT(p.ends_at))}</div></div>${(p.status === 'done' || p.status === 'cancelled') ? '' : `<button class="btn small" onclick="event.stopPropagation();openMoveShow('${p.id}')">Mover…</button>`}<div class="count">${pieces(p)}</div></div>`).join('')}</div>`
         : `<div class="empty" style="margin:20px 24px">No hay ${W.p} este día.</div>`);
   }
@@ -2078,12 +2100,12 @@ async function runImport(){
   });
   if (unitRows.length) await insertChunks('units', unitRows, 500);
   importPlan = null; closeModal(); await loadAll();
-  toast(`Importado: ${plan.groups.length} modelos y ${unitRows.length} unidades`);
+  toast(`Importado: ${plu(plan.groups.length, 'modelo', 'modelos')} y ${plu(unitRows.length, 'unidad', 'unidades')}`);
 }
 
 /* ============ RESTAURAR COPIA ============ */
 let restoreData = null;
-const RESTORE_ORDER = ['categories','equipment_models','units','kits','kit_items','clients','projects','technicians','reservations','bulk_reservations','crew_assignments','maintenance_logs','bulk_logs','custom_labels','photos','model_docs','model_accessories','kit_pieces','quote_versions','show_templates','template_items','notes','scan_events'];
+const RESTORE_ORDER = ['categories','equipment_models','units','kits','kit_items','clients','projects','technicians','reservations','bulk_reservations','crew_assignments','maintenance_logs','bulk_logs','custom_labels','photos','model_docs','model_accessories','kit_pieces','quote_versions','delivery_notes','show_templates','template_items','notes','scan_events'];
 function openRestore(){
   restoreData = null;
   openModal(`<h2>Restaurar copia</h2>
@@ -2571,6 +2593,7 @@ function openPayment(pid){
 }
 async function savePayment(pid){
   const st = $('#pay-st').value; let paid = $('#pay-paid').value || null;
+  if (!numsOk([['El importe acordado', nf('#pay-total')]])) return;
   if (st === 'paid' && !paid) paid = todayStr();
   if (st !== 'paid') paid = null;
   await db(sb.from('projects').update({payment_status:st, agreed_total:nf('#pay-total'), invoice_number:$('#pay-inv').value.trim() || null, due_date:$('#pay-due').value || null, paid_date:paid}).eq('id', pid));
@@ -2652,7 +2675,8 @@ async function schemaMissing(){
     ['esquema_v15.sql', sb.from('units').select('purchase_price').limit(1)],
     ['esquema_v16.sql', sb.from('notes').select('id').limit(1)],
     ['esquema_v17.sql', sb.from('equipment_models').select('family').limit(1)],
-    ['esquema_v17.sql', sb.from('kits').select('sort_order').limit(1)]
+    ['esquema_v17.sql', sb.from('kits').select('sort_order').limit(1)],
+    ['esquema_v18.sql', sb.from('delivery_notes').select('id').limit(1)]
   ];
   const rs = await Promise.all(probes.map(p => Promise.resolve(p[1]).then(r => r, e => ({error:e}))));
   return [...new Set(probes.filter((p, i) => rs[i].error && isSchemaErr(rs[i].error)).map(p => p[0]))];
@@ -2751,6 +2775,7 @@ function openClientForm(id){
 async function saveClient(id){
   const name = $('#c-name').value.trim(), t = i => $(i).value.trim() || null;
   if (!name) return toast('Escribe el nombre del cliente', true);
+  if (!emailOk($('#c-email').value.trim())) return toast('Ese email no parece válido (falta la @ o el dominio)', true);
   if (S.clients.some(c => c.id !== id && norm(c.name) === norm(name))) return toast('Ya existe un cliente con ese nombre', true);
   const payload = {name, contact_name:t('#c-contact'), phone:t('#c-phone'), tax_id:t('#c-tax'), email:t('#c-email'), address:t('#c-addr'), notes:t('#c-notes')};
   if (id){
@@ -3110,7 +3135,7 @@ function incidenceStats(){
   S.kits.forEach(k => { if (k.missing_note) inc++; });
   return {bad, inc, total:bad + inc};
 }
-function navBadgeHtml(){ if (whMode()) return ''; const n = incidenceStats().total; return `<span id="nav-badge" class="tabbadge" ${n ? '' : 'hidden'} aria-label="${n} incidencias">${n}</span>`; }
+function navBadgeHtml(){ if (whMode()) return ''; const n = incidenceStats().total; return `<span id="nav-badge" class="tabbadge" ${n ? '' : 'hidden'} aria-label="${plu(n, 'incidencia', 'incidencias')}">${n}</span>`; }
 function updateNavBadge(){ const el = $('#nav-badge'); if (!el) return; const n = incidenceStats().total; el.textContent = n; el.hidden = !n; }
 function incidenceCard(){
   const s = incidenceStats(); if (!s.total) return '';
@@ -3147,14 +3172,7 @@ function toggleColorFilter(hex){
   if (S.colorFilter.has(k)) S.colorFilter.delete(k); else S.colorFilter.add(k);
   render();
 }
-function clearColorFilter(){ S.colorFilter = new Set(); render(); }
 // Barra fija mientras hay un filtro activo (así siempre se puede quitar, aunque no quede ningún grupo con la leyenda)
-function colorFilterBar(groups){
-  if (!S.colorFilter.size) return '';
-  const names = [...S.colorFilter].map(k => { const e = legendList().find(x => String(x.hex).toLowerCase() === k); return e ? entryText(e) : colorName(k); });
-  const n = Object.values(groups).reduce((s, g) => s + g.length, 0);
-  return `<div class="info" style="display:flex;align-items:center;gap:10px"><div class="grow"><b>Filtrando por color</b><div class="sub">${esc(names.join(', '))} · ${n} modelo${n === 1 ? '' : 's'}</div></div><button class="btn small" onclick="clearColorFilter()">Quitar filtro</button></div>`;
-}
 
 /* ============ DAR DE BAJA CABLES (material por cantidad) ============ */
 const outBajaLines = () => S.bulkRes.filter(b => S.outSel.has('b:' + b.id) && b.state === 'out');
@@ -3215,7 +3233,7 @@ async function renameBrand(i){
   const other = g.find((y, j) => j !== i && y.key === norm(nn));
   let target = nn, ids = x.ids;
   if (other){
-    if (!confirm(`Ya existe la marca «${other.name}». ¿Unir «${x.name}» con ella? Quedarán ${x.ids.length + other.ids.length} modelos con «${other.name}».`)) return;
+    if (!confirm(`Ya existe la marca «${other.name}». ¿Unir «${x.name}» con ella? Quedarán ${plu(x.ids.length + other.ids.length, 'modelo', 'modelos')} con «${other.name}».`)) return;
     target = other.name; ids = [...x.ids, ...other.ids];
   } else if (target === x.name && x.variants.length === 1) return;
   await db(sb.from('equipment_models').update({brand:target}).in('id', ids));
@@ -3396,7 +3414,7 @@ function scRefresh(){
   const c = Object.assign({}, labelCfg(), SC), pr = scProblem(c), box = $('#sc-msg'); if (!box) return;
   const okc = Object.assign({}, c); ['cols', 'rows'].forEach(k => okc[k] = Math.max(1, Math.round(okc[k] || 1)));
   const longBrand = !pr && okc.showBrand && labelLayout(okc) === 'compact' && String(okc.brand || '').length > 14;
-  box.innerHTML = pr ? `<div class="info" style="color:var(--bad);font-weight:600">${esc(pr)}</div>` : `<div class="sub">${okc.cols * okc.rows} pegatinas por hoja · diseño ${labelLayout(okc) === 'full' ? 'completo' : 'compacto (pegatina pequeña)'}</div>${longBrand ? `<div class="sub" style="color:var(--warn);font-weight:600">El texto de la barra negra es largo para pegatinas pequeñas: se recortará con «…».</div>` : ''}`;
+  box.innerHTML = pr ? `<div class="info" style="color:var(--bad);font-weight:600">${esc(pr)}</div>` : `<div class="sub">${plu(okc.cols * okc.rows, 'pegatina', 'pegatinas')} por hoja · diseño ${labelLayout(okc) === 'full' ? 'completo' : 'compacto (pegatina pequeña)'}</div>${longBrand ? `<div class="sub" style="color:var(--warn);font-weight:600">El texto de la barra negra es largo para pegatinas pequeñas: se recortará con «…».</div>` : ''}`;
   $('#sc-prev').innerHTML = pr ? '' : sheetSvg(okc, 1, 0);
 }
 async function saveSheetCfg(){
@@ -3439,7 +3457,7 @@ function clRefresh(){
   const c = labelCfg(), n = Math.max(1, Math.min(500, parseInt(CL.copies) || 1)), s = parseInt(CL.start), st = isNaN(s) ? 1 : s, z = Math.min(1, 320 / (c.w * 3.7795));
   const prev = $('#cl-prev'); if (!prev) return;
   prev.innerHTML = `<div style="display:inline-block;zoom:${z.toFixed(3)}"><div class="lcell${c.border ? ' bd' : ' bd'}" style="position:relative;left:auto;top:auto;width:${c.w}mm;height:${c.h}mm;box-shadow:0 1px 6px rgba(0,0,0,.25)">${labelBoxHtml(customItem(CL, st), c)}</div></div>`;
-  $('#cl-note').textContent = `Así saldrá la nº ${st}${n > 1 ? ` · son ${n} pegatinas (hasta la nº ${st + n - 1})` : ''} · hoja: ${labelPresetName(c)}`;
+  $('#cl-note').textContent = `Así saldrá la nº ${st}${n > 1 ? ` · son ${plu(n, 'pegatina', 'pegatinas')} (hasta la nº ${st + n - 1})` : ''} · hoja: ${labelPresetName(c)}`;
 }
 function clPrint(){ const items = customItems(CL), t = CL.name || 'Pegatinas personalizadas'; closeModal(); openPrintLabels(items, t); }
 const clData = () => ({title:CL.title, sub:CL.sub, line3:CL.line3, tile:CL.tile, qr:CL.qr, brand:CL.brand !== false, start:parseInt(CL.start) || 1, copies:Math.max(1, Math.min(500, parseInt(CL.copies) || 1))});
@@ -3646,7 +3664,7 @@ function openAvail(mid){
   const m = r.m, P = availRange(), rango = S.av.from === S.av.to || !S.av.to ? fmtDay(S.av.from || todayStr()) : `${fmtDay(S.av.from)} → ${fmtDay(S.av.to)}`;
   let body;
   if (m.is_bulk){
-    body = `<div class="info" style="margin:10px 0 0"><b>${r.free}</b> libres de <b>${r.total}</b> en stock${r.repair ? ` · ${r.repair} en reparación` : ''}</div>`
+    body = `<div class="info" style="margin:10px 0 0"><b>${r.free}</b> ${r.free === 1 ? 'libre' : 'libres'} de <b>${r.total}</b> en stock${r.repair ? ` · ${r.repair} en reparación` : ''}</div>`
       + (r.bulkLines.length ? `<div class="group" style="margin:14px 0 6px">Reservados</div><div class="list" style="margin:0">${r.bulkLines.map(x => `<div class="row urow"><div class="grow"><b>${esc(x.p.name)}</b><div class="sub">${esc(fmtD(x.p.starts_at))} → ${esc(fmtD(x.p.ends_at))}${x.out ? ' · fuera' : ''}</div></div><div class="count">×${x.qty}</div></div>`).join('')}</div>` : '');
   } else {
     const u = r.units, sec = (t, arr, f) => arr.length ? `<div class="group" style="margin:14px 0 6px">${t} (${arr.length})</div><div class="list" style="margin:0">${arr.map(f).join('')}</div>` : '';
@@ -3659,7 +3677,6 @@ function openAvail(mid){
 }
 
 /* ============ PAPELERA Y DESHACER ============ */
-const TRASH_KIND = k => ({model:'Modelo', unit:'Unidad', kit:'Kit', project:W.S, client:'Cliente', technician:'Técnico', category:'Categoría', custom_label:'Pegatina'})[k] || k;
 const trashTable = (t, n) => { const one = n === 1, o = {equipment_models:['modelo','modelos'], units:['unidad','unidades'], reservations:['reserva','reservas'], bulk_reservations:['línea de cables','líneas de cables'], kit_items:['pieza de kit','piezas de kit'], maintenance_logs:['registro de mantenimiento','registros de mantenimiento'], bulk_logs:['incidencia de cables','incidencias de cables'], scan_events:['movimiento','movimientos'], kits:['kit','kits'], projects:[W.s, W.p], clients:['cliente','clientes'], technicians:['técnico','técnicos'], categories:['categoría','categorías'], crew_assignments:['asignación','asignaciones'], photos:['foto','fotos'], model_docs:['documento','documentos'], model_accessories:['accesorio','accesorios'], quote_versions:['versión de presupuesto','versiones de presupuesto'], kit_pieces:['pieza de kit','piezas de kit'], custom_labels:['pegatina','pegatinas']}[t]; return o ? o[one ? 0 : 1] : t; };
 // Foto de todo lo que se va a borrar (incluido lo que se borra en cascada), para poder restaurarlo
 async function trashCollect(kind, id){
@@ -3695,8 +3712,8 @@ async function trashRun(kind, id, label, del){
   let tid = null;
   try {
     const snap = await trashCollect(kind, id), r = await sb.from('trash').insert({kind, label, data:snap}).select().single();
-    if (r.error) throw r.error; tid = r.data.id;
-  } catch (e){ if (!isSchemaErr(e)){ toast(errMsg(e), true, true); throw e; } }
+    if (r.error) throw r.error; if (!r.data || !r.data.id) throw new Error('La papelera no respondió: no se ha borrado nada'); tid = r.data.id;
+  } catch (e){ if (!isSchemaErr(e)){ toast(errMsg(e), true, true); try { e.__toasted = true; } catch (x) {} throw e; } }
   await del();
   return tid;
 }
@@ -3791,7 +3808,7 @@ function diagText(){
   const q = S.queue ? S.queue.length : 0, f = S.failed ? S.failed.length : 0, c = labelCfg();
   return [`RentApp ${APP_VERSION} · ${new Date().toISOString()}`, `Navegador: ${navigator.userAgent}`, `Conexión: ${navigator.onLine ? 'con internet' : 'SIN internet'} · operaciones pendientes: ${q} · fallidas: ${f}`,
     `Usuario: ${(S.session && S.session.user && S.session.user.email) || '—'}`, `Scripts de base de datos que faltan: ${S.schemaMiss ? (S.schemaMiss.length ? S.schemaMiss.join(', ') : 'ninguno') : 'sin comprobar'}`,
-    `Datos: ${S.models.length} modelos · ${S.units.length} unidades · ${S.projects.length} ${W.p} · ${S.clients.length} clientes · ${S.kits.length} kits`, `Hoja de etiquetas: ${labelPresetName(c)}`, `Última copia en este dispositivo: ${lastBackup() ? fmtFull(lastBackup()) : 'nunca'}`,
+    `Datos: ${plu(S.models.length, 'modelo', 'modelos')} · ${plu(S.units.length, 'unidad', 'unidades')} · ${S.projects.length} ${W.p} · ${plu(S.clients.length, 'cliente', 'clientes')} · ${plu(S.kits.length, 'kit', 'kits')}`, `Hoja de etiquetas: ${labelPresetName(c)}`, `Última copia en este dispositivo: ${lastBackup() ? fmtFull(lastBackup()) : 'nunca'}`,
     `Últimos errores (${S.errLog.length}):`, ...S.errLog.slice().reverse().map(e => `  ${e.t.slice(11, 19)} [${e.code || '-'}] ${e.msg}`)].join('\n');
 }
 async function copyDiagnostics(){
@@ -3832,7 +3849,7 @@ function systemView(){
       <div class="info"><div class="sub">En el plan gratuito, <b>Supabase pausa el proyecto si pasa una semana sin actividad</b>, y la app deja de funcionar hasta que lo reactivas a mano en supabase.com. Abriendo la app de vez en cuando basta; si quieres asegurarte, puedes programar una visita automática.</div></div>
       <div class="actions"><button class="btn" onclick="openKeepAlive()">Cómo evitar la pausa</button></div>
       <div class="group">Copia de seguridad</div>
-      <div class="info"><div>Última copia en este dispositivo: <b>${l ? esc(fmtFull(l)) : 'nunca'}</b>${days != null && days > 7 ? ` · <b style="color:var(--warn)">hace ${days} días</b>` : ''}</div>
+      <div class="info"><div>Última copia en este dispositivo: <b>${l ? esc(fmtFull(l)) : 'nunca'}</b>${days != null && days > 7 ? ` · <b style="color:var(--warn)">hace ${plu(days, 'día', 'días')}</b>` : ''}</div>
         <div class="sub" style="margin-top:6px">El plan gratuito no incluye copias automáticas: la copia que descargas desde Más es la única que tienes.</div></div>
       <div class="group">Conexión y base de datos</div>
       <div class="info"><div>${navigator.onLine ? 'Con internet' : '<b style="color:var(--bad)">Sin internet</b>'} · pendiente de enviar: <b>${S.queue.length}</b> · fallidas: <b>${S.failed.length}</b></div>
@@ -3862,7 +3879,7 @@ jobs:
 function openKeepAlive(){
   openModal(`<h2>Evitar la pausa</h2><div class="sub">Un pequeño trabajo de GitHub que visita tu Supabase dos veces por semana (lunes y jueves). Solo usa la clave pública que ya está en la app.</div>
     <ol style="padding-left:20px;line-height:1.5"><li>En github.com/soko416/RENTAPP pulsa <b>Add file › Create new file</b>.</li><li>En el nombre escribe exactamente <b>.github/workflows/keepalive.yml</b></li><li>Pega el texto de abajo y pulsa <b>Commit changes</b>.</li><li>Pestaña <b>Actions</b> › «keepalive» › <b>Run workflow</b> para probarlo una vez.</li></ol>
-    <textarea id="ka-t" readonly style="min-height:200px;font-family:ui-monospace,monospace;font-size:12px">${esc(keepAliveYaml())}</textarea>
+    <textarea id="ka-t" aria-label="Contenido del archivo keepalive.yml" readonly style="min-height:200px;font-family:ui-monospace,monospace;font-size:12px">${esc(keepAliveYaml())}</textarea>
     <div class="sub" style="margin-top:6px">Aviso: GitHub desactiva las tareas programadas si el repositorio pasa 60 días sin actividad, y no he podido comprobar que Supabase cuente estas visitas como actividad. Es una ayuda, no una garantía.</div>
     <button class="btn primary block" onclick="navigator.clipboard.writeText(keepAliveYaml()).then(()=>toast('Copiado'),()=>{const e=$('#ka-t');e.focus();e.select();toast('Selecciona y copia',true)})">Copiar el texto</button><button class="btn block" onclick="closeModal()">Cerrar</button>`);
 }
@@ -3923,7 +3940,7 @@ async function handleInfo(raw){
   const code = raw.trim().toUpperCase();
   if (code.startsWith('K-') && S.kits.some(k => k.code === code)){ const k = S.kits.find(x => x.code === code); scanMsg(`Consulta: kit «${k.name}»`, 'ok'); return openKitInfo(k); }
   const f = findUnitByInput(raw);
-  if (f.many) return scanMsg(`Hay ${f.many.length} equipos con el nº ${raw.trim()}. Escribe el código U-… de uno de ellos.`, 'warn');
+  if (f.many) return scanMsg(`Hay ${plu(f.many.length, 'equipo', 'equipos')} con el nº ${raw.trim()}. Escribe el código U-… de uno de ellos.`, 'warn');
   if (!f.u) return scanMsg('Código no reconocido: ' + raw.trim(), 'bad');
   scanMsg('Consulta: ' + unitLabel(f.u), 'ok'); openUnitInfo(f.u);
 }
@@ -4214,12 +4231,12 @@ function massBar(){
 }
 const massIds = () => [...S.mass.sel];
 async function massApply(patch, msg){ await db(sb.from('equipment_models').update(patch).in('id', massIds())); const n = S.mass.sel.size; S.mass = {on:false, sel:new Set()}; closeModal(); await loadAll(); toast(`${msg} (${n})`); }
-function massCategory(){ openModal(`<h2>Cambiar de categoría</h2><div class="sub">${S.mass.sel.size} modelos</div><label for="ms-cat">Categoría</label><select id="ms-cat"><option value="">Sin categoría</option>${opts(S.categories.map(c => [c.id, c.name]), '')}</select><button class="btn primary block" style="margin-top:12px" onclick="massApply({category_id:$('#ms-cat').value||null},'Categoría cambiada')">Cambiar</button><button class="btn block" onclick="closeModal()">Cancelar</button>`); }
-function massBrand(){ openModal(`<h2>Cambiar la marca</h2><div class="sub">${S.mass.sel.size} modelos</div><label for="ms-brand">Marca</label><input id="ms-brand" list="brand-list2" autocomplete="off"><datalist id="brand-list2">${brandList().map(b => `<option value="${esc(b)}">`).join('')}</datalist><div class="sub">Vacío = quitar la marca.</div><button class="btn primary block" style="margin-top:12px" onclick="massApply({brand:canonBrand($('#ms-brand').value)},'Marca cambiada')">Cambiar</button><button class="btn block" onclick="closeModal()">Cancelar</button>`); }
-function massColor(){ const l = legendList().filter(e => e.hex); openModal(`<h2>Cambiar el color</h2><div class="sub">${S.mass.sel.size} modelos</div><div class="legend" style="margin:10px 0">${l.map(e => `<button type="button" class="chip" onclick="massApply({color:'${esc(e.hex)}'},'Color cambiado')"><span class="sw" style="background:${esc(e.hex)}"></span>${esc(entryText(e))}</button>`).join('')}</div><button class="btn block" onclick="massApply({color:null},'Color quitado')">Sin color</button><button class="btn block" onclick="closeModal()">Cancelar</button>`); }
+function massCategory(){ openModal(`<h2>Cambiar de categoría</h2><div class="sub">${plu(S.mass.sel.size, 'modelo', 'modelos')}</div><label for="ms-cat">Categoría</label><select id="ms-cat"><option value="">Sin categoría</option>${opts(S.categories.map(c => [c.id, c.name]), '')}</select><button class="btn primary block" style="margin-top:12px" onclick="massApply({category_id:$('#ms-cat').value||null},'Categoría cambiada')">Cambiar</button><button class="btn block" onclick="closeModal()">Cancelar</button>`); }
+function massBrand(){ openModal(`<h2>Cambiar la marca</h2><div class="sub">${plu(S.mass.sel.size, 'modelo', 'modelos')}</div><label for="ms-brand">Marca</label><input id="ms-brand" list="brand-list2" autocomplete="off"><datalist id="brand-list2">${brandList().map(b => `<option value="${esc(b)}">`).join('')}</datalist><div class="sub">Vacío = quitar la marca.</div><button class="btn primary block" style="margin-top:12px" onclick="massApply({brand:canonBrand($('#ms-brand').value)},'Marca cambiada')">Cambiar</button><button class="btn block" onclick="closeModal()">Cancelar</button>`); }
+function massColor(){ const l = legendList().filter(e => e.hex); openModal(`<h2>Cambiar el color</h2><div class="sub">${plu(S.mass.sel.size, 'modelo', 'modelos')}</div><div class="legend" style="margin:10px 0">${l.map(e => `<button type="button" class="chip" onclick="massApply({color:'${esc(e.hex)}'},'Color cambiado')"><span class="sw" style="background:${esc(e.hex)}"></span>${esc(entryText(e))}</button>`).join('')}</div><button class="btn block" onclick="massApply({color:null},'Color quitado')">Sin color</button><button class="btn block" onclick="closeModal()">Cancelar</button>`); }
 function massTags(){
   const mine = [...new Set(massIds().flatMap(i => (modelById(i).tags || [])))];
-  openModal(`<h2>Palabras clave</h2><div class="sub">${S.mass.sel.size} modelos</div><label for="ms-add">Añadir (separadas por comas)</label><input id="ms-add" list="tag-list2" autocomplete="off"><datalist id="tag-list2">${allTags().map(t => `<option value="${esc(t[1])}">`).join('')}</datalist>
+  openModal(`<h2>Palabras clave</h2><div class="sub">${plu(S.mass.sel.size, 'modelo', 'modelos')}</div><label for="ms-add">Añadir (separadas por comas)</label><input id="ms-add" list="tag-list2" autocomplete="off"><datalist id="tag-list2">${allTags().map(t => `<option value="${esc(t[1])}">`).join('')}</datalist>
     <button class="btn primary block" style="margin:10px 0" onclick="massTagsDo('add')">Añadir a todos</button>${mine.length ? `<label for="ms-del">Quitar de todos</label><select id="ms-del">${mine.map(t => `<option>${esc(t)}</option>`).join('')}</select><button class="btn block" onclick="massTagsDo('del')">Quitar</button>` : ''}<button class="btn block" onclick="closeModal()">Cancelar</button>`);
 }
 async function massTagsDo(op){
@@ -4255,9 +4272,9 @@ function numPreview(mid){
 }
 async function numberApply(mid){
   const r = numRead(mid); if (!r.plan.length) return toast('No hay unidades que numerar', true); if (r.dup.length) return toast('Hay números repetidos: cambia las letras o dónde empieza', true);
-  if ($('#nm-scope').value === 'todas' && !confirm(`¿Renumerar las ${r.plan.length} unidades? Cambiarán sus números de serie (las etiquetas con QR siguen valiendo).`)) return;
+  if ($('#nm-scope').value === 'todas' && !confirm(`¿Renumerar las ${plu(r.plan.length, 'unidad', 'unidades')}? Cambiarán sus números de serie (las etiquetas con QR siguen valiendo).`)) return;
   for (let i = 0; i < r.plan.length; i += 10) await Promise.all(r.plan.slice(i, i + 10).map(p => db(sb.from('units').update({serial_number:p.serial}).eq('id', p.u.id))));
-  closeModal(); await loadAll(); toast(`${r.plan.length} unidades numeradas`);
+  closeModal(); await loadAll(); toast(`${plu(r.plan.length, 'unidad', 'unidades')} numeradas`);
 }
 // ---- unir modelos y mover unidades ----
 function openMerge(id){
@@ -4265,7 +4282,7 @@ function openMerge(id){
   if (!cand.length) return toast('No hay otro modelo del mismo tipo con el que unirlo', true);
   openModal(`<h2>Unir con otro modelo</h2><div class="sub">«${esc(m.name)}» desaparece y todo lo suyo pasa al modelo que elijas.</div>
     <label for="mg-dst">Unir con</label><select id="mg-dst">${cand.map(x => `<option value="${x.id}">${esc(x.name)}${x.brand ? ' · ' + esc(x.brand) : ''}</option>`).join('')}</select>
-    <div class="info" style="margin-top:10px">${m.is_bulk ? `Pasan ${m.bulk_stock} de stock y sus reservas en shows.` : `Pasan ${S.units.filter(u => u.model_id === id).length} unidades, con sus reservas, historial y kits.`}</div>
+    <div class="info" style="margin-top:10px">${m.is_bulk ? `Pasan ${m.bulk_stock} de stock y sus reservas en shows.` : `Pasan ${plu(S.units.filter(u => u.model_id === id).length, 'unidad', 'unidades')}, con sus reservas, historial y kits.`}</div>
     <button class="btn primary block" style="margin-top:10px" onclick="mergeModels('${id}',$('#mg-dst').value)">Unir</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
 }
 async function mergeModels(src, dst){
@@ -4339,7 +4356,7 @@ function matRowCtl(m, idx, total, list){
   }
   return {click:`openView('model','${m.id}')`, lead:'', trail:''};
 }
-const rowExtraBadges = m => (m.owner ? `<span class="badge">De terceros: ${esc(m.owner)}</span>` : '') + (lowStock(m) ? '<span class="badge bad">Bajo mínimo</span>' : '') + (m.is_bulk && kitBulkUsed(m.id) ? `<span class="badge">${kitBulkUsed(m.id)} en kits</span><span class="badge">${kitBulkAvail(m)} libres</span>` : '');
+const rowExtraBadges = m => (m.owner ? `<span class="badge">De terceros: ${esc(m.owner)}</span>` : '') + (lowStock(m) ? '<span class="badge bad">Bajo mínimo</span>' : '') + (m.is_bulk && kitBulkUsed(m.id) ? `<span class="badge">${kitBulkUsed(m.id)} en kits</span><span class="badge">${libresTxt(kitBulkAvail(m))}</span>` : '');
 
 /* ============ LISTAS DE COMPROBACIÓN V1.06: accesorios, piezas del kit, etiqueta con contenido ============ */
 const accText = a => (a.qty > 1 ? a.qty + '× ' : '') + a.name;
@@ -4451,7 +4468,7 @@ function openDurationPricing(){
     <button class="btn primary block" style="margin-top:10px" onclick="saveDuration()">Guardar</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
   durPreview();
 }
-const durRow = (x, i) => `<div class="two" style="align-items:end"><div><label>Desde (días)</label><input class="du-d" type="number" min="1" value="${x.days}" inputmode="numeric" oninput="durPreview()"></div><div><label>Jornadas</label><div style="display:flex;gap:6px"><input class="du-f" type="number" min="0.1" step="0.05" value="${x.factor}" inputmode="decimal" oninput="durPreview()"><button class="btn small" aria-label="Quitar tramo" onclick="this.closest('.two').remove();durPreview()">✕</button></div></div></div>`;
+const durRow = (x, i) => `<div class="two" style="align-items:end"><div><label>Desde (días)</label><input class="du-d" type="number" min="1" value="${x.days}" inputmode="numeric" aria-label="Desde cuántos días" oninput="durPreview()"></div><div><label>Jornadas</label><div style="display:flex;gap:6px"><input class="du-f" type="number" min="0.1" step="0.05" value="${x.factor}" inputmode="decimal" aria-label="Jornadas que se cobran" oninput="durPreview()"><button class="btn small" aria-label="Quitar tramo" onclick="this.closest('.two').remove();durPreview()">✕</button></div></div></div>`;
 function durRead(){ return [...document.querySelectorAll('#du-rows .two')].map(r => ({days:parseInt(r.querySelector('.du-d').value), factor:parseFloat(r.querySelector('.du-f').value)})).filter(x => x.days >= 1 && x.factor > 0).sort((a, b) => a.days - b.days); }
 function durAdd(){ const t = durRead(), last = t[t.length - 1] || {days:1, factor:1}; $('#du-rows').insertAdjacentHTML('beforeend', durRow({days:last.days + 7, factor:Math.round((last.factor + 1.5) * 100) / 100}, t.length)); durPreview(); }
 function durReset(){ $('#du-rows').innerHTML = DUR_DEFAULT.map((x, i) => durRow(x, i)).join(''); durPreview(); }
@@ -4527,7 +4544,7 @@ function closeSummary(p, ev){
 }
 function closeSummaryText(p){
   const sm = closeSummary(p, S.closeEv || []);
-  return [`Cierre: ${p.name}${p.client ? ' · ' + p.client : ''}`, `${fmtD(p.starts_at)} → ${fmtD(p.ends_at)}`, `${sm.units} equipos${sm.bulk ? ` y ${sm.bulk} piezas por cantidad` : ''} · ${sm.techs} técnicos`, `Incidencias al devolver: ${sm.inc}`, `Importe: ${eur(sm.total)}${sm.cost ? ` · coste de terceros ${eur(sm.cost)} · margen ${eur(sm.total - sm.cost)}` : ''}`, `Cobro: ${PAY_STATUS[p.payment_status || 'none']}`, ($('#cl-notes') && $('#cl-notes').value.trim()) ? 'Notas: ' + $('#cl-notes').value.trim() : ''].filter(Boolean).join('\n');
+  return [`Cierre: ${p.name}${p.client ? ' · ' + p.client : ''}`, `${fmtD(p.starts_at)} → ${fmtD(p.ends_at)}`, `${plu(sm.units, 'equipo', 'equipos')}${sm.bulk ? ` y ${plu(sm.bulk, 'pieza', 'piezas')} por cantidad` : ''} · ${plu(sm.techs, 'técnico', 'técnicos')}`, `Incidencias al devolver: ${sm.inc}`, `Importe: ${eur(sm.total)}${sm.cost ? ` · coste de terceros ${eur(sm.cost)} · margen ${eur(sm.total - sm.cost)}` : ''}`, `Cobro: ${PAY_STATUS[p.payment_status || 'none']}`, ($('#cl-notes') && $('#cl-notes').value.trim()) ? 'Notas: ' + $('#cl-notes').value.trim() : ''].filter(Boolean).join('\n');
 }
 function copyCloseSummary(pid){ navigator.clipboard.writeText(closeSummaryText(projById(pid))).then(() => toast('Resumen copiado'), () => toast('No se pudo copiar', true)); }
 async function doCloseShow(pid){
@@ -4545,7 +4562,7 @@ async function saveQuoteVersion(pid, q){
     const vs = qvOf(pid), snap = quoteSnapshot(q), last = vs[vs.length - 1];
     if (last && sameSnap(last.snapshot, snap)) return last;
     const r = await sb.from('quote_versions').insert({project_id:pid, version:(last ? last.version : 0) + 1, snapshot:snap}).select().single();
-    if (r.error) return null; S.quoteVersions.push(r.data); return r.data;
+    if (r.error || !r.data) return null; S.quoteVersions.push(r.data); return r.data;
   } catch (e) { return null; }
 }
 function quoteDocHtml(p, q, ver, when){
@@ -4565,7 +4582,7 @@ function quoteDocHtml(p, q, ver, when){
     <p class="small" style="margin-top:6mm">Importe = cantidad × tarifa por día × ${j ? 'jornadas' : 'días de alquiler'}.${j ? ` ${q.days} día${q.days === 1 ? '' : 's'} de alquiler equivalen a ${jorTxt(q.bdays)} según la tarifa por duración.` : ''}</p>
     ${b.quote_notes ? `<p style="margin-top:5mm">${esc(b.quote_notes).replace(/\n/g, '<br>')}</p>` : ''}
     ${b.payment_terms ? `<h2>Condiciones de pago</h2><p>${esc(b.payment_terms).replace(/\n/g, '<br>')}</p>` : ''}
-    <p class="small" style="margin-top:5mm">Presupuesto válido durante ${validity} días desde la fecha indicada.</p>`;
+    <p class="small" style="margin-top:5mm">Presupuesto válido durante ${plu(validity, 'día', 'días')} desde la fecha indicada.</p>`;
 }
 async function printQuote(pid){
   await saveQuote(pid, false); closeModal();
@@ -4629,7 +4646,7 @@ async function applyTemplate(p, tid){
   const want = new Map(); tplItemsOf(tid).filter(i => i.model_id).forEach(i => want.set(i.model_id, (want.get(i.model_id) || 0) + i.qty));
   for (const [mid, qty] of want){ const it = {model_id:mid, qty}, m = modelById(mid); if (!m){ report.push('Un modelo de la plantilla ya no existe'); continue; }
     if (m.is_bulk){ const free = bulkFree(p, m.id), n = Math.max(0, Math.min(free, it.qty)); if (n < it.qty) report.push(`${m.name}: solo quedan ${Math.max(0, free)} de ${it.qty}`); if (n > 0) await db(sb.from('bulk_reservations').insert({project_id:p.id, model_id:m.id, qty:n, state:'planned'})); }
-    else { const pick = freeUnits(p, m.id).filter(x => !taken.has(x.id)).slice(0, it.qty); if (pick.length < it.qty) report.push(`${m.name}: solo hay ${pick.length} libres de ${it.qty}`); pick.forEach(u => { taken.add(u.id); rows.push({project_id:p.id, unit_id:u.id, state:'planned'}); }); } }
+    else { const pick = freeUnits(p, m.id).filter(x => !taken.has(x.id)).slice(0, it.qty); if (pick.length < it.qty) report.push(`${m.name}: solo hay ${libresTxt(pick.length)} de ${it.qty}`); pick.forEach(u => { taken.add(u.id); rows.push({project_id:p.id, unit_id:u.id, state:'planned'}); }); } }
   if (rows.length) await db(sb.from('reservations').insert(rows));
   await loadAll(false); return report;
 }
@@ -4641,11 +4658,12 @@ async function applyTemplateUi(tid, pid, isNew){
 // ---- rentabilidad por equipo (58) ----
 S.profitSort = 'net';
 function profitRows(){
+  const qc = new Map(S.projects.map(p => [p.id, projectQty(p)])), byModel = new Map(); S.units.forEach(u => { if (!byModel.has(u.model_id)) byModel.set(u.model_id, []); byModel.get(u.model_id).push(u); });
   const rows = S.models.map(m => {
-    const us = S.units.filter(u => u.model_id === m.id), ids = new Set(us.map(u => u.id)), st = modelStats(m);
+    const us = byModel.get(m.id) || [], ids = new Set(us.map(u => u.id)), st = modelStats(m, qc);
     const buy = us.reduce((s, u) => s + (Number(u.purchase_price) || 0), 0), priced = us.filter(u => u.purchase_price != null).length;
     const rep = S.maint.filter(l => ids.has(l.unit_id)).reduce((s, l) => s + (Number(l.cost) || 0), 0);
-    let rent = 0; if (m.owner && Number(m.rent_cost) > 0) S.projects.forEach(p => { if (['cancelled', 'draft', 'quoted'].includes(p.status) || new Date(p.ends_at) > Date.now()) return; rent += (projectQty(p).get(m.id) || 0) * Number(m.rent_cost) * rentalDays(p); });
+    let rent = 0; if (m.owner && Number(m.rent_cost) > 0) S.projects.forEach(p => { if (['cancelled', 'draft', 'quoted'].includes(p.status) || new Date(p.ends_at) > Date.now()) return; rent += (qc.get(p.id).get(m.id) || 0) * Number(m.rent_cost) * rentalDays(p); });
     const net = st.income - rep - rent;
     return {m, units:us.length, priced, shows:st.shows, income:st.income, buy, rep, rent, net, paid:buy > 0 ? net / buy : null};
   }).filter(r => r.shows || r.buy || r.rep);
@@ -4784,7 +4802,7 @@ function dsRefresh(){
   const u = S.units.find(x => x.serial_number && nominalNumber(x) != null) || S.units[0], k = S.kits[0];
   const d = DSK === 'kit' ? (k ? {kind:'kit', id:k.id} : null) : (u ? {kind:'unit', id:u.id} : null);
   if (!d){ box.innerHTML = `<div class="sub">No hay ${DSK === 'kit' ? 'ningún kit' : 'ningún equipo'} para la vista previa.</div>`; return; }
-  const c = Object.assign({}, SC, {border:true}), z = Math.min(1.6, 330 / (c.w * 3.7795));
+  const c = Object.assign({}, SC, {border:true}), z = Math.min(1.6, Math.min(330, window.innerWidth - 60) / (c.w * 3.7795));
   box.innerHTML = `<div style="width:${(c.w * 3.7795 * z).toFixed(0)}px;height:${(c.h * 3.7795 * z).toFixed(0)}px;margin:0 auto"><div class="lcell bd" style="position:relative;width:${c.w}mm;height:${c.h}mm;transform:scale(${z.toFixed(3)});transform-origin:top left">${labelInner(d, c)}</div></div>`;
 }
 // ---- hoja en PDF (111): se dibuja la hoja tal y como se imprime y se guarda como imagen de 300 ppp dentro de un PDF ----
@@ -4952,7 +4970,7 @@ function searchAll(q){
   return out;
 }
 function openSearch(){
-  openModal(`<h2>Buscar</h2><input id="gs-q" type="search" placeholder="Nombre, nº de serie, cliente, nota…" autocomplete="off" oninput="gsRun()" onkeydown="gsKey(event)"><div id="gs-res" style="margin-top:8px"></div>`);
+  openModal(`<h2>Buscar</h2><input id="gs-q" type="search" aria-label="Buscar" placeholder="Nombre, nº de serie, cliente, nota…" autocomplete="off" oninput="gsRun()" onkeydown="gsKey(event)"><div id="gs-res" style="margin-top:8px"></div>`);
   gsRun(); setTimeout(() => { const i = $('#gs-q'); if (i) i.focus(); }, 60);
 }
 function gsRun(){
@@ -4986,8 +5004,8 @@ function openTour(i){
     <div class="actions" style="margin-top:14px">${i > 0 ? `<button class="btn" onclick="openTour(${i - 1})">Anterior</button>` : ''}${last ? `<button class="btn primary" onclick="tourDone();closeModal()">Terminar</button>` : `<button class="btn primary" onclick="openTour(${i + 1})">Siguiente</button><button class="btn" onclick="tourDone();closeModal()">Saltar</button>`}</div>`);
 }
 function tourDone(){ try { localStorage.setItem('tourSeen', '1'); } catch (e) {} if (S.tab === 'today') render(); }
-const SHORTCUTS = [['Ctrl/⌘ + K  ·  /', 'Buscar en todo'], ['1 · 2 · 3 · 4 · 5', 'Cambiar de pestaña, en el orden de la barra inferior'], ['n', 'Nuevo (modelo, show o nota, según la pestaña)'], ['v', 'Activar o desactivar la vista partida (pantallas anchas)'], ['Esc', 'Cerrar la ventana o volver atrás'], ['?', 'Ver esta lista']];
-function openShortcuts(){ openModal(`<h2>Atajos de teclado</h2><div class="list" style="margin:12px 0">${SHORTCUTS.map(([k, d]) => `<div class="row urow"><div class="grow"><b>${esc(k)}</b><div class="sub">${esc(d)}</div></div></div>`).join('')}</div><div class="sub">No funcionan mientras escribes en un campo.</div><button class="btn block" style="margin-top:12px" onclick="closeModal()">Cerrar</button>`); }
+const SHORTCUTS = [['Ctrl/⌘ + K  ·  /', 'Buscar en todo'], ['1 · 2 · 3 · 4 · 5', 'Cambiar de pestaña, en el orden de la barra inferior'], ['n', 'Nuevo (modelo, {s} o nota, según la pestaña)'], ['v', 'Activar o desactivar la vista partida (pantallas anchas)'], ['Esc', 'Cerrar la ventana o volver atrás'], ['?', 'Ver esta lista']];
+function openShortcuts(){ openModal(`<h2>Atajos de teclado</h2><div class="list" style="margin:12px 0">${SHORTCUTS.map(([k, d]) => `<div class="row urow"><div class="grow"><b>${esc(k)}</b><div class="sub">${esc(d.replace('{s}', W.s))}</div></div></div>`).join('')}</div><div class="sub">No funcionan mientras escribes en un campo.</div><button class="btn block" style="margin-top:12px" onclick="closeModal()">Cerrar</button>`); }
 // ---- gestos (103) ----
 const gesturesOn = () => { try { return localStorage.getItem('gestures') !== '0'; } catch (e) { return true; } };
 function setGestures(on){ try { localStorage.setItem('gestures', on ? '1' : '0'); } catch (e) {} toast(on ? 'Gestos activados' : 'Gestos desactivados'); }
@@ -5021,7 +5039,7 @@ document.addEventListener('keydown', e => {
 /* ============ COMUNICACIÓN V1.10: plantillas de mensajes, WhatsApp, email y calendario ============ */
 const MSG_TPL = {
   tec_convocatoria:{label:'Convocar a un técnico', who:'tec', subject:'{show}: convocatoria', text:'{saludo}\nTe convoco para {show}.\nLugar: {lugar}\n{llamada_txt}\nFunción: {funcion}\nAñadir a tu calendario: {calendario}\n¿Me confirmas? Gracias.\n{empresa}'},
-  cli_confirmacion:{label:'Confirmar el show al cliente', who:'cli', subject:'Confirmación: {show}', text:'{saludo}\nTe confirmo {show} el {fecha} a las {hora}.\nLugar: {lugar}\nSi hay cualquier cambio, avísame. Un saludo,\n{empresa}'},
+  cli_confirmacion:{label:'Confirmar al cliente', who:'cli', subject:'Confirmación: {show}', text:'{saludo}\nTe confirmo {show} el {fecha} a las {hora}.\nLugar: {lugar}\nSi hay cualquier cambio, avísame. Un saludo,\n{empresa}'},
   cli_presupuesto:{label:'Enviar el presupuesto', who:'cli', adj:'quote', subject:'Presupuesto: {show}', text:'{saludo}\nTe envío el presupuesto de {show} ({fecha}): {total} IVA incluido.\n{pago}\nCualquier duda, dime. Un saludo,\n{empresa}'},
   cli_factura:{label:'Enviar la factura', who:'cli', adj:'invoice', subject:'Factura {factura}: {show}', text:'{saludo}\nTe adjunto la factura {factura} de {show} por {total}.\nVencimiento: {vencimiento}\n{pago}\nGracias,\n{empresa}'},
   cli_recordatorio_pago:{label:'Recordar un pago pendiente', who:'cli', subject:'Recordatorio de pago: {show}', text:'{saludo}\nTe recuerdo que la factura {factura} de {show} por {total} está pendiente de pago{vencida_txt}.\nSi ya la has pagado, ignora este mensaje. Gracias,\n{empresa}'},
@@ -5244,7 +5262,7 @@ function vanView(pid){
     ${pl.unplaced.length ? `<div class="group" style="color:var(--bad)">No caben (${pl.unplaced.length})</div><div class="list">${pl.unplaced.map(b => `<div class="row urow"><div class="grow"><b>${esc(b.label)}</b><div class="sub">${fmtNum(b.w, 0)}×${fmtNum(b.h, 0)}×${fmtNum(b.d, 0)} cm · ${fmtNum(b.kg, 1)} kg · ${esc(b.why)}</div></div></div>`).join('')}</div>` : ''}
     ${pl.src.missing.length ? `<div class="group" style="color:var(--warn)">Sin medidas (${pl.src.missing.reduce((s, m) => s + m.n, 0)})</div><div class="list">${pl.src.missing.map(m => `<div class="row urow tap" onclick="go('material');setMat('equipos');openView('model','${m.id}')"><div class="grow"><b>${esc(m.name)} × ${m.n}</b><div class="sub">Pon ancho, alto y fondo en la ficha del modelo</div></div></div>`).join('')}</div>` : ''}
     ${pl.door.length ? `<div class="group" style="color:var(--warn)">No pasan por la puerta trasera (${pl.door.length})</div><div class="list">${pl.door.slice(0, 8).map(b => `<div class="row urow"><div class="grow"><b>${esc(b.label)}</b><div class="sub">${fmtNum(b.w, 0)}×${fmtNum(b.h, 0)}×${fmtNum(b.d, 0)} cm · puerta ${fmtNum(v.doorW, 0)}×${fmtNum(v.doorH, 0)} cm</div></div></div>`).join('')}</div>` : ''}
-    ${pl.src.bulk.n ? `<div class="info"><b>Material por cantidad: ${pl.src.bulk.n} piezas</b><div class="sub">${fmtNum(pl.src.bulk.kg, 0)} kg${pl.src.bulk.m3 ? ` · ≈ ${fmtNum(pl.src.bulk.m3, 2)} m³ sueltos` : ''}. No salen en el dibujo: cuenta con un hueco para cables y cajas pequeñas.</div></div>` : ''}
+    ${pl.src.bulk.n ? `<div class="info"><b>Material por cantidad: ${plu(pl.src.bulk.n, 'pieza', 'piezas')}</b><div class="sub">${fmtNum(pl.src.bulk.kg, 0)} kg${pl.src.bulk.m3 ? ` · ≈ ${fmtNum(pl.src.bulk.m3, 2)} m³ sueltos` : ''}. No salen en el dibujo: cuenta con un hueco para cables y cajas pequeñas.</div></div>` : ''}
     ${pl.noWeightTxt || pl.src.noWeight ? `<div class="sub" style="margin:6px 18px;color:var(--warn)">${pl.src.noWeight} equipo${pl.src.noWeight === 1 ? '' : 's'} sin peso anotado: se cuentan como 0 kg.</div>` : ''}
     ${pl.placed.length ? `<div class="group">Orden de carga (${pl.placed.length})</div><div class="list">${pl.placed.map(b => `<div class="row urow"><div class="count" style="min-width:26px;font-size:15px">${b.n}</div><div class="grow"><b>${esc(b.label)}</b><div class="sub">${fmtNum(b.w, 0)}×${fmtNum(b.h, 0)}×${fmtNum(b.d, 0)} cm · ${fmtNum(b.kg, 1)} kg · ${b.z > 0 ? 'encima' : 'en el suelo'}</div></div></div>`).join('')}</div>` : '<div class="empty">Este ' + esc(W.s) + ' aún no tiene material con medidas.</div>'}`;
 }
@@ -5255,10 +5273,10 @@ function openVans(){
     <div class="actions" style="margin:8px 0"><button class="btn small" onclick="vanAdd()">+ Otra furgoneta</button><button class="btn small" onclick="vanReset()">Restaurar las de partida</button></div>
     <button class="btn primary block" onclick="saveVans()">Guardar</button><button class="btn block" onclick="closeModal()">Cancelar</button>`);
 }
-const vanRow = v => `<div class="info van-row" style="margin:10px 0"><label>Nombre</label><input class="vr-n" value="${esc(v.name)}">
-  <div class="two"><div><label>Largo útil</label><input class="vr-L" type="number" step="0.1" min="1" value="${v.L}" inputmode="decimal"></div><div><label>Ancho útil</label><input class="vr-W" type="number" step="0.1" min="1" value="${v.W}" inputmode="decimal"></div>
-  <div><label>Alto útil</label><input class="vr-H" type="number" step="0.1" min="1" value="${v.H}" inputmode="decimal"></div><div><label>Carga útil (kg)</label><input class="vr-P" type="number" step="1" min="1" value="${v.payload}" inputmode="decimal"></div>
-  <div><label>Puerta: ancho</label><input class="vr-dW" type="number" step="0.1" min="0" value="${v.doorW || 0}" inputmode="decimal"></div><div><label>Puerta: alto</label><input class="vr-dH" type="number" step="0.1" min="0" value="${v.doorH || 0}" inputmode="decimal"></div></div>
+const vanRow = v => `<div class="info van-row" style="margin:10px 0"><label>Nombre</label><input class="vr-n" aria-label="Nombre de la furgoneta" value="${esc(v.name)}">
+  <div class="two"><div><label>Largo útil</label><input class="vr-L" aria-label="Largo útil en cm" type="number" step="0.1" min="1" value="${v.L}" inputmode="decimal"></div><div><label>Ancho útil</label><input class="vr-W" aria-label="Ancho útil en cm" type="number" step="0.1" min="1" value="${v.W}" inputmode="decimal"></div>
+  <div><label>Alto útil</label><input class="vr-H" aria-label="Alto útil en cm" type="number" step="0.1" min="1" value="${v.H}" inputmode="decimal"></div><div><label>Carga útil (kg)</label><input class="vr-P" aria-label="Carga útil en kg" type="number" step="1" min="1" value="${v.payload}" inputmode="decimal"></div>
+  <div><label>Puerta: ancho</label><input class="vr-dW" aria-label="Ancho de la puerta en cm" type="number" step="0.1" min="0" value="${v.doorW || 0}" inputmode="decimal"></div><div><label>Puerta: alto</label><input class="vr-dH" aria-label="Alto de la puerta en cm" type="number" step="0.1" min="0" value="${v.doorH || 0}" inputmode="decimal"></div></div>
   <button class="btn small" onclick="this.closest('.van-row').remove()">Quitar esta furgoneta</button></div>`;
 function vanAdd(){ $('#vn-rows').insertAdjacentHTML('beforeend', vanRow({name:'Mi furgoneta', L:250, W:130, H:130, payload:1000, doorW:130, doorH:120})); }
 function vanReset(){ $('#vn-rows').innerHTML = DEFAULT_VANS.map(vanRow).join(''); }
@@ -5353,7 +5371,7 @@ function famHead(list, idx){
   const m = list[idx], prev = list[idx - 1], k = famKey(m); if (prev && famKey(prev) === k) return '';
   const n = list.filter(x => famKey(x) === k).length; if (n < 2) return '';
   const blocks = famBlocks(list), bi = blocks.indexOf(k), cat = m.category_id || '';
-  return `<div class="fam-head"><span class="grow">${esc(famOf(m))} <span class="sub">${n} modelos</span></span>${S.matOrder ? `<button class="btn small" aria-label="Subir la familia ${esc(famOf(m))}" ${bi === 0 ? 'disabled' : ''} onclick="moveFamilyAt('${cat}',${bi},-1)">▲</button><button class="btn small" aria-label="Bajar la familia ${esc(famOf(m))}" ${bi === blocks.length - 1 ? 'disabled' : ''} onclick="moveFamilyAt('${cat}',${bi},1)">▼</button>` : ''}</div>`;
+  return `<div class="fam-head"><span class="grow">${esc(famOf(m))} <span class="sub">${plu(n, 'modelo', 'modelos')}</span></span>${S.matOrder ? `<button class="btn small" aria-label="Subir la familia ${esc(famOf(m))}" ${bi === 0 ? 'disabled' : ''} onclick="moveFamilyAt('${cat}',${bi},-1)">▲</button><button class="btn small" aria-label="Bajar la familia ${esc(famOf(m))}" ${bi === blocks.length - 1 ? 'disabled' : ''} onclick="moveFamilyAt('${cat}',${bi},1)">▼</button>` : ''}</div>`;
 }
 async function moveFamilyAt(cat, bi, dir){
   const list = S.models.filter(x => (x.category_id || '') === cat), keys = famBlocks(list), j = bi + dir; if (bi < 0 || j < 0 || j >= keys.length) return;
@@ -5393,13 +5411,13 @@ function kitGroupedRows(items, catOf, rowOf){
 async function duplicateKit(id){
   const k = kitById(id); if (!k) return; const bulk = kitBulk(k), pieces = kitPiecesOf(id), units = kitUnits(k), short = bulk.filter(b => b.qty > kitBulkAvail(b.model));
   let full = true;
-  if (short.length) full = confirm(`No hay libres suficientes para copiar el kit entero:\n${short.map(b => `• ${b.model.name}: el kit lleva ${b.qty} y quedan ${kitBulkAvail(b.model)} libres`).join('\n')}\n\nAceptar = copiar las cantidades completas igualmente (te pasarás del stock).\nCancelar = copiar solo lo que haya libre.`);
+  if (short.length) full = confirm(`No hay libres suficientes para copiar el kit entero:\n${short.map(b => `• ${b.model.name}: el kit lleva ${b.qty} y ${kitBulkAvail(b.model) === 1 ? 'queda 1 libre' : 'quedan ' + kitBulkAvail(b.model) + ' libres'}`).join('\n')}\n\nAceptar = copiar las cantidades completas igualmente (te pasarás del stock).\nCancelar = copiar solo lo que haya libre.`);
   const row = await db(sb.from('kits').insert({name:k.name + ' (copia)', notes:k.notes || null, weight_kg:k.weight_kg, width_cm:k.width_cm, height_cm:k.height_cm, depth_cm:k.depth_cm}).select().single());
   const lines = bulk.map(b => ({kit_id:row.id, model_id:b.model.id, qty:full ? b.qty : Math.min(b.qty, kitBulkAvail(b.model))})).filter(l => l.qty > 0);
   if (lines.length) await db(sb.from('kit_items').insert(lines));
   if (pieces.length) await db(sb.from('kit_pieces').insert(pieces.map(p => ({kit_id:row.id, name:p.name, qty:p.qty}))));
   await loadAll(); openView('kit', row.id);
-  toast(`Kit duplicado: ${lines.length} línea${lines.length === 1 ? '' : 's'} por cantidad${pieces.length ? ` y ${pieces.length} pieza${pieces.length === 1 ? '' : 's'}` : ''}.${units.length ? ` Sus ${units.length} equipos con número de serie no se copian: cada uno solo puede estar en un kit.` : ''}`);
+  toast(`Kit duplicado: ${lines.length} línea${lines.length === 1 ? '' : 's'} por cantidad${pieces.length ? ` y ${pieces.length} pieza${pieces.length === 1 ? '' : 's'}` : ''}.${units.length ? ` Sus ${plu(units.length, 'equipo', 'equipos')} con número de serie no se copian: cada uno solo puede estar en un kit.` : ''}`);
 }
 // ---- añadir contenido al kit: por categorías, desplegables cerrados y buscador ----
 function openKitContents(kid){
@@ -5419,10 +5437,10 @@ function openKitContents(kid){
           <input type="number" min="0" max="${av}" value="0" ${av ? '' : 'disabled'} data-b="${m.id}" oninput="clampQty(this);kcCount()" style="width:80px" inputmode="numeric" aria-label="Cantidad de ${esc(m.name)}"></div>`;
       }
     });
-    return rows ? `<details class="kc-cat"><summary><span class="grow">${esc(n)}</span><span class="sub kc-sel"></span><span class="sub">${free} libres</span></summary>${rows}</details>` : '';
+    return rows ? `<details class="kc-cat"><summary><span class="grow">${esc(n)}</span><span class="sub kc-sel"></span><span class="sub">${libresTxt(free)}</span></summary>${rows}</details>` : '';
   }).join('');
   openModal(`<h2>Añadir al kit</h2><div class="sub">Solo aparecen equipos que no están en otro kit. Abre una categoría para ver lo que hay.</div>
-    <input id="kc-q" type="search" placeholder="Buscar por nombre o nº de serie" oninput="kcFilter(this.value)" style="margin:8px 0">
+    <input id="kc-q" type="search" aria-label="Buscar equipos para el kit" placeholder="Buscar por nombre o nº de serie" oninput="kcFilter(this.value)" style="margin:8px 0">
     <div id="kc-list">${sections || '<div class="empty" style="margin:20px 0">No queda nada libre para añadir.</div>'}</div>
     <button class="btn primary block" id="kc-btn" style="margin-top:12px" onclick="saveKitContents('${kid}')">Añadir al kit</button>`);
 }
@@ -5437,6 +5455,216 @@ function kcCount(){
   const b = $('#kc-btn'); if (b) b.textContent = total ? `Añadir al kit (${total})` : 'Añadir al kit';
 }
 
+/* ============ V1.20: revisión general: dinero, errores, validaciones, plurales y accesibilidad ============ */
+const r2 = x => Math.round((Number(x) + Number.EPSILON) * 100) / 100;                       // dinero siempre a céntimos
+const libresTxt = n => `${n} libre${Number(n) === 1 ? '' : 's'}`;
+const clampNum = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+// ---- avisos de errores imprevistos (antes se perdían sin decir nada) ----
+function reportError(e){
+  if (e && e.__toasted) return;
+  try { noteError(e); toast('Algo ha fallado: ' + String((e && e.message) || e || 'error').slice(0, 120), true, true); } catch (x) {}
+}
+window.addEventListener('unhandledrejection', ev => reportError(ev.reason));
+window.addEventListener('error', ev => { if (/ResizeObserver|Script error/i.test(String(ev.message))) return; reportError(ev.error || ev.message); });
+// ---- accesibilidad: nombre para los campos que solo tienen texto de ejemplo, y límites de longitud ----
+function a11yFix(root){
+  (root || document).querySelectorAll('input,select,textarea').forEach(e => {
+    if (e.type === 'hidden' || e.type === 'checkbox' || e.type === 'radio' || e.type === 'file') return;
+    if (!e.getAttribute('aria-label') && !e.getAttribute('aria-labelledby') && !(e.id && document.querySelector('label[for="' + CSS.escape(e.id) + '"]')) && !e.closest('label')) {
+      const t = e.placeholder || e.title; if (t) e.setAttribute('aria-label', t);
+    }
+    if (e.tagName === 'INPUT' && (e.type === 'text' || e.type === 'search' || !e.type) && !e.hasAttribute('maxlength')) e.setAttribute('maxlength', '200');
+    if (e.tagName === 'TEXTAREA' && !e.hasAttribute('maxlength')) e.setAttribute('maxlength', '5000');
+  });
+}
+let MODAL_PREV = null;
+document.addEventListener('keydown', e => {                                                   // el foco no se escapa de la ventana abierta
+  if (e.key !== 'Tab' || !modalOpen()) return;
+  const f = [...$('#sheet').querySelectorAll('button,a[href],input,select,textarea,summary,[tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && !x.closest('[hidden]') && x.offsetParent !== null);
+  if (!f.length) return; const first = f[0], last = f[f.length - 1], a = document.activeElement;
+  if (e.shiftKey && (a === first || a === $('#sheet'))){ e.preventDefault(); last.focus(); } else if (!e.shiftKey && a === last){ e.preventDefault(); first.focus(); }
+});
+// ---- comprobaciones al guardar ----
+function numsOk(pairs){ const bad = pairs.find(([, v]) => v != null && !isNaN(v) && v < 0); if (bad){ toast(`${bad[0]} no puede ser negativo`, true); return false; } return true; }
+const emailOk = s => !s || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+async function confirmBigCount(n, what){
+  if (n > 500){ toast(`Como máximo ${what} 500 de una vez`, true); return false; }
+  return n <= 50 || confirm(`¿Seguro que quieres crear ${n} ${what === 'unidades' ? 'unidades' : 'elementos'} de golpe? Si te has equivocado de cifra, cancela.`);
+}
+/* ============ V1.22: albaranes de entrega y recogida (material, estado, fotos y firma) ============ */
+const DN_KIND = {delivery:'entrega', pickup:'recogida'};
+const DN_ST = {ok:'Bien', dmg:'Dañado', miss:'Falta'};
+let DN = null;
+function uuid4(){
+  try { if (crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+  const b = crypto.getRandomValues(new Uint8Array(16)); b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128;
+  const h = [...b].map(x => x.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+const safeUrl = u => /^(https?:|data:image\/|blob:)/.test(String(u || '')) ? String(u) : '';
+const localInput = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+const dnOf = pid => (S.dnotes || []).filter(n => n.project_id === pid).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+function deliveryCard(p){
+  const ns = dnOf(p.id);
+  return `<div class="group">Albaranes (${ns.length})</div>`
+    + (ns.length ? `<div class="list">${ns.map(n => `<div class="row tap" onclick="openDeliveryNote('${p.id}','${n.kind}','${n.id}')"><div class="grow"><b>Albarán de ${DN_KIND[n.kind] || ''}</b><div class="sub">${esc(n.number || '')} · ${esc(fmtFull(n.when_at || n.created_at))}${n.signer_name ? ' · ' + esc(n.signer_name) : ''}</div></div><span class="badge ${n.signed_at ? 'ok' : 'warn'}">${n.signed_at ? 'Firmado' : 'Sin firmar'}</span></div>`).join('')}</div>`
+      : `<div class="sub" style="margin:0 18px 6px">Aún no hay albaranes. Haz uno al entregar o al recoger el material.</div>`)
+    + `<div class="actions"><button class="btn" onclick="openDeliveryNote('${p.id}','delivery')">+ Albarán de entrega</button><button class="btn" onclick="openDeliveryNote('${p.id}','pickup')">+ Albarán de recogida</button></div>`;
+}
+function dnItemsFor(p, kind){
+  const rs = S.reservations.filter(r => r.project_id === p.id), bs = S.bulkRes.filter(b => b.project_id === p.id);
+  const pick = a => { const x = a.filter(r => kind === 'pickup' ? r.state !== 'planned' : r.state !== 'returned'); return x.length ? x : a; };
+  const items = [];
+  pick(rs).forEach(r => { const u = unitById(r.unit_id); if (!u) return; const m = modelById(u.model_id), k = r.kit_id ? kitById(r.kit_id) : null;
+    items.push({t:'u', id:u.id, name:m ? m.name : 'Equipo', sn:u.serial_number || u.code || '', kit:k ? k.name : '', qty:1, st:'ok', note:'', inc:true}); });
+  pick(bs).forEach(b => { const m = modelById(b.model_id); if (!m) return; const k = b.kit_id ? kitById(b.kit_id) : null;
+    items.push({t:'b', id:m.id, name:m.name, sn:'', kit:k ? k.name : '', qty:b.qty, st:'ok', note:'', inc:true}); });
+  const rk = x => x.t === 'u' ? (S.modelRank.get((unitById(x.id) || {}).model_id) ?? 1e9) : (S.modelRank.get(x.id) ?? 1e9);
+  return items.sort((a, b) => (a.kit || '~').localeCompare(b.kit || '~', 'es') || rk(a) - rk(b) || String(a.sn).localeCompare(String(b.sn), 'es', {numeric:true}));
+}
+async function openDeliveryNote(pid, kind, id){
+  if ((S.schemaMiss || []).includes('esquema_v18.sql')) return showSchemaHelp(['esquema_v18.sql']);
+  const p = projById(pid); if (!p) return;
+  let row = null;
+  if (id){ const r = await sb.from('delivery_notes').select('*').eq('id', id); if (r.error) return toast(errMsg(r.error), true, true); row = (r.data || [])[0]; if (!row) return toast('Ese albarán ya no existe', true); kind = row.kind; if (row.signed_at) return dnView(row); }
+  DN = {pid, kind, id:id || null, items:row ? row.items : dnItemsFor(p, kind), photos:(row ? row.photos : []).map(x => ({url:x.url, cap:x.cap || ''})), sigDirty:false};
+  if (!DN.items.length) return toast(`Este ${W.s} aún no tiene material reservado`, true);
+  const groups = new Map(); DN.items.forEach((it, i) => { const k = it.kit || ''; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(i); });
+  const stOpts = sel => Object.entries(DN_ST).map(([v, t]) => `<option value="${v}" ${sel === v ? 'selected' : ''}>${t}</option>`).join('');
+  const rowH = i => { const it = DN.items[i]; return `<div class="dn-row ${it.inc === false ? 'off' : ''}" data-i="${i}">
+      <div style="display:flex;align-items:center;gap:8px"><label class="chkrow" style="flex:1;margin:0"><input type="checkbox" data-in="${i}" ${it.inc === false ? '' : 'checked'} onchange="dnUpd()" aria-label="Incluir ${esc(it.name)}"><span><b>${esc(it.name)}</b>${it.sn ? ` <span class="sub">${esc(it.sn)}</span>` : ''}</span></label>
+        ${it.t === 'b' ? `<input type="number" min="0" max="99999" value="${it.qty}" data-q="${i}" style="width:72px" inputmode="numeric" aria-label="Cantidad de ${esc(it.name)}" onchange="dnUpd()">` : ''}
+        <select data-st="${i}" style="width:auto" aria-label="Estado de ${esc(it.name)}" onchange="dnUpd()">${stOpts(it.st)}</select></div>
+      <input data-n="${i}" value="${esc(it.note || '')}" placeholder="Qué le pasa (opcional)" aria-label="Nota sobre ${esc(it.name)}" ${it.st && it.st !== 'ok' ? '' : 'hidden'} style="margin-top:6px"></div>`; };
+  const itemsH = [...groups.entries()].map(([k, ix]) => `<details class="kc-cat" ${ix.length <= 8 ? 'open' : ''}><summary><span class="grow">${k ? 'Kit ' + esc(k) : 'Material suelto'}</span><span class="sub dn-sum"></span></summary>${ix.map(rowH).join('')}</details>`).join('');
+  const t = kind === 'delivery' ? 'entrega' : 'recogida';
+  openModal(`<h2>Albarán de ${t}</h2><div class="sub">${esc(p.name)}${p.client ? ' · ' + esc(p.client) : ''}${row && row.number ? ' · ' + esc(row.number) : ''}</div>
+    <label for="dn-when">Fecha y hora</label><input id="dn-when" type="datetime-local" value="${localInput(row && row.when_at ? new Date(row.when_at) : new Date())}">
+    <div class="group" style="margin:14px 0 4px;display:flex;align-items:center;gap:8px"><span style="flex:1">Material (${DN.items.length})</span><button class="btn small" onclick="dnAllOk()">Todo bien</button></div>
+    <div class="sub" style="margin-bottom:6px">${kind === 'delivery' ? 'Quita el visto a lo que no se entrega y marca lo que ya tenga daños.' : 'Marca lo que vuelve dañado o lo que falta, y quita el visto a lo que no se recoge.'}</div>
+    <div id="dn-items">${itemsH}</div>
+    <div class="group" style="margin:14px 0 4px">Fotos del estado (<span id="dn-pc">0</span>)</div>
+    <div class="actions" style="margin:0"><button class="btn" onclick="$('#dn-cam').click()">Hacer foto</button><button class="btn" onclick="$('#dn-gal').click()">Elegir fotos</button></div>
+    <input type="file" id="dn-cam" accept="image/*" capture="environment" hidden onchange="dnAddPhotos(this)" aria-label="Hacer una foto"><input type="file" id="dn-gal" accept="image/*" multiple hidden onchange="dnAddPhotos(this)" aria-label="Elegir fotos">
+    <div id="dn-photos" class="dn-photos"></div>
+    <label for="dn-notes">Observaciones</label><textarea id="dn-notes" placeholder="Cualquier cosa que quieras dejar por escrito">${esc(row && row.notes || '')}</textarea>
+    <div class="group" style="margin:14px 0 4px">Firma de quien ${kind === 'delivery' ? 'recibe' : 'entrega'} el material</div>
+    <div class="sub" style="margin-bottom:6px">Con su firma confirma que ${kind === 'delivery' ? 'recibe' : 'devuelve'} el material de este albarán en el estado indicado.</div>
+    <canvas id="dn-sig" width="700" height="240" aria-label="Recuadro para firmar con el dedo"></canvas>
+    <div class="actions" style="margin:6px 0 0"><button class="btn small" onclick="dnSigClear()">Borrar firma</button></div>
+    <div class="two"><div><label for="dn-name">Nombre y apellidos</label><input id="dn-name" autocomplete="off" value="${esc(row && row.signer_name || '')}"></div><div><label for="dn-nif">DNI / NIF (opcional)</label><input id="dn-nif" autocomplete="off" value="${esc(row && row.signer_id || '')}"></div></div>
+    <button class="btn primary block" style="margin-top:14px" onclick="saveDeliveryNote(true)">Firmar y guardar</button>
+    <button class="btn block" style="margin-top:8px" onclick="saveDeliveryNote(false)">Guardar sin firma (para firmar después)</button>
+    ${row ? `<button class="btn danger block" style="margin-top:8px" onclick="deleteDeliveryNote('${row.id}')">Eliminar este albarán</button>` : ''}`);
+  dnSigInit(); dnUpd(); dnPhotosRender();
+}
+function dnUpd(){
+  document.querySelectorAll('#dn-items .dn-row').forEach(r => { const st = r.querySelector('[data-st]').value, inc = r.querySelector('[data-in]').checked; r.querySelector('[data-n]').hidden = !(inc && st !== 'ok'); r.classList.toggle('off', !inc); });
+  document.querySelectorAll('#dn-items details').forEach(d => {
+    const rows = [...d.querySelectorAll('.dn-row')], inc = rows.filter(r => r.querySelector('[data-in]').checked), bad = inc.filter(r => r.querySelector('[data-st]').value !== 'ok');
+    d.querySelector('.dn-sum').textContent = `${inc.length}/${rows.length}${bad.length ? ' · ' + plu(bad.length, 'incidencia', 'incidencias') : ''}`;
+  });
+}
+function dnAllOk(){ document.querySelectorAll('#dn-items [data-st]').forEach(s => s.value = 'ok'); document.querySelectorAll('#dn-items [data-in]').forEach(c => c.checked = true); dnUpd(); }
+function dnCollect(){
+  return DN.items.map((it, i) => { const r = document.querySelector(`#dn-items .dn-row[data-i="${i}"]`); if (!r) return it;
+    const q = r.querySelector('[data-q]');
+    return Object.assign({}, it, {inc:r.querySelector('[data-in]').checked, st:r.querySelector('[data-st]').value, note:r.querySelector('[data-n]').value.trim(), qty:q ? Math.max(0, parseInt(q.value) || 0) : it.qty}); });
+}
+async function dnAddPhotos(input){
+  for (const f of [...input.files]){
+    if (DN.photos.length >= 12){ toast('Como máximo 12 fotos por albarán', true); break; }
+    try { const blob = await resizeImage(f, 1400, 'image/jpeg', 0.72); DN.photos.push({blob, obj:URL.createObjectURL(blob), cap:''}); } catch (e) { toast('No se pudo leer esa foto', true); }
+  }
+  input.value = ''; dnPhotosRender();
+}
+function dnPhotosRender(){
+  const b = $('#dn-photos'); if (!b) return; $('#dn-pc').textContent = DN.photos.length;
+  b.innerHTML = DN.photos.map((p, i) => `<div class="dn-ph"><img src="${esc(p.url || p.obj)}" alt="Foto ${i + 1} del estado del material"><input value="${esc(p.cap)}" placeholder="Pie de foto (opcional)" aria-label="Pie de la foto ${i + 1}" onchange="DN.photos[${i}].cap=this.value"><button class="btn small" aria-label="Quitar la foto ${i + 1}" onclick="dnDelPhoto(${i})">✕</button></div>`).join('');
+  a11yFix(b);
+}
+function dnDelPhoto(i){ DN.photos.splice(i, 1); dnPhotosRender(); }
+function dnSigInit(){
+  const c = $('#dn-sig'); if (!c) return; const x = c.getContext('2d'); x.lineWidth = 2.6; x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = '#111';
+  let down = false, last = null;
+  const pos = e => { const r = c.getBoundingClientRect(); return {x:(e.clientX - r.left) * c.width / r.width, y:(e.clientY - r.top) * c.height / r.height}; };
+  c.onpointerdown = e => { e.preventDefault(); down = true; last = pos(e); try { c.setPointerCapture(e.pointerId); } catch (x2) {} x.beginPath(); x.moveTo(last.x, last.y); x.lineTo(last.x + 0.1, last.y + 0.1); x.stroke(); DN.sigDirty = true; };
+  c.onpointermove = e => { if (!down) return; const p = pos(e); x.beginPath(); x.moveTo(last.x, last.y); x.lineTo(p.x, p.y); x.stroke(); last = p; };
+  c.onpointerup = c.onpointercancel = () => { down = false; };
+}
+function dnSigClear(){ const c = $('#dn-sig'); c.getContext('2d').clearRect(0, 0, c.width, c.height); DN.sigDirty = false; }
+const dnNumber = off => { const pre = `ALB-${new Date().getFullYear()}-`; const n = (S.dnotes || []).filter(x => (x.number || '').startsWith(pre)).map(x => parseInt(x.number.slice(pre.length)) || 0); return pre + String((n.length ? Math.max(...n) : 0) + 1 + (off || 0)).padStart(4, '0'); };
+async function saveDeliveryNote(sign){
+  const items = dnCollect(), name = $('#dn-name').value.trim();
+  if (!items.some(x => x.inc)) return toast('Deja marcado al menos un elemento del material', true);
+  if (sign){
+    if (!name){ $('#dn-name').focus(); return toast('Escribe el nombre de quien firma', true); }
+    if (!DN.sigDirty) return toast('Falta la firma: dibújala con el dedo en el recuadro', true);
+  }
+  const id = DN.id || uuid4(), photos = []; let n = 0;
+  if (DN.photos.some(x => x.blob)) toast('Subiendo fotos…');
+  for (const ph of DN.photos){
+    if (ph.url){ photos.push({url:ph.url, cap:ph.cap || ''}); continue; }
+    const path = `albaranes/${id}/${Date.now()}-${n++}.jpg`, r = await sb.storage.from('fotos').upload(path, ph.blob, {contentType:'image/jpeg', upsert:true});
+    if (r.error){ toast('No se pudo subir una foto: ' + r.error.message + ' (¿ejecutaste esquema_v3.sql?)', true); throw r.error; }
+    photos.push({url:sb.storage.from('fotos').getPublicUrl(path).data.publicUrl, cap:ph.cap || ''});
+  }
+  const row = {project_id:DN.pid, kind:DN.kind, when_at:$('#dn-when').value ? new Date($('#dn-when').value).toISOString() : new Date().toISOString(), signer_name:name || null, signer_id:$('#dn-nif').value.trim() || null,
+    notes:$('#dn-notes').value.trim() || null, items, photos, signature:sign ? $('#dn-sig').toDataURL('image/png') : null, signed_at:sign ? new Date().toISOString() : null};
+  let number = null;
+  if (DN.id){ await db(sb.from('delivery_notes').update(row).eq('id', id)); const old = (S.dnotes || []).find(x => x.id === id); number = old && old.number; }
+  else {
+    row.id = id;
+    for (let t = 0; t < 4; t++){ row.number = dnNumber(t); try { await db(sb.from('delivery_notes').insert(row)); break; } catch (e) { if (!(e && e.code === '23505') || t === 3) throw e; } }
+    number = row.number;
+  }
+  const dmg = items.filter(x => x.inc && x.t === 'u' && x.st === 'dmg' && (unitById(x.id) || {}).status === 'ok');
+  if (sign && DN.kind === 'pickup' && dmg.length && confirm(`Has marcado ${plu(dmg.length, 'equipo', 'equipos')} como dañado${dmg.length === 1 ? '' : 's'}. ¿Lo${dmg.length === 1 ? '' : 's'} paso a «En reparación» con lo que has anotado?`)){
+    for (const x of dmg){
+      await db(sb.from('units').update({status:'repair'}).eq('id', x.id));
+      await db(sb.from('maintenance_logs').insert({unit_id:x.id, kind:'repair', done_on:todayStr(), description:x.note || `Dañado en la recogida (${number})`}));
+    }
+  }
+  const pid = DN.pid, kind = DN.kind; closeModal(); await loadAll();
+  toast(sign ? 'Albarán firmado y guardado' : 'Albarán guardado sin firma');
+  if (sign) await openDeliveryNote(pid, kind, id);
+}
+function dnView(n){
+  const items = n.items || [], inc = items.filter(x => x.inc !== false), bad = inc.filter(x => x.st && x.st !== 'ok'), out = items.filter(x => x.inc === false);
+  openModal(`<h2>Albarán de ${DN_KIND[n.kind]}</h2><div class="sub">${esc(n.number || '')} · ${esc(fmtFull(n.when_at || n.created_at))}</div>
+    <div class="info"><b>${esc((projById(n.project_id) || {}).name || '')}</b><div class="sub">${plu(inc.length, 'elemento', 'elementos')}${bad.length ? ` · <b style="color:var(--warn)">${plu(bad.length, 'con incidencia', 'con incidencias')}</b>` : ' · todo bien'}${out.length ? ` · ${out.length} no incluidos` : ''}</div></div>
+    ${bad.length ? `<div class="list">${bad.map(x => `<div class="row"><div class="grow"><b>${esc(x.name)}</b> ${x.sn ? `<span class="sub">${esc(x.sn)}</span>` : ''}<div class="sub">${esc(DN_ST[x.st] || '')}${x.note ? ': ' + esc(x.note) : ''}</div></div></div>`).join('')}</div>` : ''}
+    ${(n.photos || []).length ? `<div class="group">Fotos (${n.photos.length})</div><div class="dn-photos">${n.photos.map((p, i) => `<div class="dn-ph"><img src="${esc(safeUrl(p.url))}" alt="Foto ${i + 1} del estado del material" onclick="openPhoto('${esc(safeUrl(p.url))}')">${p.cap ? `<div class="sub">${esc(p.cap)}</div>` : ''}</div>`).join('')}</div>` : ''}
+    ${n.notes ? `<div class="info">${esc(n.notes)}</div>` : ''}
+    <div class="group">Firma</div><div class="info" style="text-align:center">${n.signature ? `<img src="${esc(safeUrl(n.signature))}" alt="Firma de ${esc(n.signer_name || '')}" style="max-width:100%;max-height:110px;background:#fff;border-radius:8px">` : ''}<div><b>${esc(n.signer_name || '')}</b>${n.signer_id ? ' · ' + esc(n.signer_id) : ''}</div><div class="sub">Firmado el ${esc(fmtFull(n.signed_at))}</div></div>
+    <button class="btn primary block" style="margin-top:12px" onclick="dnPrint('${n.id}')">Imprimir / guardar en PDF</button>
+    <button class="btn danger block" style="margin-top:8px" onclick="deleteDeliveryNote('${n.id}')">Eliminar este albarán</button>`);
+}
+async function dnPrint(id){
+  const r = await sb.from('delivery_notes').select('*').eq('id', id); if (r.error) return toast(errMsg(r.error), true, true);
+  const n = (r.data || [])[0]; if (!n) return; closeModal(); printDoc('doc', deliveryDocHtml(n));
+}
+function deliveryDocHtml(n){
+  const p = projById(n.project_id) || {name:'', venue:''}, items = n.items || [], inc = items.filter(x => x.inc !== false), out = items.filter(x => x.inc === false);
+  const groups = new Map(); inc.forEach(x => { const k = x.kit || ''; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(x); });
+  const rows = [...groups.entries()].map(([k, xs]) => (k ? `<tr class="kit"><td colspan="5"><b>Kit ${esc(k)}</b></td></tr>` : '') + xs.map(x => `<tr><td>${esc(x.name)}</td><td>${esc(x.sn || '')}</td><td style="text-align:right">${x.qty}</td><td>${esc(DN_ST[x.st] || 'Bien')}</td><td>${esc(x.note || '')}</td></tr>`).join('')).join('');
+  const t = DN_KIND[n.kind] || '';
+  return `${bizHeader()}<h1>Albarán de ${t}</h1>
+    <p>Nº <b>${esc(n.number || '')}</b> · ${esc(fmtFull(n.when_at || n.created_at))}</p>
+    <p>${esc(W.S)}: <b>${esc(p.name)}</b>${p.venue ? ' · ' + esc(p.venue) : ''}</p>${clientBlock(p)}
+    <table class="dn-t"><thead><tr><th>Material</th><th>Nº de serie / código</th><th style="text-align:right">Cant.</th><th>Estado</th><th>Observación</th></tr></thead><tbody>${rows}</tbody></table>
+    ${out.length ? `<p class="small" style="margin-top:3mm"><b>No incluidos en este albarán:</b> ${out.map(x => esc(x.name + (x.sn ? ' ' + x.sn : ''))).join(', ')}</p>` : ''}
+    ${n.notes ? `<p style="margin-top:3mm"><b>Observaciones:</b> ${esc(n.notes)}</p>` : ''}
+    ${(n.photos || []).length ? `<h2 style="margin-top:5mm">Fotos del estado</h2><div class="dn-pg">${n.photos.map((ph, i) => `<figure><img src="${esc(safeUrl(ph.url))}" alt="Foto ${i + 1}"><figcaption class="small">${esc(ph.cap || 'Foto ' + (i + 1))}</figcaption></figure>`).join('')}</div>` : ''}
+    <p style="margin-top:6mm">Con su firma, quien ${n.kind === 'delivery' ? 'recibe' : 'devuelve'} el material confirma que la lista, las cantidades y el estado indicados en este albarán son correctos.</p>
+    <div class="dn-sign">${n.signature ? `<img src="${esc(safeUrl(n.signature))}" alt="Firma">` : '<div style="height:22mm"></div>'}<div><b>${esc(n.signer_name || '')}</b>${n.signer_id ? ' · ' + esc(n.signer_id) : ''}</div><div class="small">${n.signed_at ? 'Firmado el ' + esc(fmtFull(n.signed_at)) + ' (firma dibujada en pantalla)' : 'Pendiente de firma'}</div></div>`;
+}
+async function deleteDeliveryNote(id){
+  if (!confirm('Se borrará este albarán con su firma y sus fotos. ¿Seguro?')) return;
+  const r = await sb.from('delivery_notes').select('photos').eq('id', id); const ph = ((r.data || [])[0] || {}).photos || [];
+  await db(sb.from('delivery_notes').delete().eq('id', id)); ph.forEach(x => removeOldPhoto(x.url));
+  closeModal(); await loadAll(); toast('Albarán eliminado');
+}
 /* ============ Arranque ============ */
 S.queue = lsGet(QUEUE_KEY, []); S.failed = lsGet(FAIL_KEY, []);
 sb.auth.onAuthStateChange((_e, session) => {
