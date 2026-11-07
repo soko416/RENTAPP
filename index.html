@@ -326,7 +326,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = 'V1.28';   // siguiente: V1.29, V1.30…
+const APP_VERSION = 'V1.29';   // siguiente: V1.30, V1.31…
 // Cómo llamas a los shows (Más > Ajustes de la app): Show / Bolo / Evento… Todas las opciones son masculinas y el plural lleva «s».
 const W = {s:'show', p:'shows', S:'Show', P:'Shows'};
 const capFirst = x => x ? x.charAt(0).toUpperCase() + x.slice(1) : x;
@@ -1297,17 +1297,39 @@ function projectView(id){
     <div class="actions"><button class="btn primary" onclick="openAddAssign('${id}')">+ Añadir técnico</button></div>${showDocsHtml(id)}${notesHtml('project', id)}`;
 }
 function openAddMaterial(pid){
-  const p = projById(pid);
-  const rows = S.models.map(m => {
-    const free = m.is_bulk ? bulkFree(p, m.id) : freeUnits(p, m.id).length;
-    const total = m.is_bulk ? m.bulk_stock : S.units.filter(u => u.model_id === m.id && u.status !== 'lost' && u.status !== 'retired').length;
-    return `<div class="row" data-s="${esc((m.name+' '+(m.brand||'')).toLowerCase())}"><div class="grow"><b>${colorDot(m)}${esc(m.name)}</b>${m.color?`<div class="sub">${esc(colorText(m))}</div>`:''}<div class="sub">Libres ${free} de ${total}${m.is_bulk?' · por cantidad':''}</div></div>
-      <input type="number" min="0" max="${free}" value="0" ${free?'':'disabled'}  data-m="${m.id}" data-bulk="${m.is_bulk?1:0}" oninput="clampQty(this)" style="width:76px" inputmode="numeric" aria-label="Cantidad de ${esc(m.name)}"></div>`;
+  const p = projById(pid), cats = new Map();
+  S.models.forEach(m => { const c = catName(m); if (!cats.has(c)) cats.set(c, []); cats.get(c).push(m); });
+  const sections = [...cats.keys()].sort(catOrder).map(n => {
+    const ms = cats.get(n), fcount = {}; let free = 0, rows = '', last = null;
+    ms.forEach(m => { const k = famKey(m); fcount[k] = (fcount[k] || 0) + 1; });
+    ms.forEach(m => {
+      const f = m.is_bulk ? bulkFree(p, m.id) : freeUnits(p, m.id).length;
+      const total = m.is_bulk ? m.bulk_stock : S.units.filter(u => u.model_id === m.id && u.status !== 'lost' && u.status !== 'retired').length;
+      free += f;
+      const head = (famKey(m) !== last && fcount[famKey(m)] > 1) ? `<div class="group kc-fam" style="margin:10px 0 2px">${esc(famOf(m))}</div>` : ''; last = famKey(m);
+      rows += head + `<div class="row" style="padding-left:0;padding-right:0" data-s="${esc((m.name + ' ' + (m.brand || '')).toLowerCase())}"><div class="grow"><b>${colorDot(m)}${esc(m.name)}</b>${m.color ? `<div class="sub">${esc(colorText(m))}</div>` : ''}<div class="sub">Libres ${f} de ${total}${m.is_bulk ? ' · por cantidad' : ''}</div></div>
+        <input type="number" min="0" max="${f}" value="0" ${f ? '' : 'disabled'}  data-m="${m.id}" data-bulk="${m.is_bulk ? 1 : 0}" oninput="clampQty(this);amCount()" style="width:76px" inputmode="numeric" aria-label="Cantidad de ${esc(m.name)}"></div>`;
+    });
+    return `<details class="kc-cat"><summary><span class="grow">${esc(n)}</span><span class="sub am-sel"></span><span class="sub">${libresTxt(free)}</span></summary>${rows}</details>`;
   }).join('');
-  openModal(`<h2>Añadir material</h2><div class="sub">Solo se cuentan las unidades libres en las fechas de este ${W.s}.</div>
-    <div class="search" style="margin:10px 0"><input type="search" placeholder="Buscar" oninput="filterRows(this.value)"></div>
-    ${S.models.length?`<div class="list" style="margin:0">${rows}</div>`:`<div class="empty">Primero añade material en la pestaña Material.</div>`}
-    <button class="btn primary block" onclick="saveMaterial('${pid}')">Añadir al ${W.s}</button>`);
+  openModal(`<h2>Añadir material</h2><div class="sub">Solo se cuentan las unidades libres en las fechas de este ${W.s}. Abre una categoría para elegir.</div>
+    <div class="search" style="margin:10px 0"><input type="search" placeholder="Buscar" oninput="amFilter(this.value)"></div>
+    ${S.models.length ? `<div id="am-list">${sections}</div>` : `<div class="empty">Primero añade material en la pestaña Material.</div>`}
+    <button class="btn primary block" id="am-btn" style="margin-top:12px" onclick="saveMaterial('${pid}')">Añadir al ${W.s}</button>`);
+}
+function amFilter(v){
+  v = String(v || '').toLowerCase().trim();
+  document.querySelectorAll('#am-list [data-s]').forEach(e => e.hidden = !!v && !e.dataset.s.includes(v));
+  document.querySelectorAll('#am-list .kc-fam').forEach(f => f.hidden = !!v);
+  document.querySelectorAll('#am-list details').forEach(d => { const any = !!d.querySelector('[data-s]:not([hidden])'); d.hidden = !!v && !any; if (v) d.open = any; });
+}
+function amCount(){
+  let total = 0;
+  document.querySelectorAll('#am-list details').forEach(d => {
+    const n = [...d.querySelectorAll('input[data-m]')].reduce((a, i) => a + (parseInt(i.value) || 0), 0); total += n;
+    const t = d.querySelector('.am-sel'); if (t) t.textContent = n ? `${n} elegido${n === 1 ? '' : 's'}` : '';
+  });
+  const b = $('#am-btn'); if (b) b.textContent = total ? `Añadir al ${W.s} (${total})` : `Añadir al ${W.s}`;
 }
 async function saveMaterial(pid){
   const p = projById(pid), uRows = [], bulk = [];
