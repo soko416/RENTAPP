@@ -62,6 +62,8 @@ body.wh nav.tabs button{font-size:17px;padding-top:16px;padding-bottom:16px}
 .actions .btn,.pad .btn.small,.info .btn.small{max-width:100%;white-space:normal;text-align:center}
 @media (max-width:340px){nav.tabs button{font-size:12px;padding-left:0;padding-right:0}.bar h1{font-size:20px}}
 .btn.block{white-space:normal;text-align:center}
+.seg button{min-width:0;padding-left:8px;padding-right:8px}
+@media (max-width:340px){.seg button{font-size:13px}}
 .login h1.brand{background:#000;border-radius:22px;padding:34px 30px;margin:0 0 18px;display:flex;justify-content:center}
 .login h1.brand svg{width:100%;max-width:300px;height:auto;display:block}
 nav.tabs button.wide{flex:1.7 1 0}
@@ -324,7 +326,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = 'V1.26';   // siguiente: V1.27, V1.28…
+const APP_VERSION = 'V1.28';   // siguiente: V1.29, V1.30…
 // Cómo llamas a los shows (Más > Ajustes de la app): Show / Bolo / Evento… Todas las opciones son masculinas y el plural lleva «s».
 const W = {s:'show', p:'shows', S:'Show', P:'Shows'};
 const capFirst = x => x ? x.charAt(0).toUpperCase() + x.slice(1) : x;
@@ -351,6 +353,14 @@ const opts = (list, sel) => list.map(([v,t]) => `<option value="${esc(v)}" ${v==
 
 const UNIT_STATUS = {ok:'Operativa', repair:'En reparación', lost:'Perdida', retired:'De baja'};
 // Etiqueta de estado de una unidad: Operativa (verde) · Fuera (azul, está en un show) · Incompleta / En reparación (aviso) · Perdida / De baja (rojo)
+// Dentro de un kit solo se marca lo que da problemas (roto, incompleto, perdido o de baja); lo que está bien no lleva nada
+const unitIssueBadge = u => u.status === 'repair' ? '<span class="badge rep">En reparación</span>' : (u.status === 'lost' || u.status === 'retired') ? `<span class="badge baja">${esc(UNIT_STATUS[u.status])}</span>` : (u.missing_note ? '<span class="badge inc">Incompleta</span>' : '');
+function unitIssueText(u){
+  const l = u.status === 'repair' ? repairLog(u) : null, p = [];
+  if (u.status === 'repair') p.push(l && l.description ? (l.description === 'Devuelta con daños' ? l.description : 'Roto: ' + l.description) : 'En reparación');
+  if (u.missing_note) p.push('Falta: ' + u.missing_note);
+  return p.length ? ` · <span style="color:var(--warn);font-weight:600">${esc(p.join(' · '))}</span>` : '';
+}
 function unitBadges(u){
   const out = S.reservations.some(r => r.unit_id === u.id && r.state === 'out'), b = [];
   const cond = u.status === 'repair' ? ['rep', UNIT_STATUS.repair] : (u.status === 'lost' || u.status === 'retired') ? ['baja', UNIT_STATUS[u.status]] : (u.missing_note ? ['inc', 'Incompleta'] : null);
@@ -369,6 +379,7 @@ function toast(msg, bad=false, diag=false){
   clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.className='toast', bad?(diag?9000:6000):2500);
 }
 function errMsg(e){
+  if (e && /kit_items_unit_unique/.test(String(e.message || ''))) return 'Ese equipo ya está en otro kit (lo habrá añadido otro dispositivo). Actualiza y revisa.';
   if (!e) return 'Error desconocido';
   noteError(e);
   const m = String(e.message || ''), c = e.code;
@@ -679,11 +690,11 @@ function materialList(){
   const body = '<div class="pad mat">' + names.map(n => catSection('m:' + catKey(n), n, `${groups[n].length} modelo${groups[n].length === 1 ? '' : 's'}`, groups[n].map((m, idx) => {
     const us = S.units.filter(u => u.model_id === m.id), rk = matRowCtl(m, idx, groups[n].length, groups[n]);
     // Solo dos cuentas: lo que está fuera de servicio (roto, perdido o de baja; en cables, los que están en reparación) y lo marcado como incompleto
-    const nBad = us.filter(u => u.status !== 'ok').length + bulkRepair(m), nInc = us.filter(u => u.missing_note).length;
+    const nRep = us.filter(u => u.status === 'repair').length + bulkRepair(m), nGone = us.filter(u => u.status === 'lost' || u.status === 'retired').length, nBad = nRep + nGone, nInc = us.filter(u => u.missing_note).length;
     const subTxt = [colorText(m), m.brand].filter(Boolean).join(' · ');
     return famHead(groups[n], idx) + `<div class="row tap mrow" data-s="${esc((m.name+' '+(m.brand||'')+' '+n+' '+us.map(u=>(u.serial_number||'')+' '+(u.manufacturer_serial||'')).join(' ')+' '+(m.tags||[]).join(' ')+' '+(m.owner||'')).toLowerCase())}" onclick="${rk.click}">
       ${rk.lead}${m.photo_url?`<img class="thumb" loading="lazy" src="${esc(m.photo_url)}" alt="">`:''}
-      <div class="grow"><div class="mline" style="flex-wrap:nowrap;justify-content:space-between"><b>${colorDot(m)}${esc(m.name)}</b><span class="count">${m.is_bulk ? m.bulk_stock : us.length}</span></div>${subTxt || m.is_bulk || nBad || nInc || rowExtraBadges(m) ? `<div class="mline">${subTxt ? `<span class="sub">${esc(subTxt)}</span>` : ''}${m.is_bulk ? '<span class="badge">Por cantidad</span>' : ''}${nBad ? `<span class="badge warn">${nBad} fuera de servicio</span>` : ''}${nInc ? `<span class="badge warn">${nInc} incompleto${nInc === 1 ? '' : 's'}</span>` : ''}${rowExtraBadges(m)}</div>` : ''}</div>${rk.trail}</div>`;
+      <div class="grow"><div class="mline" style="flex-wrap:nowrap;justify-content:space-between"><b>${colorDot(m)}${esc(m.name)}</b><span class="count">${m.is_bulk ? m.bulk_stock : us.length}</span></div>${subTxt || m.is_bulk || nBad || nInc || rowExtraBadges(m) ? `<div class="mline">${subTxt ? `<span class="sub">${esc(subTxt)}</span>` : ''}${m.is_bulk ? '<span class="badge">Por cantidad</span>' : ''}${nRep ? `<span class="badge rep">${nRep} en reparación</span>` : ''}${nGone ? `<span class="badge baja">${nGone} de baja o perdid${nGone === 1 ? 'a' : 'as'}</span>` : ''}${nInc ? `<span class="badge inc">${nInc} incompleto${nInc === 1 ? '' : 's'}</span>` : ''}${rowExtraBadges(m)}</div>` : ''}</div>${rk.trail}</div>`;
   }).join(''), /cabl/i.test(n) ? legendChips() : '')).join('') + '</div>';
   return bar('Material', {actions: `<button class="btn small" onclick="openView('labels','')">Etiquetas${labelPendingCount() ? ' (' + labelPendingCount() + ')' : ''}</button><button class="btn primary small" onclick="openModelForm()">+ Modelo</button>`})
     + matSeg()
@@ -966,7 +977,7 @@ function openUnit(id){
     <div class="actions" style="margin:10px 0 0"><button class="btn" onclick="closeModal();printLabels(['${id}'])">Imprimir etiqueta</button>${nfcSupported() ? `<button class="btn" onclick="nfcWrite(unitById('${id}').code)">Escribir en NFC</button>` : ''}<button class="btn" onclick="openChanges('units','${id}')">Cambios</button>${u.status === 'retired' || u.status === 'lost' ? '' : `<button class="btn" onclick="openRetire('${id}')">Dar de baja…</button>`}<button class="btn danger" onclick="deleteUnit('${id}')">Eliminar</button></div>`);
 }
 // Estados que se ven en la ficha. «Incompleto» es un equipo operativo al que le falta algo (se guarda como estado Operativa + qué falta).
-const UNIT_FORM_STATES = {ok:'Operativa', incomplete:'Incompleto', repair:'En reparación', lost:'Perdida', retired:'De baja'};
+const UNIT_FORM_STATES = {ok:'Operativa', incomplete:'Incompleta', repair:'En reparación', lost:'Perdida', retired:'De baja'};
 function unitStateChanged(hadMissing){
   const v = $('#u-status').value, box = $('#u-missing-box');
   box.hidden = !(v === 'incomplete' || (v !== 'ok' && hadMissing));       // si estaba incompleto y pasa a reparación, se sigue viendo qué le falta
@@ -1050,10 +1061,10 @@ function kitView(id){
   if (!k) return bar('Kits', {back:true});
   const us = kitUnits(k), bs = kitBulk(k);
   const unitRows = kitGroupedRows(S.kitItems.filter(i => i.kit_id === id && i.unit_id && unitById(i.unit_id)).sort((a, b) => unitRankCmp(unitById(a.unit_id), unitById(b.unit_id))), i => catName(modelById(unitById(i.unit_id).model_id)), i => { const u = unitById(i.unit_id);
-    return `<div class="row urow">${unitTile(u)}<div class="grow"><b>${esc(unitModelName(u))}</b><div class="sub">${unitSub(u)}</div></div>
-      <button class="btn small" aria-label="Quitar del kit" onclick="removeKitItem('${i.id}')">✕</button></div>`; });
-  const bulkRows = kitGroupedRows(bs, x => catName(x.model), ({item, model, qty}) => `<div class="row"><div class="grow"><b>${esc(model.name)}</b></div><div class="count">×${qty}</div>
-      <button class="btn small" aria-label="Quitar del kit" onclick="removeKitItem('${item.id}')">✕</button></div>`);
+    return `<div class="row urow tap" onclick="openUnit('${u.id}')">${unitTile(u)}<div class="grow"><b>${esc(unitModelName(u))}</b><div class="sub">${unitSub(u)}${unitIssueText(u)}</div></div>${unitIssueBadge(u)}
+      <button class="btn small" aria-label="Quitar del kit" onclick="event.stopPropagation();removeKitItem('${i.id}')">✕</button></div>`; });
+  const bulkRows = kitGroupedRows(bs, x => catName(x.model), ({item, model, qty}) => `<div class="row tap" onclick="openView('model','${model.id}')"><div class="grow"><b>${esc(model.name)}</b></div><div class="count">×${qty}</div>
+      <button class="btn small" aria-label="Quitar del kit" onclick="event.stopPropagation();removeKitItem('${item.id}')">✕</button></div>`);
   return bar(k.name, {back:true, actions:favBtn('kit', id)})
     + `<div class="info" style="text-align:center"><div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:10px">${kitBadgeList(k).join('')}</div>${kitState(k).reasons.length ? `<div class="sub" style="color:var(--warn);font-weight:600;margin:-4px 0 10px">${esc(kitState(k).reasons.join(' · '))}</div>` : ''}<div class="qrbox">${qrSvg(k.code)}</div><div class="sub">Código del kit <span class="code">${esc(k.code)}</span></div>${labelStatusHtml('k', k)}
        ${k.notes?`<div style="margin-top:8px;text-align:left">${esc(k.notes)}</div>`:''}${kitSpecs(k)}</div>
@@ -1085,7 +1096,8 @@ async function saveKit(id){
   else { const row = await db(sb.from('kits').insert(payload).select().single()); closeModal(); await loadAll(); openView('kit', row.id); }
 }
 async function deleteKit(id){
-  if (!confirm('¿Eliminar este kit? Los equipos no se borran: solo dejan de estar agrupados.')) return;
+  const act = S.reservations.filter(r => r.kit_id === id && r.state !== 'returned').concat(S.bulkRes.filter(b => b.kit_id === id && b.state !== 'returned')), pj = act.length ? projById(act[0].project_id) : null;
+  if (!confirm(pj ? `Este kit está ahora en «${pj.name}». Si lo eliminas, su material seguirá en el ${W.s} como piezas sueltas y los equipos no se borran. ¿Eliminar el kit?` : '¿Eliminar este kit? Los equipos no se borran: solo dejan de estar agrupados.')) return;
   const k = kitById(id), tid = await trashRun('kit', id, `Kit «${k.name}»`, () => db(sb.from('kits').delete().eq('id', id)));
   S.view = null; await loadAll(); undoBar(`Kit «${k.name}» eliminado`, tid);
 }
@@ -1288,7 +1300,7 @@ function openAddMaterial(pid){
   const p = projById(pid);
   const rows = S.models.map(m => {
     const free = m.is_bulk ? bulkFree(p, m.id) : freeUnits(p, m.id).length;
-    const total = m.is_bulk ? m.bulk_stock : S.units.filter(u => u.model_id === m.id).length;
+    const total = m.is_bulk ? m.bulk_stock : S.units.filter(u => u.model_id === m.id && u.status !== 'lost' && u.status !== 'retired').length;
     return `<div class="row" data-s="${esc((m.name+' '+(m.brand||'')).toLowerCase())}"><div class="grow"><b>${colorDot(m)}${esc(m.name)}</b>${m.color?`<div class="sub">${esc(colorText(m))}</div>`:''}<div class="sub">Libres ${free} de ${total}${m.is_bulk?' · por cantidad':''}</div></div>
       <input type="number" min="0" max="${free}" value="0" ${free?'':'disabled'}  data-m="${m.id}" data-bulk="${m.is_bulk?1:0}" oninput="clampQty(this)" style="width:76px" inputmode="numeric" aria-label="Cantidad de ${esc(m.name)}"></div>`;
   }).join('');
@@ -2496,7 +2508,7 @@ function pendingBtn(){
 }
 
 /* ============ ESTADO AL DEVOLVER ============ */
-const COND = {ok:'Completo', repair:'Reparación', incomplete:'Incompleto'};
+const COND = {ok:'Completo', repair:'En reparación', incomplete:'Incompleto'};
 let condResolve = null, condState = [];
 const quickReturn = () => { try { return localStorage.getItem('quickReturn') === '1'; } catch(e){ return false; } };
 function setQuick(on){ try { localStorage.setItem('quickReturn', on ? '1' : '0'); } catch(e){} }
@@ -3168,7 +3180,7 @@ function repairsBodyHtml(){
 }
 function repairsView(){
   return bar('En reparación', {back:true})
-    + `<div class="sub" style="margin:12px 16px 0">Aquí queda todo lo que has devuelto como «Reparación». Mientras esté aquí no se puede cargar en ningún ${W.s}. Cuando vuelva arreglado, márcalo como reparado.</div>`
+    + `<div class="sub" style="margin:12px 16px 0">Aquí queda todo lo que has devuelto como «En reparación». Mientras esté aquí no se puede cargar en ningún ${W.s}. Cuando vuelva arreglado, márcalo como reparado.</div>`
     + repairsBodyHtml();
 }
 // Contenido de «Incompletos»: equipos marcados como incompletos y lo que les falta
@@ -3223,11 +3235,15 @@ function incidenceStats(){
 }
 function navBadgeHtml(){ if (whMode()) return ''; const n = incidenceStats().total; return `<span id="nav-badge" class="tabbadge" ${n ? '' : 'hidden'} aria-label="${plu(n, 'incidencia', 'incidencias')}">${n}</span>`; }
 function updateNavBadge(){ const el = $('#nav-badge'); if (!el) return; const n = incidenceStats().total; el.textContent = n; el.hidden = !n; }
+function incidenceBreakdown(s){
+  const rep = S.units.filter(u => u.status === 'repair').length + S.models.reduce((n, m) => n + bulkRepair(m), 0), gone = S.units.filter(u => u.status === 'lost' || u.status === 'retired').length;
+  return [rep ? rep + ' en reparación' : '', gone ? gone + ' de baja o perdid' + (gone === 1 ? 'a' : 'as') : '', s.inc ? s.inc + ' incompleto' + (s.inc === 1 ? '' : 's') : ''].filter(Boolean).join(' · ');
+}
 function incidenceCard(){
   const s = incidenceStats(); if (!s.total) return '';
   return `<div class="group">Incidencias</div>
     <div class="info" style="display:flex;align-items:center;gap:14px"><div style="font-size:38px;font-weight:800;font-stretch:88%;line-height:1;color:var(--warn)">${s.total}</div>
-      <div class="grow"><b>incidencia${s.total === 1 ? '' : 's'} en total</b><div class="sub">${s.bad} fuera de servicio · ${s.inc} incompleto${s.inc === 1 ? '' : 's'}</div></div></div>`;
+      <div class="grow"><b>incidencia${s.total === 1 ? '' : 's'} en total</b><div class="sub">${incidenceBreakdown(s)}</div></div></div>`;
 }
 
 /* ============ ORDEN DE LOS MODELOS: por nombre y por tamaño ============ */
@@ -4503,10 +4519,6 @@ function accToggle(i, j, on){
     if (st.cond === 'ok' || st.autoNote){ if (st.cond === 'ok') setCond(i, 'incomplete'); st.note = miss.join(', '); $('#cnt-' + i).value = st.note; st.autoNote = st.note; }
   } else if (st.autoNote){ st.autoNote = null; setCond(i, 'ok'); st.note = ''; $('#cnt-' + i).value = ''; }
 }
-function kitBlocks(){
-  return condKits.map((k, ki) => { const kit = kitById(k.kit_id) || {};
-    return `<div class="info" style="margin:10px 0 0" id="kp-${ki}"><b>Kit «${esc(kit.name || '')}»</b>${kit.missing_note ? `<div class="sub bad">Salió incompleto: ${esc(kit.missing_note)}</div>` : ''}<div class="sub" style="margin-top:6px;font-weight:700">Piezas que deben volver</div>${k.pieces.map((p, pj) => `<label class="chkrow"><input type="checkbox" checked onchange="kpToggle(${ki},${pj},this.checked)"><span>${esc(accText(p))}</span></label>`).join('')}</div>`; }).join('');
-}
 function kpToggle(ki, pj, on){ condKits[ki].pieces[pj].ok = on; kgSync(); }
 // ---- lista de contenido para pegar en la tapa del kit: el tamaño de letra se ajusta solo para que quepa ----
 function kitListHtml(kt, lay){
@@ -5515,7 +5527,7 @@ function openKitContents(kid){
     cats.get(n).forEach(m => {
       const fam = famOf(m), head = (famKey(m) !== last && fcount[famKey(m)] > 1) ? `<div class="group kc-fam" style="margin:10px 0 2px" data-kc="${esc(norm(fam))}">${esc(fam)}</div>` : ''; 
       if (!m.is_bulk){
-        const us = S.units.filter(u => u.model_id === m.id && !inKit.has(u.id)).sort(unitCmp); if (!us.length) return; free += us.length; last = famKey(m);
+        const us = S.units.filter(u => u.model_id === m.id && !inKit.has(u.id) && u.status !== 'lost' && u.status !== 'retired').sort(unitCmp); if (!us.length) return; free += us.length; last = famKey(m);
         rows += head + `<div class="group" style="margin:6px 0 2px;font-size:13px" data-kc="${esc(norm(m.name))}">${esc(m.name)}</div>` + us.map(u => `<label class="chkrow" data-kc="${esc(norm(m.name + ' ' + (u.serial_number || '') + ' ' + u.code))}"><input type="checkbox" data-u="${u.id}" onchange="kcCount()">${unitTile(u)}${u.serial_number ? '<span>' + esc(u.serial_number) + '</span>' : '<span class="code sub">' + esc(u.code) + '</span>'}</label>`).join('');
       } else {
         const av = kitBulkAvail(m), inK = kitBulkUsed(m.id); free += av; last = famKey(m);
@@ -5618,7 +5630,7 @@ async function openDeliveryNote(pid, kind, id){
   const groups = new Map(); DN.items.forEach((it, i) => { const k = it.kit || ''; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(i); });
   const stOpts = sel => Object.entries(DN_ST).map(([v, t]) => `<option value="${v}" ${sel === v ? 'selected' : ''}>${t}</option>`).join('');
   const rowH = i => { const it = DN.items[i]; return `<div class="dn-row ${it.inc === false ? 'off' : ''}" data-i="${i}">
-      <div style="display:flex;align-items:center;gap:8px"><label class="chkrow" style="flex:1;margin:0"><input type="checkbox" data-in="${i}" ${it.inc === false ? '' : 'checked'} onchange="dnUpd()" aria-label="Incluir ${esc(it.name)}"><span><b>${esc(it.name)}</b>${it.sn ? ` <span class="sub">${esc(it.sn)}</span>` : ''}</span></label>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><label class="chkrow" style="flex:1 1 150px;min-width:0;margin:0"><input type="checkbox" data-in="${i}" ${it.inc === false ? '' : 'checked'} onchange="dnUpd()" aria-label="Incluir ${esc(it.name)}"><span><b>${esc(it.name)}</b>${it.sn ? ` <span class="sub">${esc(it.sn)}</span>` : ''}</span></label>
         ${it.t === 'b' ? `<input type="number" min="0" max="99999" value="${it.qty}" data-q="${i}" style="width:72px" inputmode="numeric" aria-label="Cantidad de ${esc(it.name)}" onchange="dnUpd()">` : ''}
         <select data-st="${i}" style="width:auto" aria-label="Estado de ${esc(it.name)}" onchange="dnUpd()">${stOpts(it.st)}</select></div>
       <input data-n="${i}" value="${esc(it.note || '')}" placeholder="Qué le pasa (opcional)" aria-label="Nota sobre ${esc(it.name)}" ${it.st && it.st !== 'ok' ? '' : 'hidden'} style="margin-top:6px"></div>`; };
