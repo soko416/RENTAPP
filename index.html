@@ -62,6 +62,7 @@ body.wh nav.tabs button{font-size:17px;padding-top:16px;padding-bottom:16px}
 .actions .btn,.pad .btn.small,.info .btn.small{max-width:100%;white-space:normal;text-align:center}
 @media (max-width:340px){nav.tabs button{font-size:12px;padding-left:0;padding-right:0}.bar h1{font-size:20px}}
 .btn.block{white-space:normal;text-align:center}
+.am-units{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:2px 10px 6px;margin:0 0 8px}
 .seg button{min-width:0;padding-left:8px;padding-right:8px}
 @media (max-width:340px){.seg button{font-size:13px}}
 .login h1.brand{background:#000;border-radius:22px;padding:34px 30px;margin:0 0 18px;display:flex;justify-content:center}
@@ -124,7 +125,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .badge.inc{background:var(--incbg);color:var(--inctx)}.badge.inc::before{content:"⚠ "}
 .badge.rep{background:var(--repbg);color:var(--reptx)}.badge.rep::before{content:"✖ "}
 .badge.baja{background:var(--bajabg);color:var(--bajatx)}
-.info.kg{border-left:4px solid var(--accent)}
+.kit-name::before{content:"KIT";display:inline-block;background:var(--ink);color:var(--panel);font-size:11px;font-weight:700;letter-spacing:.06em;line-height:1.3;padding:2px 6px;border-radius:4px;margin-right:8px;vertical-align:1px}
+.kit-tag{display:inline-block;background:var(--ink);color:var(--panel);font-size:11px;font-weight:700;letter-spacing:.06em;line-height:1.3;padding:2px 6px;border-radius:4px}
+.row:has(.kit-name),.info.kg,.kitin{border-left:6px solid var(--ink)}
 .kg-detail{margin-top:6px}
 .kg-detail .info{margin:8px 0 0;background:transparent}
 .empty{margin:40px 24px;text-align:center;color:var(--muted)}
@@ -326,7 +329,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = 'V1.29';   // siguiente: V1.30, V1.31…
+const APP_VERSION = 'V1.31';   // siguiente: V1.32, V1.33…
 // Cómo llamas a los shows (Más > Ajustes de la app): Show / Bolo / Evento… Todas las opciones son masculinas y el plural lleva «s».
 const W = {s:'show', p:'shows', S:'Show', P:'Shows'};
 const capFirst = x => x ? x.charAt(0).toUpperCase() + x.slice(1) : x;
@@ -1051,7 +1054,7 @@ function kitsList(){
   return bar('Material', {actions:`${ks.length > 1 ? `<button class="btn small" onclick="kitOrderToggle()">${S.kitOrder ? 'Terminar de ordenar' : 'Ordenar'}</button>` : ''}<button class="btn primary small" onclick="openKitForm()">+ Kit</button>`}) + matSeg()
     + (ks.length && !S.kitOrder ? `<div class="sub" style="margin:8px 18px 0">Operativo = listo · Fuera = en un ${esc(W.s)} · Incompleto o En reparación = aviso</div>` : '')
     + (ks.length ? `<div class="list">${ks.map((k, i) => `<div class="row ${S.kitOrder ? '' : 'tap'}" ${S.kitOrder ? '' : `onclick="openView('kit','${k.id}')"`}>
-        <div class="grow"><b>${esc(k.name)}</b><div class="sub">${plu(kitUnits(k).length, 'equipo', 'equipos')} · ${plu(kitBulk(k).length, 'línea', 'líneas')} por cantidad${kitReasonHtml(k)}</div></div>
+        <div class="grow"><b class="kit-name">${esc(k.name)}</b><div class="sub">${plu(kitUnits(k).length, 'equipo', 'equipos')} · ${plu(kitBulk(k).length, 'línea', 'líneas')} por cantidad${kitReasonHtml(k)}</div></div>
         ${S.kitOrder ? `<div style="display:flex;gap:4px"><button class="btn small" aria-label="Subir ${esc(k.name)}" ${i === 0 ? 'disabled' : ''} onclick="moveKit('${k.id}',-1)">▲</button><button class="btn small" aria-label="Bajar ${esc(k.name)}" ${i === ks.length - 1 ? 'disabled' : ''} onclick="moveKit('${k.id}',1)">▼</button></div>` : kitBadges(k)}</div>`).join('')}</div>`
       : `<div class="empty">Aún no hay kits.<br>Un kit es un flight case o un pack que reservas y escaneas de una vez.<br>Pulsa «+ Kit» para crear el primero.</div>`);
 }
@@ -1066,7 +1069,7 @@ function kitView(id){
   const bulkRows = kitGroupedRows(bs, x => catName(x.model), ({item, model, qty}) => `<div class="row tap" onclick="openView('model','${model.id}')"><div class="grow"><b>${esc(model.name)}</b></div><div class="count">×${qty}</div>
       <button class="btn small" aria-label="Quitar del kit" onclick="event.stopPropagation();removeKitItem('${item.id}')">✕</button></div>`);
   return bar(k.name, {back:true, actions:favBtn('kit', id)})
-    + `<div class="info" style="text-align:center"><div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:10px">${kitBadgeList(k).join('')}</div>${kitState(k).reasons.length ? `<div class="sub" style="color:var(--warn);font-weight:600;margin:-4px 0 10px">${esc(kitState(k).reasons.join(' · '))}</div>` : ''}<div class="qrbox">${qrSvg(k.code)}</div><div class="sub">Código del kit <span class="code">${esc(k.code)}</span></div>${labelStatusHtml('k', k)}
+    + `<div class="info" style="text-align:center"><div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;align-items:center;margin-bottom:10px"><span class="kit-tag">KIT</span>${kitBadgeList(k).join('')}</div>${kitState(k).reasons.length ? `<div class="sub" style="color:var(--warn);font-weight:600;margin:-4px 0 10px">${esc(kitState(k).reasons.join(' · '))}</div>` : ''}<div class="qrbox">${qrSvg(k.code)}</div><div class="sub">Código del kit <span class="code">${esc(k.code)}</span></div>${labelStatusHtml('k', k)}
        ${k.notes?`<div style="margin-top:8px;text-align:left">${esc(k.notes)}</div>`:''}${kitSpecs(k)}</div>
     ${kitMissingHtml(k)}
     <div class="actions"><button class="btn" onclick="openKitForm('${id}')">Editar</button><button class="btn" onclick="duplicateKit('${id}')">Duplicar</button><button class="btn" onclick="printKitLabel('${id}')">Imprimir etiqueta</button><button class="btn" onclick="printKitList('${id}')">Imprimir lista de contenido</button><button class="btn" onclick="openChanges('kits','${id}')">Cambios</button><button class="btn danger" onclick="deleteKit('${id}')">Eliminar</button></div>
@@ -1241,10 +1244,14 @@ function projectView(id){
   const looseR = rs.filter(r => !r.kit_id), looseB = bs.filter(b => !b.kit_id);
 
   const kitsH = kitIds.map(kid => {
-    const k = kitById(kid), kr = rs.filter(r => r.kit_id === kid), kb = bs.filter(b => b.kit_id === kid), st = aggState([...kr, ...kb]);
-    return `<div class="row"><div class="grow"><b>${esc(k ? k.name : 'Kit')}</b><div class="sub">${plu(kr.length, 'equipo', 'equipos')}${kb.length?` · ${kb.length} línea${kb.length===1?'':'s'} por cantidad`:''}</div></div>
+    const k = kitById(kid), kr = rs.filter(r => r.kit_id === kid), kb = bs.filter(b => b.kit_id === kid), st = aggState([...kr, ...kb]), key = `sk:${id}:${kid}`, open = S.catOpen[key] === true;
+    const us = kr.map(r => unitById(r.unit_id)).filter(Boolean).sort(unitRankCmp), issues = us.filter(u => unitIssueBadge(u)).length;
+    const head = `<div class="row head tap kithead" onclick="toggleCat('${key}')" role="button" aria-expanded="${open}"><span>${open ? '▾' : '▸'}</span><div class="grow"><b class="kit-name">${esc(k ? k.name : 'Kit')}</b><div class="sub">${plu(kr.length, 'equipo', 'equipos')}${kb.length ? ` · ${plu(kb.length, 'línea', 'líneas')} por cantidad` : ''}${issues ? ` · <span style="color:var(--warn);font-weight:600">${plu(issues, 'con problema', 'con problemas')}</span>` : ''}</div></div>
       <span class="badge ${RES_CLASS[st]}">${RES_STATE[st]}</span>
-      ${st==='planned'?`<button class="btn small" aria-label="Quitar kit" onclick="removeKitFromShow('${id}','${kid}')">✕</button>`:''}</div>`;
+      ${st === 'planned' ? `<button class="btn small" aria-label="Quitar kit" onclick="event.stopPropagation();removeKitFromShow('${id}','${kid}')">✕</button>` : ''}</div>`;
+    if (!open) return head;
+    return head + us.map(u => `<div class="row urow tap kitin" onclick="openUnit('${u.id}')">${unitTile(u)}<div class="grow"><b>${esc(unitModelName(u))}</b><div class="sub">${unitSub(u)}${unitIssueText(u)}</div></div>${unitIssueBadge(u)}</div>`).join('')
+      + kb.map(b => { const m = modelById(b.model_id); return `<div class="row tap kitin" onclick="openView('model','${b.model_id}')"><div class="grow"><b>${colorDot(m)}${esc(m ? m.name : '')}</b></div><div class="count">×${b.qty}</div></div>`; }).join('');
   }).join('');
 
   const byModel = {};
@@ -1264,7 +1271,7 @@ function projectView(id){
       <span class="badge ${RES_CLASS[b.state]}">${RES_STATE[b.state]}</span><div class="count">×${b.qty}</div></div>`; }).join('');
 
   const as = S.assigns.filter(a => a.project_id === id);
-  const total = pieces(p);
+  const total = pieces(p), loosePieces = looseR.length + looseB.reduce((n, b) => n + b.qty, 0);
   return bar(p.name, {back:true, actions:favBtn('project', id)})
     + `<div class="info"><div>${esc(fmtDT(p.starts_at))} → ${esc(fmtDT(p.ends_at))}</div>
        <div class="sub">${esc([p.client, p.venue].filter(Boolean).join(' · '))}</div>
@@ -1283,11 +1290,11 @@ function projectView(id){
       <button class="btn" onclick="openChanges('projects','${id}')">Cambios</button><button class="btn danger" onclick="deleteProject('${id}')">Eliminar</button></div>
     <div class="actions"><a class="btn" style="text-decoration:none" target="_blank" rel="noopener" href="${esc(gcalUrl(p))}">Añadir a Google Calendar</a><button class="btn" onclick="downloadShowIcs('${id}')">Archivo .ics</button><button class="btn" onclick="openMsgMenu('${id}')">Mensajes…</button><button class="btn" onclick="printRider('${id}')">Rider técnico</button></div>
     ${paymentCard(p)}${loadCard(p)}${deliveryCard(p)}
-    <div class="group" style="display:flex;align-items:center;gap:8px"><span style="flex:1">Material (${plu(total, 'pieza', 'piezas')})</span>${Object.keys(byModel).length > 1 ? `<button class="btn small" onclick="foldShow('${id}')">${Object.keys(byModel).some(mid => S.catOpen[`s:${id}:${mid}`] !== false) ? 'Plegar todo' : 'Desplegar todo'}</button>` : ''}</div>
-    ${kitIds.length?`<div class="list">${kitsH}</div>`:''}
+    ${kitIds.length ? `<div class="group">Kits (${kitIds.length})</div><div class="list">${kitsH}</div>` : ''}
+    ${(looseR.length || looseB.length) ? `<div class="group" style="display:flex;align-items:center;gap:8px"><span style="flex:1">${kitIds.length ? 'Material suelto' : 'Material'} (${plu(loosePieces, 'pieza', 'piezas')})</span>${Object.keys(byModel).length > 1 ? `<button class="btn small" onclick="foldShow('${id}')">${Object.keys(byModel).some(mid => S.catOpen[`s:${id}:${mid}`] !== false) ? 'Plegar todo' : 'Desplegar todo'}</button>` : ''}</div>` : ''}
     ${looseR.length?`<div class="list">${unitsH}</div>`:''}
     ${looseB.length?`<div class="list">${bulkH}</div>`:''}
-    ${total?'':`<div class="empty" style="margin:20px 24px">Aún no hay material en este ${W.s}.</div>`}
+    ${total ? '' : `<div class="group">Material (0 piezas)</div><div class="empty" style="margin:20px 24px">Aún no hay material en este ${W.s}.</div>`}
     <div class="actions"><button class="btn primary" onclick="openAddMaterial('${id}')">+ Añadir material</button><button class="btn primary" onclick="openAddKit('${id}')">+ Añadir kit</button></div>
     <div class="group">Técnicos (${as.length})</div>
     ${as.length?`<div class="list">${as.map(a => { const t = techById(a.technician_id); if(!t) return '';
@@ -1303,20 +1310,31 @@ function openAddMaterial(pid){
     const ms = cats.get(n), fcount = {}; let free = 0, rows = '', last = null;
     ms.forEach(m => { const k = famKey(m); fcount[k] = (fcount[k] || 0) + 1; });
     ms.forEach(m => {
-      const f = m.is_bulk ? bulkFree(p, m.id) : freeUnits(p, m.id).length;
+      const freeU = m.is_bulk ? [] : freeUnits(p, m.id).sort(unitCmp), f = m.is_bulk ? bulkFree(p, m.id) : freeU.length;
       const total = m.is_bulk ? m.bulk_stock : S.units.filter(u => u.model_id === m.id && u.status !== 'lost' && u.status !== 'retired').length;
       free += f;
       const head = (famKey(m) !== last && fcount[famKey(m)] > 1) ? `<div class="group kc-fam" style="margin:10px 0 2px">${esc(famOf(m))}</div>` : ''; last = famKey(m);
-      rows += head + `<div class="row" style="padding-left:0;padding-right:0" data-s="${esc((m.name + ' ' + (m.brand || '')).toLowerCase())}"><div class="grow"><b>${colorDot(m)}${esc(m.name)}</b>${m.color ? `<div class="sub">${esc(colorText(m))}</div>` : ''}<div class="sub">Libres ${f} de ${total}${m.is_bulk ? ' · por cantidad' : ''}</div></div>
-        <input type="number" min="0" max="${f}" value="0" ${f ? '' : 'disabled'}  data-m="${m.id}" data-bulk="${m.is_bulk ? 1 : 0}" oninput="clampQty(this);amCount()" style="width:76px" inputmode="numeric" aria-label="Cantidad de ${esc(m.name)}"></div>`;
+      const serials = freeU.map(u => (u.serial_number || '') + ' ' + (u.code || '')).join(' ');
+      const chooser = freeU.length ? `<div class="am-units" id="amu-${m.id}" hidden><div class="sub" style="margin:6px 0 2px">Marca los que quieras llevar:</div>${freeU.map(u => { const k = unitKit(u); return `<label class="chkrow"><input type="checkbox" data-pu="${u.id}" data-pm="${m.id}" onchange="amUnitPick('${m.id}')">${unitTile(u)}<span><b>${esc(u.serial_number || u.code)}</b>${k ? `<span class="sub"> · en el kit «${esc(k.name)}»</span>` : ''}${u.missing_note ? ` <span class="badge inc">Incompleta</span>` : ''}</span></label>`; }).join('')}</div>` : '';
+      rows += head + `<div class="am-item" data-s="${esc((m.name + ' ' + (m.brand || '') + ' ' + serials).toLowerCase())}"><div class="row" style="padding-left:0;padding-right:0"><div class="grow"><b>${colorDot(m)}${esc(m.name)}</b>${m.color ? `<div class="sub">${esc(colorText(m))}</div>` : ''}<div class="sub">Libres ${f} de ${total}${m.is_bulk ? ' · por cantidad' : ''}</div>${freeU.length ? `<button type="button" class="btn small" style="margin-top:6px" id="amb-${m.id}" aria-expanded="false" onclick="amToggleUnits('${m.id}')">Elegir cuáles</button>` : ''}</div>
+        <input type="number" min="0" max="${f}" value="0" ${f ? '' : 'disabled'}  data-m="${m.id}" data-bulk="${m.is_bulk ? 1 : 0}" oninput="clampQty(this);amQtyTyped('${m.id}');amCount()" style="width:76px" inputmode="numeric" aria-label="Cantidad de ${esc(m.name)}"></div>${chooser}</div>`;
     });
     return `<details class="kc-cat"><summary><span class="grow">${esc(n)}</span><span class="sub am-sel"></span><span class="sub">${libresTxt(free)}</span></summary>${rows}</details>`;
   }).join('');
-  openModal(`<h2>Añadir material</h2><div class="sub">Solo se cuentan las unidades libres en las fechas de este ${W.s}. Abre una categoría para elegir.</div>
-    <div class="search" style="margin:10px 0"><input type="search" placeholder="Buscar" oninput="amFilter(this.value)"></div>
+  openModal(`<h2>Añadir material</h2><div class="sub">Solo se cuentan las unidades libres en las fechas de este ${W.s}. Abre una categoría para elegir; en los equipos con número de serie puedes escoger cuáles.</div>
+    <div class="search" style="margin:10px 0"><input type="search" placeholder="Buscar por nombre o nº de serie" oninput="amFilter(this.value)"></div>
     ${S.models.length ? `<div id="am-list">${sections}</div>` : `<div class="empty">Primero añade material en la pestaña Material.</div>`}
     <button class="btn primary block" id="am-btn" style="margin-top:12px" onclick="saveMaterial('${pid}')">Añadir al ${W.s}</button>`);
 }
+function amToggleUnits(mid){
+  const box = $('#amu-' + mid), btn = $('#amb-' + mid); if (!box) return;
+  box.hidden = !box.hidden; if (btn){ btn.setAttribute('aria-expanded', String(!box.hidden)); btn.textContent = box.hidden ? 'Elegir cuáles' : 'Ocultar la lista'; }
+}
+function amUnitPick(mid){
+  const n = document.querySelectorAll(`#amu-${mid} input:checked`).length, inp = document.querySelector(`#am-list input[data-m="${mid}"]`);
+  if (inp) inp.value = String(n); amCount();
+}
+function amQtyTyped(mid){ document.querySelectorAll(`#amu-${mid} input:checked`).forEach(c => { c.checked = false; }); }      // si escribes una cantidad, vuelve a elegir la app los primeros libres
 function amFilter(v){
   v = String(v || '').toLowerCase().trim();
   document.querySelectorAll('#am-list [data-s]').forEach(e => e.hidden = !!v && !e.dataset.s.includes(v));
@@ -1333,11 +1351,19 @@ function amCount(){
 }
 async function saveMaterial(pid){
   const p = projById(pid), uRows = [], bulk = [];
+  const picks = {}; let stale = false;
+  document.querySelectorAll('#sheet input[data-pu]:checked').forEach(c => { (picks[c.dataset.pm] = picks[c.dataset.pm] || []).push(c.dataset.pu); });
   document.querySelectorAll('#sheet input[data-m]').forEach(inp => {
     const n = parseInt(inp.value) || 0; if (n <= 0) return;
     if (inp.dataset.bulk === '1') bulk.push({model_id:inp.dataset.m, n});
+    else if (picks[inp.dataset.m]){
+      const ok = new Set(freeUnits(p, inp.dataset.m).map(u => u.id)), mine = picks[inp.dataset.m].filter(uid => ok.has(uid));
+      if (mine.length !== picks[inp.dataset.m].length) stale = true;
+      mine.forEach(uid => uRows.push({project_id:pid, unit_id:uid, state:'planned'}));
+    }
     else freeUnits(p, inp.dataset.m).slice(0, n).forEach(u => uRows.push({project_id:pid, unit_id:u.id, state:'planned'}));
   });
+  if (stale) return toast('Alguno de los equipos que elegiste ya no está libre en esas fechas. Vuelve a abrir la lista.', true);
   // comprobar TODO antes de guardar nada: si algo no cabe, no se añade nada
   for (const inp of document.querySelectorAll('#sheet input[data-m]')){
     const n = parseInt(inp.value) || 0; if (n <= 0) continue;
@@ -1379,7 +1405,7 @@ function openAddKit(pid){
   const inShow = new Set([...S.reservations, ...S.bulkRes].filter(x => x.project_id === pid && x.kit_id).map(x => x.kit_id));
   const rows = S.kits.filter(k => !inShow.has(k.id)).map(k => {
     const probs = kitProblem(p, k);
-    return `<div class="row"><div class="grow"><b>${esc(k.name)}</b>
+    return `<div class="row"><div class="grow"><b class="kit-name">${esc(k.name)}</b>
       <div class="sub ${probs.length?'bad':''}">${probs.length ? esc(probs.slice(0,2).join('; ') + (probs.length>2?` y ${probs.length-2} más`:'')) : `${plu(kitUnits(k).length, 'equipo', 'equipos')} · ${plu(kitBulk(k).length, 'línea', 'líneas')} por cantidad · libre`}</div></div>
       <button class="btn small primary" ${probs.length?'disabled':''} onclick="saveKitToShow('${pid}','${k.id}')">Añadir</button></div>`;
   }).join('');
@@ -1843,7 +1869,7 @@ function repairLog(u){
 function openAlerts(){
   const al = maintAlerts();
   openModal(`<h2>Avisos de mantenimiento</h2><div class="sub">Equipos en reparación o incompletos, revisiones en los próximos 30 días y lámparas al 90% o más de su vida útil.</div>
-    ${al.length ? `<div class="list" style="margin:12px 0 0">${al.map(a => a.k ? `<div class="row tap" onclick="closeModal();go('material');setMat('kits');openView('kit','${a.k.id}')"><div class="grow"><b>${esc(a.k.name)}</b><div class="sub">${esc(a.text)}</div></div></div>` : a.u ? `<div class="row tap" onclick="openUnit('${a.u.id}')"><div class="grow"><b>${esc(unitLabel(a.u))}</b><div class="sub">${esc(a.text)}</div></div></div>`
+    ${al.length ? `<div class="list" style="margin:12px 0 0">${al.map(a => a.k ? `<div class="row tap" onclick="closeModal();go('material');setMat('kits');openView('kit','${a.k.id}')"><div class="grow"><b class="kit-name">${esc(a.k.name)}</b><div class="sub">${esc(a.text)}</div></div></div>` : a.u ? `<div class="row tap" onclick="openUnit('${a.u.id}')"><div class="grow"><b>${esc(unitLabel(a.u))}</b><div class="sub">${esc(a.text)}</div></div></div>`
       : `<div class="row tap" onclick="closeModal();go('material');${a.go || "openView('repairs','')"}"><div class="grow"><b>${colorDot(a.m)}${esc(a.m.name)}</b><div class="sub">${esc(a.text)}</div></div></div>`).join('')}</div>`
       : `<div class="empty" style="margin:24px 0">Todo al día.</div>`}`);
 }
@@ -2571,7 +2597,7 @@ function askConditionEx(units, bulks, title, kits){
     condGroups = [...G.values()].sort((a, b) => ((kitById(a.kid) || {}).name || '').localeCompare((kitById(b.kid) || {}).name || '', 'es'));
     const inKit = new Set(); condGroups.forEach(g => { g.ui.forEach(i => inKit.add('u' + i)); g.bj.forEach(j => inKit.add('b' + j)); });
     const packH = condGroups.map((g, gi) => { const kit = kitById(g.kid) || {};
-      return `<div class="info kg" id="kg-${gi}"><b>Kit «${esc(kit.name || '')}»</b>
+      return `<div class="info kg" id="kg-${gi}"><b class="kit-name">${esc(kit.name || '')}</b>
         <div class="sub">${[g.ui.length ? plu(g.ui.length, 'equipo', 'equipos') : '', g.bj.length ? plu(g.bj.length, 'línea', 'líneas') + ' por cantidad' : '', g.ki.length ? 'piezas sueltas' : ''].filter(Boolean).join(' · ')}</div>
         ${kit.missing_note ? `<div class="sub bad">Salió incompleto: ${esc(kit.missing_note)}</div>` : ''}
         <div class="legend" style="margin:8px 0 0"><button type="button" class="chip sel" data-m="all" onclick="kgAll(${gi})">Vuelve todo completo</button><button type="button" class="chip" data-m="det" onclick="kgDetail(${gi})">Revisar uno a uno</button></div>
@@ -2970,7 +2996,7 @@ function renderOutList(){
     + groups.map(g => {
       const all = outKeys(g).every(k => S.outSel.has(k)), cats = {};
       const add = (cat, key, html) => (cats[cat] = cats[cat] || []).push({key, html});
-      [...g.kits].forEach(([kid, e]) => add('Kits', `k:${g.p.id}:${kid}`, row(`k:${g.p.id}:${kid}`, esc(e.kit.name), `Kit · ${e.units.length} equipo${e.units.length === 1 ? '' : 's'}${e.bulks.length ? ` + ${e.bulks.length} línea${e.bulks.length === 1 ? '' : 's'} por cantidad` : ''}`, '', e.kit.name)));
+      [...g.kits].forEach(([kid, e]) => add('Kits', `k:${g.p.id}:${kid}`, row(`k:${g.p.id}:${kid}`, `<span class="kit-name">${esc(e.kit.name)}</span>`, `Kit · ${e.units.length} equipo${e.units.length === 1 ? '' : 's'}${e.bulks.length ? ` + ${e.bulks.length} línea${e.bulks.length === 1 ? '' : 's'} por cantidad` : ''}`, '', e.kit.name)));
       [...g.units].sort((x, y) => unitCmp(x.u, y.u)).forEach(({r, u}) => { const m = modelById(u.model_id) || {}; add(catName(m), 'r:' + r.id, row('r:' + r.id, colorDot(m) + esc(m.name || ''), esc(u.serial_number || u.code) + (u.missing_note ? ` · <span style="color:var(--warn)">Incompleto</span>` : ''), '', `${m.name} ${u.serial_number || ''} ${u.code}`, unitTile(u))); });
       g.bulks.forEach(b => { const m = modelById(b.model_id) || {}, v = S.outQty[b.id] != null ? S.outQty[b.id] : b.qty;
         add(catName(m), 'b:' + b.id, row('b:' + b.id, colorDot(m) + esc(m.name || ''), `Fuera: ${b.qty}${colorText(m) ? ' · ' + esc(colorText(m)) : ''}`,
@@ -3058,7 +3084,7 @@ function loadView(pid){
     const all = [...e.rs, ...e.bs], st = aggState(all), pcs = e.rs.length + e.bs.reduce((s, b) => s + b.qty, 0);
     const dpcs = e.rs.filter(r => isDone(r.state)).length + e.bs.filter(b => isDone(b.state)).reduce((s, b) => s + b.qty, 0);
     add('Kits', row({kind:'k', id:e.kit.id, checked:st === 'out' || st === 'returned', ind:st === 'mixed', disabled:st === 'returned', doneRow:st === 'out' || st === 'returned',
-      title:esc(e.kit.name), sub:`Kit · ${e.rs.length} equipo${e.rs.length === 1 ? '' : 's'}${e.bs.length ? ` + ${e.bs.length} línea${e.bs.length === 1 ? '' : 's'} por cantidad` : ''}${st === 'mixed' ? ' · parcial' : st === 'returned' ? ' · devuelto' : ''}`, search:e.kit.name}), pcs, dpcs);
+      title:`<span class="kit-name">${esc(e.kit.name)}</span>`, sub:`Kit · ${e.rs.length} equipo${e.rs.length === 1 ? '' : 's'}${e.bs.length ? ` + ${e.bs.length} línea${e.bs.length === 1 ? '' : 's'} por cantidad` : ''}${st === 'mixed' ? ' · parcial' : st === 'returned' ? ' · devuelto' : ''}`, search:e.kit.name}), pcs, dpcs);
   });
   [...L.units].sort((x, y) => unitCmp(x.u, y.u)).forEach(({r, u, m}) => {
     const blocked = r.state === 'planned' && u.status !== 'ok';
@@ -3616,7 +3642,7 @@ function labelsView(){
   };
   const catHtml = Object.keys(cats).sort(catOrder).map(nm => catSection('labc:' + catKey(nm), nm, `${cats[nm].length} modelo${cats[nm].length === 1 ? '' : 's'}`, cats[nm].map(modelRows).join(''))).join('');
   const kits = S.kits.slice().sort(byName), nSel = sel.size;
-  const kitHtml = kits.length ? catSection('labc:kits', 'Kits', `${kits.length} kit${kits.length === 1 ? '' : 's'}`, kits.map(k => `<div class="row urow"><label class="chkrow grow" style="padding:0"><input type="checkbox" data-lk="${k.id}" ${sel.has('k:' + k.id) ? 'checked' : ''} onchange="labToggle('k:${k.id}',this.checked)"><span class="grow"><b>${esc(k.name)}</b><span class="sub" style="display:block">${kitUnits(k).length} equipo${kitUnits(k).length === 1 ? '' : 's'}${k.label_printed_at ? '' : ' · sin imprimir'}</span></span></label></div>`).join('')) : '';
+  const kitHtml = kits.length ? catSection('labc:kits', 'Kits', `${kits.length} kit${kits.length === 1 ? '' : 's'}`, kits.map(k => `<div class="row urow"><label class="chkrow grow" style="padding:0"><input type="checkbox" data-lk="${k.id}" ${sel.has('k:' + k.id) ? 'checked' : ''} onchange="labToggle('k:${k.id}',this.checked)"><span class="grow"><b class="kit-name">${esc(k.name)}</b><span class="sub" style="display:block">${kitUnits(k).length} equipo${kitUnits(k).length === 1 ? '' : 's'}${k.label_printed_at ? '' : ' · sin imprimir'}</span></span></label></div>`).join('')) : '';
   const custom = S.customLabels.length ? `<div class="list">${S.customLabels.map(x => { const d = x.data || {}; return `<div class="row urow"><div class="grow"><b>${esc(x.name)}</b><div class="sub">${esc([d.title, d.copies > 1 ? d.copies + ' pegatinas' : ''].filter(Boolean).join(' · '))}</div></div><button class="btn small primary" onclick="printCustomSaved('${x.id}')">Imprimir</button><button class="btn small" onclick="openCustomLabel('${x.id}')">Editar</button></div>`; }).join('')}</div>`
     : `<div class="sub" style="margin:6px 18px">Aún no tienes ninguna. Crea pegatinas con tu propio texto: cajas numeradas, cables, avisos…</div>`;
   return bar('Etiquetas', {back:true})
@@ -4107,7 +4133,7 @@ function openKitInfo(k){
   const us = S.kitItems.filter(i => i.kit_id === k.id && i.unit_id).map(i => unitById(i.unit_id)).filter(Boolean), rs = S.reservations.filter(r => r.kit_id === k.id && r.state === 'out'), bs = S.bulkRes.filter(b => b.kit_id === k.id && b.state === 'out');
   const out = rs.length || bs.length, p = out ? projById((rs[0] || bs[0]).project_id) : null;
   const next = S.reservations.filter(r => r.kit_id === k.id && r.state === 'planned').map(r => projById(r.project_id)).filter(Boolean).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))[0];
-  openModal(`<h2>${esc(k.name)}</h2><div class="sub">Kit · ${esc(k.code)}</div>
+  openModal(`<h2><span class="kit-name">${esc(k.name)}</span></h2><div class="sub">Kit · ${esc(k.code)}</div>
     <div class="info" style="margin:8px 0 0"><b${out ? ' style="color:var(--warn)"' : ''}>${out ? `Fuera del almacén${p ? ' · ' + esc(p.name) : ''}` : next ? `En el almacén, reservado para ${esc(next.name)} (${esc(fmtD(next.starts_at))})` : 'En el almacén, libre'}</b>${k.missing_note ? `<div class="sub" style="color:var(--warn);font-weight:600">Incompleto: falta ${esc(k.missing_note)}</div>` : ''}</div>
     <div class="group" style="margin:14px 0 6px">Contenido (${us.length} equipo${us.length === 1 ? '' : 's'})</div>
     <div class="list" style="margin:0">${us.map(u => `<div class="row urow">${unitTile(u)}<div class="grow"><b>${esc(unitModelName(u))}</b><div class="sub">${unitSub(u)}${u.missing_note ? ' · <span style="color:var(--warn)">incompleto: falta ' + esc(u.missing_note) + '</span>' : ''}</div></div></div>`).join('') || '<div class="row urow"><span class="sub">Sin equipos con número.</span></div>'}${kitPiecesOf(k.id).map(p => `<div class="row urow"><div class="grow"><b>${esc(accText(p))}</b><div class="sub">Pieza del kit</div></div></div>`).join('')}</div>
@@ -5082,7 +5108,7 @@ function searchAll(q){
   const add = (g, arr) => { if (arr.length) out.push({g, items:arr.sort((a, b) => a.f - b.f).slice(0, 8)}); };
   add('Modelos', S.models.filter(m => hit(m.name, m.brand, (m.tags || []).join(' '), m.owner, m.notes)).map(m => ({t:'model', id:m.id, title:m.name, sub:[m.brand, m.is_bulk ? 'Por cantidad' : (S.units.filter(u => u.model_id === m.id).length + ' equipos')].filter(Boolean).join(' · '), f:F('model', m.id)})));
   add('Equipos', S.units.filter(u => hit(u.serial_number, u.manufacturer_serial, u.code)).map(u => ({t:'unit', id:u.id, title:unitLabel(u), sub:[u.manufacturer_serial ? 'Fabricante ' + u.manufacturer_serial : '', UNIT_STATUS[u.status]].filter(Boolean).join(' · '), f:1})));
-  add('Kits', S.kits.filter(x => hit(x.name, x.code)).map(x => ({t:'kit', id:x.id, title:x.name, sub:x.code, f:F('kit', x.id)})));
+  add('Kits', S.kits.filter(x => hit(x.name, x.code)).map(x => ({t:'kit', id:x.id, title:x.name, sub:`${plu(kitUnits(x).length, 'equipo', 'equipos')} · ${plu(kitBulk(x).length, 'línea', 'líneas')} por cantidad`, f:F('kit', x.id)})));
   add(W.S[0].toUpperCase() + W.S.slice(1) + 's', S.projects.filter(p => hit(p.name, p.client, p.venue)).sort((a, b) => new Date(b.starts_at) - new Date(a.starts_at)).map(p => ({t:'project', id:p.id, title:p.name, sub:[fmtD(p.starts_at), p.client, PROJ_STATUS[p.status]].filter(Boolean).join(' · '), f:F('project', p.id)})));
   add('Clientes', S.clients.filter(c => hit(c.name, c.tax_id, c.email, c.phone, c.contact_name)).map(c => ({t:'client', id:c.id, title:c.name, sub:[c.tax_id, c.email].filter(Boolean).join(' · '), f:F('client', c.id)})));
   add('Técnicos', S.techs.filter(t => hit(t.name, t.phone, t.email)).map(t => ({t:'tech', id:t.id, title:t.name, sub:[t.phone, t.email].filter(Boolean).join(' · '), f:1})));
@@ -5097,7 +5123,7 @@ function gsRun(){
   const q = ($('#gs-q') || {}).value || '', box = $('#gs-res'); if (!box) return;
   if (norm(q).length < 2){ const fl = favs().map(favItem).filter(Boolean); box.innerHTML = fl.length ? `<div class="group" style="margin:8px 0 6px">Favoritos</div><div class="list" style="margin:0">${fl.map(f => `<div class="row urow tap" onclick="searchGo('${f.t}','${f.id}')"><div class="grow"><b>★ ${esc(f.label)}</b><div class="sub">${esc(f.kind)}</div></div></div>`).join('')}</div>` : '<div class="sub" style="margin:10px 2px">Escribe al menos 2 letras. Busca en material, equipos (por nº de serie o del fabricante), kits, ' + esc(W.p) + ', clientes, técnicos y notas.</div>'; return; }
   const res = searchAll(q);
-  box.innerHTML = res.length ? res.map(g => `<div class="group" style="margin:12px 0 6px">${esc(g.g)}</div><div class="list" style="margin:0">${g.items.map(i => `<div class="row urow tap" data-sr="1" onclick="searchGo('${i.t}','${i.id}')"><div class="grow"><b>${i.f === 0 ? '★ ' : ''}${esc(i.title)}</b><div class="sub">${esc(i.sub || '')}</div></div></div>`).join('')}</div>`).join('') : '<div class="empty" style="margin:20px 0">No hay nada con «' + esc(q) + '».</div>';
+  box.innerHTML = res.length ? res.map(g => `<div class="group" style="margin:12px 0 6px">${esc(g.g)}</div><div class="list" style="margin:0">${g.items.map(i => `<div class="row urow tap" data-sr="1" onclick="searchGo('${i.t}','${i.id}')"><div class="grow"><b${i.t === 'kit' ? ' class="kit-name"' : ''}>${i.f === 0 ? '★ ' : ''}${esc(i.title)}</b><div class="sub">${esc(i.sub || '')}</div></div></div>`).join('')}</div>`).join('') : '<div class="empty" style="margin:20px 0">No hay nada con «' + esc(q) + '».</div>';
 }
 function gsKey(e){ if (e.key === 'Enter'){ const r = document.querySelector('#gs-res [data-sr]'); if (r) r.click(); } }
 function searchGo(t, id){
@@ -5500,7 +5526,7 @@ async function moveFamilyAt(cat, bi, dir){
   if (await persistConfig()){ resortModels(); render(); }
 }
 // ---- desplegables: en Material empiezan CERRADOS (y se abren solos al buscar o filtrar) ----
-function catIsOpen(key){ return key.startsWith('m:') ? (!!S.catForce || S.catOpen[key] === true) : S.catOpen[key] !== false; }
+function catIsOpen(key){ if (key.startsWith('sk:')) return S.catOpen[key] === true; return key.startsWith('m:') ? (!!S.catForce || S.catOpen[key] === true) : S.catOpen[key] !== false; }
 function toggleAllCats(){ const hs = [...document.querySelectorAll('.cat-head[data-ck]')], anyClosed = hs.some(h => h.getAttribute('aria-expanded') === 'false'); hs.forEach(h => S.catOpen[h.dataset.ck] = anyClosed); render(); }
 function filterRows(v){
   v = String(v || '').toLowerCase().trim();
