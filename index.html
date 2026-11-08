@@ -62,7 +62,10 @@ body.wh nav.tabs button{font-size:17px;padding-top:16px;padding-bottom:16px}
 .actions .btn,.pad .btn.small,.info .btn.small{max-width:100%;white-space:normal;text-align:center}
 @media (max-width:340px){nav.tabs button{font-size:12px;padding-left:0;padding-right:0}.bar h1{font-size:20px}}
 .btn.block{white-space:normal;text-align:center}
-.am-units{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:2px 10px 6px;margin:0 0 8px}
+.kc-model{border-top:1px solid var(--line)}
+.kc-model>summary{display:flex;align-items:center;gap:8px;padding:10px 0;cursor:pointer;list-style-position:inside}
+.am-tools{display:flex;gap:8px;margin:0 0 4px}
+.am-u.off{opacity:.6}
 .seg button{min-width:0;padding-left:8px;padding-right:8px}
 @media (max-width:340px){.seg button{font-size:13px}}
 .login h1.brand{background:#000;border-radius:22px;padding:34px 30px;margin:0 0 18px;display:flex;justify-content:center}
@@ -329,7 +332,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = 'V1.31';   // siguiente: V1.32, V1.33…
+const APP_VERSION = 'V1.32';   // siguiente: V1.33, V1.34…
 // Cómo llamas a los shows (Más > Ajustes de la app): Show / Bolo / Evento… Todas las opciones son masculinas y el plural lleva «s».
 const W = {s:'show', p:'shows', S:'Show', P:'Shows'};
 const capFirst = x => x ? x.charAt(0).toUpperCase() + x.slice(1) : x;
@@ -357,6 +360,7 @@ const opts = (list, sel) => list.map(([v,t]) => `<option value="${esc(v)}" ${v==
 const UNIT_STATUS = {ok:'Operativa', repair:'En reparación', lost:'Perdida', retired:'De baja'};
 // Etiqueta de estado de una unidad: Operativa (verde) · Fuera (azul, está en un show) · Incompleta / En reparación (aviso) · Perdida / De baja (rojo)
 // Dentro de un kit solo se marca lo que da problemas (roto, incompleto, perdido o de baja); lo que está bien no lleva nada
+const unitOutProject = u => { const r = S.reservations.find(x => x.unit_id === u.id && x.state === 'out'); if (!r) return null; const p = projById(r.project_id); return p ? p.name : ''; };
 const unitIssueBadge = u => u.status === 'repair' ? '<span class="badge rep">En reparación</span>' : (u.status === 'lost' || u.status === 'retired') ? `<span class="badge baja">${esc(UNIT_STATUS[u.status])}</span>` : (u.missing_note ? '<span class="badge inc">Incompleta</span>' : '');
 function unitIssueText(u){
   const l = u.status === 'repair' ? repairLog(u) : null, p = [];
@@ -386,7 +390,7 @@ function errMsg(e){
   if (!e) return 'Error desconocido';
   noteError(e);
   const m = String(e.message || ''), c = e.code;
-  if (c === '23P01') return 'Esa unidad ya está reservada en otro ' + W.s + ' que se solapa en fechas.';
+  if (c === '23P01') return 'Ese equipo ya está reservado en otro ' + W.s + ' que se solapa en fechas.';
   if (c === '23505') return 'Ya existe un elemento con ese valor (nombre o código repetido).';
   if (c === '23514' && /projects_status_check/.test(m)) return 'Falta ejecutar esquema_v15.sql en Supabase (SQL Editor) para usar el estado «Presupuestado».';
   if (c === '23514') return m;
@@ -677,7 +681,7 @@ function modelStats(m, qc){
 
 /* ============ MATERIAL: equipos ============ */
 function matSeg(){
-  return `<div class="pad" style="margin-top:12px"><div class="seg"><button class="${S.matMode==='equipos'?'on':''}" onclick="setMat('equipos')">Equipos</button><button class="${S.matMode==='kits'?'on':''}" onclick="setMat('kits')">Kits</button></div>${splitBtn() ? `<div style="margin-top:8px">${splitBtn()}</div>` : ''}</div>`;
+  return `<div class="pad" style="margin-top:12px"><div class="seg"><button class="${S.matMode==='equipos'?'on':''}" onclick="setMat('equipos')">Equipos</button><button class="${S.matMode==='kits'?'on':''}" onclick="setMat('kits')">Kits</button></div>${splitBtn() ? `<div style="margin-top:8px">${splitBtn()}</div>` : ''}${S.matMode === 'equipos' ? '<div class="sub" style="margin-top:8px">Cifra de la derecha: disponibles ahora / los que tienes</div>' : ''}</div>`;
 }
 function materialList(){
   if (S.matMode === 'kits') return kitsList();
@@ -697,7 +701,7 @@ function materialList(){
     const subTxt = [colorText(m), m.brand].filter(Boolean).join(' · ');
     return famHead(groups[n], idx) + `<div class="row tap mrow" data-s="${esc((m.name+' '+(m.brand||'')+' '+n+' '+us.map(u=>(u.serial_number||'')+' '+(u.manufacturer_serial||'')).join(' ')+' '+(m.tags||[]).join(' ')+' '+(m.owner||'')).toLowerCase())}" onclick="${rk.click}">
       ${rk.lead}${m.photo_url?`<img class="thumb" loading="lazy" src="${esc(m.photo_url)}" alt="">`:''}
-      <div class="grow"><div class="mline" style="flex-wrap:nowrap;justify-content:space-between"><b>${colorDot(m)}${esc(m.name)}</b><span class="count">${m.is_bulk ? m.bulk_stock : us.length}</span></div>${subTxt || m.is_bulk || nBad || nInc || rowExtraBadges(m) ? `<div class="mline">${subTxt ? `<span class="sub">${esc(subTxt)}</span>` : ''}${m.is_bulk ? '<span class="badge">Por cantidad</span>' : ''}${nRep ? `<span class="badge rep">${nRep} en reparación</span>` : ''}${nGone ? `<span class="badge baja">${nGone} de baja o perdid${nGone === 1 ? 'a' : 'as'}</span>` : ''}${nInc ? `<span class="badge inc">${nInc} incompleto${nInc === 1 ? '' : 's'}</span>` : ''}${rowExtraBadges(m)}</div>` : ''}</div>${rk.trail}</div>`;
+      <div class="grow"><div class="mline" style="flex-wrap:nowrap;justify-content:space-between"><b>${colorDot(m)}${esc(m.name)}</b><span class="count" aria-label="${modelCounts(m).free} disponibles de ${modelCounts(m).total}">${modelCounts(m).free}/${modelCounts(m).total}</span></div>${subTxt || m.is_bulk || nBad || nInc || rowExtraBadges(m) ? `<div class="mline">${subTxt ? `<span class="sub">${esc(subTxt)}</span>` : ''}${m.is_bulk ? '<span class="badge">Por cantidad</span>' : ''}${nRep ? `<span class="badge rep">${nRep} en reparación</span>` : ''}${nGone ? `<span class="badge baja">${nGone} de baja o perdid${nGone === 1 ? 'a' : 'as'}</span>` : ''}${nInc ? `<span class="badge inc">${nInc} incompleto${nInc === 1 ? '' : 's'}</span>` : ''}${rowExtraBadges(m)}</div>` : ''}</div>${rk.trail}</div>`;
   }).join(''), /cabl/i.test(n) ? legendChips() : '')).join('') + '</div>';
   return bar('Material', {actions: `<button class="btn small" onclick="openView('labels','')">Etiquetas${labelPendingCount() ? ' (' + labelPendingCount() + ')' : ''}</button><button class="btn primary small" onclick="openModelForm()">+ Modelo</button>`})
     + matSeg()
@@ -765,7 +769,7 @@ function unitWhere(u){
   const out = rs.find(r => r.state === 'out');
   if (out){ const p = projById(out.project_id); return {t:'Fuera · ' + (p?p.name:''), k:'warn'}; }
   const next = rs.map(r => projById(r.project_id)).filter(Boolean).sort((a,b) => new Date(a.starts_at) - new Date(b.starts_at))[0];
-  if (next) return {t:'Reservada · ' + next.name + ' (' + fmtD(next.starts_at) + ')', k:''};
+  if (next) return {t:'Reservado · ' + next.name + ' (' + fmtD(next.starts_at) + ')', k:''};
   return null;
 }
 function unitKit(u){ const it = S.kitItems.find(i => i.unit_id === u.id); return it ? kitById(it.kit_id) : null; }
@@ -1031,18 +1035,21 @@ const kitBulk = k => S.kitItems.filter(i => i.kit_id === k.id && i.model_id).map
 
 // Estado de un kit (igual que en las unidades): Fuera si va en un show; En reparación / Incompleto según lo que lleva dentro; si no, Operativo
 function kitState(k){
-  const us = kitUnits(k);
+  const us = kitUnits(k), kb = kitBulk(k);
   const out = S.reservations.some(r => r.state === 'out' && (r.kit_id === k.id || us.some(u => u.id === r.unit_id))) || S.bulkRes.some(b => b.state === 'out' && b.kit_id === k.id);
+  const uOut = us.filter(u => S.reservations.some(r => r.unit_id === u.id && r.state === 'out')).length, bOut = kb.filter(x => S.bulkRes.some(b => b.state === 'out' && b.kit_id === k.id && b.model_id === x.model.id)).length;
+  const partial = out && (us.length + kb.length) > 0 && (uOut + bOut) < (us.length + kb.length);
   const rep = us.filter(u => u.status === 'repair'), gone = us.filter(u => u.status === 'lost' || u.status === 'retired'), inc = us.filter(u => u.status !== 'repair' && u.missing_note), reasons = [];
+  if (partial && uOut) reasons.push(plu(uOut, 'equipo', 'equipos') + ' fuera');
   if (rep.length) reasons.push(plu(rep.length, 'equipo', 'equipos') + ' en reparación');
   if (k.missing_note) reasons.push('falta ' + k.missing_note);
   if (inc.length) reasons.push(plu(inc.length, 'equipo incompleto', 'equipos incompletos'));
   if (gone.length) reasons.push(plu(gone.length, 'equipo perdido o de baja', 'equipos perdidos o de baja'));
-  return {out, rep:rep.length > 0, inc:!!(k.missing_note || inc.length || gone.length), reasons};
+  return {out, partial, rep:rep.length > 0, inc:!!(k.missing_note || inc.length || gone.length), reasons};
 }
 function kitBadgeList(k){
   const st = kitState(k), b = [];
-  if (st.out) b.push(['fuera', 'Fuera']);
+  if (st.out) b.push(['fuera', st.partial ? 'Fuera parcial' : 'Fuera']);
   if (st.rep) b.push(['rep', 'En reparación']); else if (st.inc) b.push(['inc', 'Incompleto']);
   if (!b.length) b.push(['ok', 'Operativo']);
   return b.map(([c, t]) => `<span class="badge ${c}">${t}</span>`);
@@ -1063,8 +1070,9 @@ function kitView(id){
   const k = kitById(id);
   if (!k) return bar('Kits', {back:true});
   const us = kitUnits(k), bs = kitBulk(k);
-  const unitRows = kitGroupedRows(S.kitItems.filter(i => i.kit_id === id && i.unit_id && unitById(i.unit_id)).sort((a, b) => unitRankCmp(unitById(a.unit_id), unitById(b.unit_id))), i => catName(modelById(unitById(i.unit_id).model_id)), i => { const u = unitById(i.unit_id);
-    return `<div class="row urow tap" onclick="openUnit('${u.id}')">${unitTile(u)}<div class="grow"><b>${esc(unitModelName(u))}</b><div class="sub">${unitSub(u)}${unitIssueText(u)}</div></div>${unitIssueBadge(u)}
+  const kst0 = kitState(k);
+  const unitRows = kitGroupedRows(S.kitItems.filter(i => i.kit_id === id && i.unit_id && unitById(i.unit_id)).sort((a, b) => unitRankCmp(unitById(a.unit_id), unitById(b.unit_id))), i => catName(modelById(unitById(i.unit_id).model_id)), i => { const u = unitById(i.unit_id), w = kst0.partial ? unitOutProject(u) : null;
+    return `<div class="row urow tap" onclick="openUnit('${u.id}')">${unitTile(u)}<div class="grow"><b>${esc(unitModelName(u))}</b><div class="sub">${unitSub(u)}${w !== null ? ` · <span style="color:var(--info);font-weight:600">En ${esc(w || 'un ' + W.s)}</span>` : ''}${unitIssueText(u)}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">${w !== null ? '<span class="badge fuera">Fuera</span>' : ''}${unitIssueBadge(u)}</div>
       <button class="btn small" aria-label="Quitar del kit" onclick="event.stopPropagation();removeKitItem('${i.id}')">✕</button></div>`; });
   const bulkRows = kitGroupedRows(bs, x => catName(x.model), ({item, model, qty}) => `<div class="row tap" onclick="openView('model','${model.id}')"><div class="grow"><b>${esc(model.name)}</b></div><div class="count">×${qty}</div>
       <button class="btn small" aria-label="Quitar del kit" onclick="event.stopPropagation();removeKitItem('${item.id}')">✕</button></div>`);
@@ -1218,7 +1226,7 @@ async function commitProject(id, payload){
   let pid = id;
   if (id){
     try { await db(sb.from('projects').update(payload).eq('id', id)); }
-    catch(err){ if (err.code === '23P01') toast(('No se pueden mover las fechas: alguna unidad ya está reservada en otro ' + W.s + ' en ese periodo.'), true); return; }
+    catch(err){ if (err.code === '23P01') toast(('No se pueden mover las fechas: algún equipo ya está reservado en otro ' + W.s + ' en ese periodo.'), true); return; }
   } else {
     const row = await db(sb.from('projects').insert(payload).select().single());
     pid = row.id;
@@ -1303,6 +1311,15 @@ function projectView(id){
       <button class="btn small" aria-label="Quitar" onclick="removeAssign('${a.id}')">✕</button></div>`; }).join('')}</div>`:`<div class="empty" style="margin:20px 24px">Aún no hay técnicos asignados.</div>`}
     <div class="actions"><button class="btn primary" onclick="openAddAssign('${id}')">+ Añadir técnico</button></div>${showDocsHtml(id)}${notesHtml('project', id)}`;
 }
+// Por qué un equipo no se puede coger en las fechas de este show
+function amWhy(p, u){
+  if (S.reservations.some(r => r.project_id === p.id && r.unit_id === u.id && r.state !== 'returned')) return {mine:true, t:`Ya está en este ${W.s}`};
+  const st = new Date(p.starts_at), en = new Date(p.ends_at);
+  const clash = S.reservations.filter(r => r.unit_id === u.id && r.state !== 'returned' && r.project_id !== p.id).map(r => ({r, q:projById(r.project_id)})).find(x => x.q && new Date(x.q.starts_at) < en && new Date(x.q.ends_at) > st);
+  if (clash) return {t:clash.r.state === 'out' ? 'Fuera · ' + clash.q.name : 'Reservado · ' + clash.q.name + ' (' + fmtD(clash.q.starts_at) + ')'};
+  if (u.status === 'repair') return {t:'En reparación'};
+  return {t:'No disponible en esas fechas'};
+}
 function openAddMaterial(pid){
   const p = projById(pid), cats = new Map();
   S.models.forEach(m => { const c = catName(m); if (!cats.has(c)) cats.set(c, []); cats.get(c).push(m); });
@@ -1310,59 +1327,58 @@ function openAddMaterial(pid){
     const ms = cats.get(n), fcount = {}; let free = 0, rows = '', last = null;
     ms.forEach(m => { const k = famKey(m); fcount[k] = (fcount[k] || 0) + 1; });
     ms.forEach(m => {
-      const freeU = m.is_bulk ? [] : freeUnits(p, m.id).sort(unitCmp), f = m.is_bulk ? bulkFree(p, m.id) : freeU.length;
-      const total = m.is_bulk ? m.bulk_stock : S.units.filter(u => u.model_id === m.id && u.status !== 'lost' && u.status !== 'retired').length;
-      free += f;
       const head = (famKey(m) !== last && fcount[famKey(m)] > 1) ? `<div class="group kc-fam" style="margin:10px 0 2px">${esc(famOf(m))}</div>` : ''; last = famKey(m);
-      const serials = freeU.map(u => (u.serial_number || '') + ' ' + (u.code || '')).join(' ');
-      const chooser = freeU.length ? `<div class="am-units" id="amu-${m.id}" hidden><div class="sub" style="margin:6px 0 2px">Marca los que quieras llevar:</div>${freeU.map(u => { const k = unitKit(u); return `<label class="chkrow"><input type="checkbox" data-pu="${u.id}" data-pm="${m.id}" onchange="amUnitPick('${m.id}')">${unitTile(u)}<span><b>${esc(u.serial_number || u.code)}</b>${k ? `<span class="sub"> · en el kit «${esc(k.name)}»</span>` : ''}${u.missing_note ? ` <span class="badge inc">Incompleta</span>` : ''}</span></label>`; }).join('')}</div>` : '';
-      rows += head + `<div class="am-item" data-s="${esc((m.name + ' ' + (m.brand || '') + ' ' + serials).toLowerCase())}"><div class="row" style="padding-left:0;padding-right:0"><div class="grow"><b>${colorDot(m)}${esc(m.name)}</b>${m.color ? `<div class="sub">${esc(colorText(m))}</div>` : ''}<div class="sub">Libres ${f} de ${total}${m.is_bulk ? ' · por cantidad' : ''}</div>${freeU.length ? `<button type="button" class="btn small" style="margin-top:6px" id="amb-${m.id}" aria-expanded="false" onclick="amToggleUnits('${m.id}')">Elegir cuáles</button>` : ''}</div>
-        <input type="number" min="0" max="${f}" value="0" ${f ? '' : 'disabled'}  data-m="${m.id}" data-bulk="${m.is_bulk ? 1 : 0}" oninput="clampQty(this);amQtyTyped('${m.id}');amCount()" style="width:76px" inputmode="numeric" aria-label="Cantidad de ${esc(m.name)}"></div>${chooser}</div>`;
+      if (m.is_bulk){
+        const f = bulkFree(p, m.id); free += f;
+        rows += head + `<div class="am-item" data-s="${esc((m.name + ' ' + (m.brand || '')).toLowerCase())}"><div class="row" style="padding-left:0;padding-right:0"><div class="grow"><b>${colorDot(m)}${esc(m.name)}</b>${m.color ? `<div class="sub">${esc(colorText(m))}</div>` : ''}<div class="sub">Libres ${f} de ${m.bulk_stock} · por cantidad</div></div>
+          <input type="number" min="0" max="${f}" value="0" ${f ? '' : 'disabled'} data-m="${m.id}" data-bulk="1" oninput="clampQty(this);amCount()" style="width:76px" inputmode="numeric" aria-label="Cantidad de ${esc(m.name)}"></div></div>`;
+        return;
+      }
+      const all = S.units.filter(u => u.model_id === m.id && u.status !== 'lost' && u.status !== 'retired').sort(unitCmp), freeSet = new Set(freeUnits(p, m.id).map(u => u.id));
+      free += freeSet.size;
+      const serials = all.map(u => (u.serial_number || '') + ' ' + (u.code || '')).join(' ');
+      const unitRows = all.map(u => {
+        const isFree = freeSet.has(u.id), why = isFree ? null : amWhy(p, u), k = unitKit(u);
+        return `<label class="chkrow am-u ${isFree ? '' : 'off'}"><input type="checkbox" data-pu="${u.id}" data-pm="${m.id}" ${isFree ? '' : 'disabled'} ${why && why.mine ? 'checked' : ''} onchange="amCount()" aria-label="Elegir ${esc(m.name)} ${esc(u.serial_number || u.code)}">${unitTile(u)}<span class="grow"><b>${esc(u.serial_number || u.code)}</b>${why ? `<span class="sub"> · ${esc(why.t)}</span>` : ''}${k && isFree ? `<span class="sub"> · en el kit «${esc(k.name)}»</span>` : ''}${u.missing_note ? `<span class="sub" style="color:var(--warn);font-weight:600"> · Falta: ${esc(u.missing_note)}</span>` : ''}</span>${unitIssueBadge(u)}</label>`;
+      }).join('');
+      rows += head + `<details class="kc-model am-item" data-s="${esc((m.name + ' ' + (m.brand || '') + ' ' + serials).toLowerCase())}"><summary><span class="grow"><b>${colorDot(m)}${esc(m.name)}</b><span class="sub" style="display:block">Libres ${freeSet.size} de ${all.length}</span></span><span class="sub am-msel"></span></summary>
+        ${freeSet.size ? `<div class="am-tools"><button type="button" class="btn small" onclick="amAll('${m.id}',true)">Todos los libres</button><button type="button" class="btn small" onclick="amAll('${m.id}',false)">Ninguno</button></div>` : ''}${unitRows || '<div class="sub" style="padding:8px 0">No tienes equipos de este modelo.</div>'}</details>`;
     });
     return `<details class="kc-cat"><summary><span class="grow">${esc(n)}</span><span class="sub am-sel"></span><span class="sub">${libresTxt(free)}</span></summary>${rows}</details>`;
   }).join('');
-  openModal(`<h2>Añadir material</h2><div class="sub">Solo se cuentan las unidades libres en las fechas de este ${W.s}. Abre una categoría para elegir; en los equipos con número de serie puedes escoger cuáles.</div>
+  openModal(`<h2>Añadir material</h2><div class="sub">Solo se pueden coger los equipos libres en las fechas de este ${W.s}. Abre la categoría, el modelo y marca los que quieras.</div>
     <div class="search" style="margin:10px 0"><input type="search" placeholder="Buscar por nombre o nº de serie" oninput="amFilter(this.value)"></div>
     ${S.models.length ? `<div id="am-list">${sections}</div>` : `<div class="empty">Primero añade material en la pestaña Material.</div>`}
     <button class="btn primary block" id="am-btn" style="margin-top:12px" onclick="saveMaterial('${pid}')">Añadir al ${W.s}</button>`);
 }
-function amToggleUnits(mid){
-  const box = $('#amu-' + mid), btn = $('#amb-' + mid); if (!box) return;
-  box.hidden = !box.hidden; if (btn){ btn.setAttribute('aria-expanded', String(!box.hidden)); btn.textContent = box.hidden ? 'Elegir cuáles' : 'Ocultar la lista'; }
+function amAll(mid, on){
+  document.querySelectorAll(`#am-list input[data-pm="${mid}"]:not(:disabled)`).forEach(c => { c.checked = on; }); amCount();
 }
-function amUnitPick(mid){
-  const n = document.querySelectorAll(`#amu-${mid} input:checked`).length, inp = document.querySelector(`#am-list input[data-m="${mid}"]`);
-  if (inp) inp.value = String(n); amCount();
-}
-function amQtyTyped(mid){ document.querySelectorAll(`#amu-${mid} input:checked`).forEach(c => { c.checked = false; }); }      // si escribes una cantidad, vuelve a elegir la app los primeros libres
 function amFilter(v){
   v = String(v || '').toLowerCase().trim();
-  document.querySelectorAll('#am-list [data-s]').forEach(e => e.hidden = !!v && !e.dataset.s.includes(v));
+  document.querySelectorAll('#am-list [data-s]').forEach(e => { e.hidden = !!v && !e.dataset.s.includes(v); if (v && !e.hidden && e.tagName === 'DETAILS') e.open = true; });
   document.querySelectorAll('#am-list .kc-fam').forEach(f => f.hidden = !!v);
-  document.querySelectorAll('#am-list details').forEach(d => { const any = !!d.querySelector('[data-s]:not([hidden])'); d.hidden = !!v && !any; if (v) d.open = any; });
+  document.querySelectorAll('#am-list details.kc-cat').forEach(d => { const any = !!d.querySelector('[data-s]:not([hidden])'); d.hidden = !!v && !any; if (v) d.open = any; });
 }
 function amCount(){
   let total = 0;
-  document.querySelectorAll('#am-list details').forEach(d => {
-    const n = [...d.querySelectorAll('input[data-m]')].reduce((a, i) => a + (parseInt(i.value) || 0), 0); total += n;
-    const t = d.querySelector('.am-sel'); if (t) t.textContent = n ? `${n} elegido${n === 1 ? '' : 's'}` : '';
+  document.querySelectorAll('#am-list details.kc-cat').forEach(d => {
+    const n = d.querySelectorAll('input[data-pu]:checked:not(:disabled)').length + [...d.querySelectorAll('input[data-m]')].reduce((a, i) => a + (parseInt(i.value) || 0), 0); total += n;
+    const t = d.querySelector(':scope > summary .am-sel'); if (t) t.textContent = n ? `${n} elegido${n === 1 ? '' : 's'}` : '';
   });
+  document.querySelectorAll('#am-list details.kc-model').forEach(d => { const n = d.querySelectorAll('input[data-pu]:checked:not(:disabled)').length, t = d.querySelector('.am-msel'); if (t) t.textContent = n ? `${n} elegido${n === 1 ? '' : 's'}` : ''; });
   const b = $('#am-btn'); if (b) b.textContent = total ? `Añadir al ${W.s} (${total})` : `Añadir al ${W.s}`;
 }
 async function saveMaterial(pid){
   const p = projById(pid), uRows = [], bulk = [];
   const picks = {}; let stale = false;
-  document.querySelectorAll('#sheet input[data-pu]:checked').forEach(c => { (picks[c.dataset.pm] = picks[c.dataset.pm] || []).push(c.dataset.pu); });
-  document.querySelectorAll('#sheet input[data-m]').forEach(inp => {
-    const n = parseInt(inp.value) || 0; if (n <= 0) return;
-    if (inp.dataset.bulk === '1') bulk.push({model_id:inp.dataset.m, n});
-    else if (picks[inp.dataset.m]){
-      const ok = new Set(freeUnits(p, inp.dataset.m).map(u => u.id)), mine = picks[inp.dataset.m].filter(uid => ok.has(uid));
-      if (mine.length !== picks[inp.dataset.m].length) stale = true;
-      mine.forEach(uid => uRows.push({project_id:pid, unit_id:uid, state:'planned'}));
-    }
-    else freeUnits(p, inp.dataset.m).slice(0, n).forEach(u => uRows.push({project_id:pid, unit_id:u.id, state:'planned'}));
+  document.querySelectorAll('#sheet input[data-pu]:checked:not(:disabled)').forEach(c => { (picks[c.dataset.pm] = picks[c.dataset.pm] || []).push(c.dataset.pu); });
+  Object.keys(picks).forEach(mid => {
+    const ok = new Set(freeUnits(p, mid).map(u => u.id)), mine = picks[mid].filter(uid => ok.has(uid));
+    if (mine.length !== picks[mid].length) stale = true;
+    mine.forEach(uid => uRows.push({project_id:pid, unit_id:uid, state:'planned'}));
   });
+  document.querySelectorAll('#sheet input[data-m]').forEach(inp => { const n = parseInt(inp.value) || 0; if (n > 0) bulk.push({model_id:inp.dataset.m, n}); });
   if (stale) return toast('Alguno de los equipos que elegiste ya no está libre en esas fechas. Vuelve a abrir la lista.', true);
   // comprobar TODO antes de guardar nada: si algo no cabe, no se añade nada
   for (const inp of document.querySelectorAll('#sheet input[data-m]')){
@@ -1370,7 +1386,7 @@ async function saveMaterial(pid){
     const m = modelById(inp.dataset.m), free = m.is_bulk ? bulkFree(p, m.id) : freeUnits(p, m.id).length;
     if (n > free) return toast(`No hay tantos «${m.name}»: ${free === 1 ? 'queda 1 libre' : 'quedan ' + free + ' libres'} en las fechas de este ${W.s}.`, true);
   }
-  if (!uRows.length && !bulk.length) return toast('Indica cuántas unidades quieres añadir', true);
+  if (!uRows.length && !bulk.length) return toast('Marca qué quieres añadir', true);
   if (uRows.length) await db(sb.from('reservations').insert(uRows));
   for (const b of bulk){
     const ex = S.bulkRes.find(x => x.project_id === pid && x.model_id === b.model_id && !x.kit_id && x.state === 'planned');
@@ -1769,8 +1785,8 @@ async function handleCode(raw){
       if (res && res.state === 'out') return scanMsg('Ya estaba marcada como fuera: ' + label, 'warn');
       if (u.status !== 'ok') return scanMsg(label + ' está ' + UNIT_STATUS[u.status].toLowerCase() + '. No se puede sacar.', 'bad');
       if (!res){
-        if (off) return scanMsg(label + (' no está reservada en este ' + W.s + ' y sin conexión no se puede añadir.'), 'bad');
-        if (!confirm(label + (' no está reservada en este ' + W.s + '. ¿Añadirla ahora?'))) return;
+        if (off) return scanMsg(label + (' no está reservado en este ' + W.s + ' y sin conexión no se puede añadir.'), 'bad');
+        if (!confirm(label + (' no está reservado en este ' + W.s + '. ¿Añadirlo ahora?'))) return;
         const r = await sb.from('reservations').insert({project_id:pid, unit_id:u.id, state:'planned'}).select().single();
         if (r.error) return scanMsg(errMsg(r.error), 'bad');
         S.reservations.push(r.data);
@@ -2418,7 +2434,7 @@ async function bulkAdjustRepair(modelId, delta){
 async function syncOp(op){
   if (op.t === 'out'){
     const rs = must(await sb.from('reservations').select('id,state').eq('unit_id', op.unit_id).eq('project_id', op.project_id).neq('state', 'returned').limit(1));
-    if (!rs.length) throw {message:('la unidad ya no estaba reservada en ese ' + W.s + '')};
+    if (!rs.length) throw {message:('el equipo ya no estaba reservado en ese ' + W.s + '')};
     if (rs[0].state === 'planned') must(await sb.from('reservations').update({state:'out'}).eq('id', rs[0].id));
     must(await sb.from('scan_events').insert({unit_id:op.unit_id, project_id:op.project_id, action:'out', at:op.at}));
   } else if (op.t === 'in'){
@@ -4105,7 +4121,7 @@ function openUnitInfo(u){
   if (u.status === 'repair'){ dónde = 'En reparación'; kind = 'warn'; }
   else if (u.status === 'lost' || u.status === 'retired'){ dónde = UNIT_STATUS[u.status]; kind = 'bad'; }
   else if (sit.out){ dónde = `Fuera del almacén · ${sit.out.p.name} (${fmtD(sit.out.p.starts_at)} → ${fmtD(sit.out.p.ends_at)})`; kind = 'warn'; }
-  else if (sit.next.length){ dónde = `En el almacén, reservada para ${sit.next[0].p.name} (${fmtD(sit.next[0].p.starts_at)})`; }
+  else if (sit.next.length){ dónde = `En el almacén, reservado para ${sit.next[0].p.name} (${fmtD(sit.next[0].p.starts_at)})`; }
   else dónde = 'En el almacén, libre';
   const l = repairLog(u), mt = [u.next_service ? `Próxima revisión: ${fmtDay(u.next_service)}` : '', m.lamp_life_hours > 0 ? `Lámpara: ${u.lamp_hours || 0} de ${m.lamp_life_hours} h` : ''].filter(Boolean);
   openModal(`<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">${unitTile(u, 'md')}<div><h2 style="margin:0;font-size:22px">${esc(m.name || '')}</h2>${u.serial_number ? `<div style="font-size:16px;color:var(--muted)">${esc(u.serial_number)}</div>` : ''}</div></div>
@@ -5513,6 +5529,12 @@ function resortModels(){
   S.modelRank = new Map(S.models.map((m, i) => [m.id, i]));
 }
 const famBlocks = list => { const keys = []; list.forEach(x => { const k = famKey(x); if (!keys.includes(k)) keys.push(k); }); return keys; };
+// Lo que tienes y lo que está disponible ahora (sin lo perdido ni lo de baja; fuera = en un show sin devolver, o en reparación)
+function modelCounts(m){
+  if (m.is_bulk){ const out = S.bulkRes.filter(b => b.model_id === m.id && b.state === 'out').reduce((n, b) => n + b.qty, 0), total = Number(m.bulk_stock) || 0; return {free:Math.max(0, total - bulkRepair(m) - out), total}; }
+  const us = S.units.filter(u => u.model_id === m.id && u.status !== 'lost' && u.status !== 'retired'), out = new Set(S.reservations.filter(r => r.state === 'out').map(r => r.unit_id));
+  return {free:us.filter(u => u.status === 'ok' && !out.has(u.id)).length, total:us.length};
+}
 function famHead(list, idx){
   const m = list[idx], prev = list[idx - 1], k = famKey(m); if (prev && famKey(prev) === k) return '';
   const n = list.filter(x => famKey(x) === k).length; if (n < 2) return '';
