@@ -332,7 +332,7 @@ button.chip{font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ============ Conexión con tu base de datos ============ */
-const APP_VERSION = 'V1.34';   // siguiente: V1.35, V1.36…
+const APP_VERSION = 'V1.35';   // siguiente: V1.36, V1.37…
 // Cómo llamas a los shows (Más > Ajustes de la app): Show / Bolo / Evento… Todas las opciones son masculinas y el plural lleva «s».
 const W = {s:'show', p:'shows', S:'Show', P:'Shows'};
 const capFirst = x => x ? x.charAt(0).toUpperCase() + x.slice(1) : x;
@@ -707,63 +707,24 @@ function materialList(){
   return bar('Material', {actions: `<button class="btn small" onclick="openView('labels','')">Etiquetas${labelPendingCount() ? ' (' + labelPendingCount() + ')' : ''}</button><button class="btn primary small" onclick="openModelForm()">+ Modelo</button>`})
     + matSeg()
     + (S.models.length ? `<div class="search"><input type="search" placeholder="Buscar por nombre, marca o nº de serie" oninput="filterRows(this.value)"></div>` : '')
-    + `<div class="actions" style="margin-top:10px"><button class="btn small" onclick="openMatMenu()" aria-haspopup="dialog">⋯ Opciones</button>${S.matOrder ? '<button class="btn primary small" onclick="orderToggle()">Terminar de ordenar</button>' : ''}${S.mass.on ? '<button class="btn small" onclick="massToggle()">Cancelar selección</button>' : ''}${names.length > 1 ? `<button class="btn small" onclick="toggleAllCats()">${anyClosed ? 'Abrir todo' : 'Cerrar todo'}</button>` : ''}${panelBtns()}</div>${filterBar(groups)}${tagBar()}${massBar()}${matPanelHtml()}`
+    + `<div class="actions" style="margin-top:10px">${extraBtn('x:mat', 'small')}${S.matOrder ? '<button class="btn primary small" onclick="orderToggle()">Terminar de ordenar</button>' : ''}${S.mass.on ? '<button class="btn small" onclick="massToggle()">Cancelar selección</button>' : ''}${names.length > 1 ? `<button class="btn small" onclick="toggleAllCats()">${anyClosed ? 'Abrir todo' : 'Cerrar todo'}</button>` : ''}${panelBtns()}</div>${extraRow('x:mat', matExtra())}${filterBar(groups)}${tagBar()}${massBar()}${matPanelHtml()}`
     + (S.models.length ? (names.length || !anyFilter() ? body : '') : `<div class="empty">Aún no hay material.<br>Pulsa «+ Modelo» para añadir el primer equipo.</div>`);
 }
 
-// Menú de acciones secundarias de una ficha (sustituye a filas de 6 a 10 botones sueltos)
-function menuSheet(title, groups){
-  const item = ([fn, t, sub, o]) => { o = o || {};
-    const inner = `<div class="grow"><b${o.danger ? ' style="color:var(--bad)"' : ''}>${t}</b>${sub ? `<div class="sub">${sub}</div>` : ''}</div><span class="sub" aria-hidden="true">›</span>`;
-    return o.href ? `<a class="row tap" style="text-decoration:none;color:inherit" target="_blank" rel="noopener" href="${esc(o.href)}" onclick="closeModal()">${inner}</a>` : `<div class="row tap" role="button" tabindex="0" onclick="closeModal();${fn}">${inner}</div>`; };
-  openModal(`<h2>${esc(title)}</h2>` + groups.map(([g, items], i) => `<div class="group" style="margin:${i ? 14 : 10}px 0 4px">${esc(g)}</div><div class="list" style="margin:0">${items.filter(Boolean).map(item).join('')}</div>`).join('') + `<button class="btn block" style="margin-top:14px" onclick="closeModal()">Cerrar</button>`);
-}
+// «⋯ Más»: enseña u oculta, en el mismo sitio, los botones extra de una pantalla (empieza oculto)
+S.extraOpen = S.extraOpen || {};
+const extraOpen = key => !!S.extraOpen[key];
+const extraBtn = (key, cls) => `<button class="btn ${cls || ''}" onclick="toggleExtra('${key}')" aria-expanded="${extraOpen(key)}">${extraOpen(key) ? '▴ Menos' : '⋯ Más'}</button>`;
+const extraRow = (key, html) => extraOpen(key) ? `<div class="actions extra">${html}</div>` : '';
+function toggleExtra(key){ S.extraOpen[key] = !S.extraOpen[key]; render(); }
+// Secciones plegables de la pantalla Más (empiezan cerradas)
 const moSec = (key, title, inner) => { const open = catIsOpen(key); return `<div class="pad" style="margin-top:8px"><button type="button" class="cat-head" onclick="toggleCat('${key}')" aria-expanded="${open}"><span>${open ? '▾' : '▸'}</span><span class="grow">${esc(title)}</span></button></div>${open ? inner : ''}`; };
-const moreBtn = fn => `<button class="btn" onclick="${fn}" aria-haspopup="dialog">⋯ Más</button>`;
-function openProjectMenu(id){
-  const p = projById(id); if (!p) return;
-  menuSheet(`Más acciones · ${p.name}`, [
-    ['Documentos', [[`printContract('${id}')`, 'Contrato', 'Imprimir o guardar en PDF'], [`printRider('${id}')`, 'Rider técnico', 'Documento con las necesidades técnicas'], [`openMsgMenu('${id}')`, 'Mensajes…', 'WhatsApp o email al cliente y a los técnicos']]],
-    ['Preparación', [[`openView('van','${id}')`, 'Furgoneta', 'Cómo cabe el material en la furgoneta'], [`openDmxPatch('${id}')`, 'Patch DMX', 'Direcciones y universos de cada equipo'], [`openTemplates('${id}')`, 'Plantillas…', 'Guardar o aplicar un lote de material']]],
-    ['Calendario', [[null, 'Añadir a Google Calendar', 'Se abre en una pestaña nueva', {href:gcalUrl(p)}], [`downloadShowIcs('${id}')`, 'Archivo .ics', 'Para cualquier calendario']]],
-    ['Gestión', [[`openDuplicate('${id}')`, 'Duplicar', `Crea un ${W.s} nuevo con el material ya reservado`], [`openChanges('projects','${id}')`, 'Cambios', `Historial de cambios de este ${W.s}`], [`deleteProject('${id}')`, 'Eliminar', '', {danger:true}]]]]);
-}
-function openKitMenu(id){
-  menuSheet('Más acciones del kit', [
-    ['Imprimir', [[`printKitList('${id}')`, 'Lista de contenido', 'Hoja con todo lo que lleva el kit']]],
-    ['Gestión', [[`duplicateKit('${id}')`, 'Duplicar', 'Copia el kit con su material por cantidad'], [`openChanges('kits','${id}')`, 'Cambios', 'Historial de cambios de este kit'], [`deleteKit('${id}')`, 'Eliminar', '', {danger:true}]]]]);
-}
-function openModelMenu(id){
-  const m = modelById(id); if (!m) return;
-  menuSheet(`Más acciones · ${m.name}`, [
-    ['Material', [[`openModelForm('','${id}')`, 'Duplicar', 'Crea otro modelo con los mismos datos'], ...(m.is_bulk ? [] : [[`openNumber('${id}')`, 'Numerar…', 'Poner número a las unidades'], [`openMoveUnits('${id}')`, 'Mover unidades…', 'Pasar unidades a otro modelo']]), [`openMerge('${id}')`, 'Unir con otro modelo…', 'Juntar dos modelos en uno']]],
-    ['Gestión', [[`openChanges('equipment_models','${id}')`, 'Cambios', 'Historial de cambios de este modelo'], [`deleteModel('${id}')`, 'Eliminar', '', {danger:true}]]]]);
-}
-const recordMenu = (title, table, id, delFn) => menuSheet(title, [['Gestión', [[`openChanges('${table}','${id}')`, 'Cambios', 'Historial de cambios'], [`${delFn}('${id}')`, 'Eliminar', '', {danger:true}]]]]);
-function openShowsMenu(){
-  menuSheet(`Más opciones de ${W.p}`, [
-    [W.P, [[`openTemplates('')`, 'Plantillas…', 'Guardar o aplicar un lote de material']]],
-    ['Calendario', [[`downloadAllIcs()`, `Calendario de todos los ${esc(W.p)} (.ics)`, 'Para suscribirlo en cualquier calendario']]]]);
-}
-
-// Menú de opciones del material (antes eran 8 botones sueltos encima de la lista)
-function openMatMenu(){
-  const nb = retiredUnits().length;
-  const item = (fn, t, sub) => `<div class="row tap" onclick="closeModal();${fn}"><div class="grow"><b>${t}</b><div class="sub">${sub}</div></div><span class="sub" aria-hidden="true">›</span></div>`;
-  openModal(`<h2>Opciones del material</h2>
-    <div class="group" style="margin:10px 0 4px">Consultar</div><div class="list" style="margin:0">
-      ${item("openView('avail','')", 'Disponibilidad', 'Qué tienes libre en unas fechas')}
-      ${item("openView('profit','')", 'Rentabilidad', 'Cuánto ha dado cada equipo')}
-      ${nb ? item("openView('retired','')", `Bajas (${nb})`, 'Equipos vendidos, perdidos o dados de baja') : ''}
-      ${item('openLegend()', 'Leyenda de colores', 'Qué significa cada color')}</div>
-    <div class="group" style="margin:14px 0 4px">Organizar</div><div class="list" style="margin:0">
-      ${item('openCategories()', 'Gestionar categorías', 'Crear, renombrar y ordenar')}
-      ${item('openBrands()', 'Gestionar marcas', 'Ver y renombrar las marcas')}
-      ${item('orderToggle()', S.matOrder ? 'Terminar de ordenar' : 'Ordenar', 'Mover modelos y familias con ▲▼')}</div>
-    <div class="group" style="margin:14px 0 4px">Varios a la vez</div><div class="list" style="margin:0">
-      ${item('massToggle()', S.mass.on ? 'Cancelar selección' : 'Seleccionar varios', 'Marcar varios modelos para cambiarlos juntos')}</div>
-    <button class="btn block" style="margin-top:14px" onclick="closeModal()">Cerrar</button>`);
-}
+const projExtra = p => { const id = p.id; return `<button class="btn" onclick="printContract('${id}')">Contrato</button><button class="btn" onclick="openTemplates('${id}')">Plantillas…</button><button class="btn" onclick="openView('van','${id}')">Furgoneta</button><button class="btn" onclick="openDmxPatch('${id}')">Patch DMX</button><button class="btn" onclick="openDuplicate('${id}')">Duplicar</button><button class="btn" onclick="openChanges('projects','${id}')">Cambios</button><button class="btn danger" onclick="deleteProject('${id}')">Eliminar</button><a class="btn" style="text-decoration:none" target="_blank" rel="noopener" href="${esc(gcalUrl(p))}">Añadir a Google Calendar</a><button class="btn" onclick="downloadShowIcs('${id}')">Archivo .ics</button><button class="btn" onclick="openMsgMenu('${id}')">Mensajes…</button><button class="btn" onclick="printRider('${id}')">Rider técnico</button>`; };
+const kitExtra = id => `<button class="btn" onclick="duplicateKit('${id}')">Duplicar</button><button class="btn" onclick="printKitList('${id}')">Imprimir lista de contenido</button><button class="btn" onclick="openChanges('kits','${id}')">Cambios</button><button class="btn danger" onclick="deleteKit('${id}')">Eliminar</button>`;
+const modelExtra = m => `<button class="btn" onclick="openModelForm('','${m.id}')">Duplicar</button>${m.is_bulk ? '' : `<button class="btn" onclick="openNumber('${m.id}')">Numerar…</button><button class="btn" onclick="openMoveUnits('${m.id}')">Mover unidades…</button>`}<button class="btn" onclick="openMerge('${m.id}')">Unir con otro modelo…</button><button class="btn" onclick="openChanges('equipment_models','${m.id}')">Cambios</button><button class="btn danger" onclick="deleteModel('${m.id}')">Eliminar</button>`;
+const recordExtra = (table, id, delFn) => `<button class="btn" onclick="openChanges('${table}','${id}')">Cambios</button><button class="btn danger" onclick="${delFn}('${id}')">Eliminar</button>`;
+const showsExtra = () => `<button class="btn" onclick="openTemplates('')">Plantillas…</button><button class="btn" onclick="downloadAllIcs()">Calendario de todos los ${esc(W.p)} (.ics)</button>`;
+const matExtra = () => `<button class="btn small" onclick="openView('avail','')">Disponibilidad</button><button class="btn small" onclick="openView('profit','')">Rentabilidad</button>${retiredUnits().length ? `<button class="btn small" onclick="openView('retired','')">Bajas (${retiredUnits().length})</button>` : ''}<button class="btn small" onclick="openLegend()">Leyenda de colores</button><button class="btn small" onclick="openCategories()">Gestionar categorías</button><button class="btn small" onclick="openBrands()">Gestionar marcas</button><button class="btn small" onclick="orderToggle()">${S.matOrder ? 'Terminar de ordenar' : 'Ordenar'}</button><button class="btn small" onclick="massToggle()">${S.mass.on ? 'Cancelar selección' : 'Seleccionar varios'}</button>`;
 
 /* ---- Categorías ---- */
 function openCategories(){
@@ -847,7 +808,7 @@ function modelView(id){
     const lines = S.bulkRes.filter(b => b.model_id === id).map(b => ({b, p:projById(b.project_id)})).filter(x => x.p && x.b.state !== 'returned')
       .sort((x,y) => new Date(x.p.starts_at) - new Date(y.p.starts_at));
     return head + galleryHtml('m', id) + docsHtml(m) + notesHtml('model', id) + `<div class="info"><b>${m.bulk_stock}</b> en stock · <span class="sub">por cantidad, sin número de serie</span>${kitBulkUsed(id) ? ` · <b>${kitBulkUsed(id)}</b> en kits (${libresTxt(kitBulkAvail(m))})` : ''}${bulkRepair(m) ? ` · <span style="color:var(--warn);font-weight:600">${bulkRepair(m)} en reparación</span>` : ''}</div>
-      <div class="actions"><button class="btn" onclick="openModelForm('${id}')">Editar</button>${m.consumable ? `<button class="btn" onclick="openStock('${id}','bought')">He comprado…</button><button class="btn" onclick="openStock('${id}','used')">He usado…</button>` : ''}${moreBtn(`openModelMenu('${id}')`)}</div>
+      <div class="actions"><button class="btn" onclick="openModelForm('${id}')">Editar</button>${m.consumable ? `<button class="btn" onclick="openStock('${id}','bought')">He comprado…</button><button class="btn" onclick="openStock('${id}','used')">He usado…</button>` : ''}${extraBtn('x:model:' + id)}</div>${extraRow('x:model:' + id, modelExtra(m))}
       <div class="group">Reservado en ${W.p}</div>
       ${lines.length ? `<div class="list">${lines.map(({b,p}) => `<div class="row tap" onclick="go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))}</div></div>
         <span class="badge ${RES_CLASS[b.state]}">${RES_STATE[b.state]}</span><div class="count">×${b.qty}</div></div>`).join('')}</div>`
@@ -856,8 +817,8 @@ function modelView(id){
   const us = S.units.filter(u => u.model_id === id).sort(unitCmp);
   return head + galleryHtml('m', id) + docsHtml(m) + accsHtml(m) + notesHtml('model', id)
     + `<div class="actions">
-      <button class="btn" onclick="openModelForm('${id}')">Editar</button><button class="btn" onclick="printLabels(S.units.filter(u=>u.model_id==='${id}').map(u=>u.id))">Etiquetas QR</button>${moreBtn(`openModelMenu('${id}')`)}
-    </div>
+      <button class="btn" onclick="openModelForm('${id}')">Editar</button><button class="btn" onclick="printLabels(S.units.filter(u=>u.model_id==='${id}').map(u=>u.id))">Etiquetas QR</button>${extraBtn('x:model:' + id)}
+    </div>${extraRow('x:model:' + id, modelExtra(m))}
     <div class="group">Unidades (${us.length})</div>
     ${us.length ? `<div class="sub" style="margin:0 18px 6px">Operativa = lista · Fuera = en un ${esc(W.s)} · Incompleta o En reparación = aviso</div>` : ''}
     ${us.length ? `<div class="list">${us.map(u => { const w = unitWhere(u), k = unitKit(u); return `<div class="row tap urow" onclick="openUnit('${u.id}')">${unitTile(u)}
@@ -1133,7 +1094,7 @@ function kitView(id){
     + `<div class="info" style="text-align:center"><div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;align-items:center;margin-bottom:10px"><span class="kit-tag">KIT</span>${kitBadgeList(k).join('')}</div>${kitState(k).reasons.length ? `<div class="sub" style="color:var(--warn);font-weight:600;margin:-4px 0 10px">${esc(kitState(k).reasons.join(' · '))}</div>` : ''}<div class="qrbox">${qrSvg(k.code)}</div><div class="sub">Código del kit <span class="code">${esc(k.code)}</span></div>${labelStatusHtml('k', k)}
        ${k.notes?`<div style="margin-top:8px;text-align:left">${esc(k.notes)}</div>`:''}${kitSpecs(k)}</div>
     ${kitMissingHtml(k)}
-    <div class="actions"><button class="btn" onclick="openKitForm('${id}')">Editar</button><button class="btn" onclick="printKitLabel('${id}')">Imprimir etiqueta</button>${moreBtn(`openKitMenu('${id}')`)}</div>
+    <div class="actions"><button class="btn" onclick="openKitForm('${id}')">Editar</button><button class="btn" onclick="printKitLabel('${id}')">Imprimir etiqueta</button>${extraBtn('x:kit:' + id)}</div>${extraRow('x:kit:' + id, kitExtra(id))}
     <div class="group">Equipos (${us.length})</div>
     ${us.length ? `<div class="list">${unitRows}</div>` : `<div class="empty" style="margin:20px 24px">Sin equipos con número de serie.</div>`}
     <div class="group">Por cantidad (${bs.length})</div>
@@ -1234,7 +1195,7 @@ function showsList(){
       <div class="grow"><b>${esc(p.name)}</b><div class="sub">${esc(fmtDT(p.starts_at))}${p.venue?' · '+esc(p.venue):''}</div></div>
       ${p.status!=='confirmed'?`<span class="badge ${p.status==='cancelled'?'bad':p.status==='done'?'ok':''}">${PROJ_STATUS[p.status]}</span>`:''}${p.payment_status==='invoiced'?'<span class="badge warn">Facturado</span>':p.payment_status==='paid'?'<span class="badge ok">Cobrado</span>':''}
       <div class="count" title="Piezas reservadas">${pieces(p)}</div></div>`;
-  return bar(whMode() ? 'Carga' : ('' + W.P + ''), {actions:whMode() ? '' : `<button class="btn small" onclick="openShowsMenu()" aria-haspopup="dialog" aria-label="Más opciones">⋯</button><button class="btn primary small" onclick="openProjectForm()">+ ${W.S}</button>`}) + (whMode() ? '' : showsSeg() + showStatusBar() + icsBar())
+  return bar(whMode() ? 'Carga' : ('' + W.P + ''), {actions:whMode() ? '' : `${extraBtn('x:shows', 'small')}<button class="btn primary small" onclick="openProjectForm()">+ ${W.S}</button>`}) + (whMode() ? '' : showsSeg() + showStatusBar() + icsBar())
     + (S.projects.length ? `${up.length?`<div class="group">Próximos</div><div class="list">${up.map(rowH).join('')}</div>`:''}
        ${past.length?`<div class="group">Pasados</div><div class="list">${past.map(rowH).join('')}</div>`:''}`
       : `<div class="empty">Aún no hay ${W.p}.<br>Pulsa «+ ${W.S}» para crear el primero.</div>`);
@@ -1340,7 +1301,7 @@ function projectView(id){
        <div style="margin-top:6px"><span class="badge ${p.status==='cancelled'?'bad':p.status==='done'?'ok':''}">${PROJ_STATUS[p.status]}</span></div>${closedInfoHtml(p)}
        ${p.notes?`<div style="margin-top:8px">${esc(p.notes)}</div>`:''}</div>
     ${nextStepBtn(p) ? `<div class="actions">${nextStepBtn(p)}</div>` : ''}
-    <div class="actions"><button class="btn" onclick="openProjectForm('${id}')">Editar</button><button class="btn" onclick="openView('load','${id}')">Lista de carga</button><button class="btn" onclick="openQuote('${id}')">Presupuesto</button>${moreBtn(`openProjectMenu('${id}')`)}</div>
+    <div class="actions"><button class="btn" onclick="openProjectForm('${id}')">Editar</button><button class="btn" onclick="openView('load','${id}')">Lista de carga</button><button class="btn" onclick="openQuote('${id}')">Presupuesto</button>${extraBtn('x:project:' + id)}</div>${extraRow('x:project:' + id, projExtra(p))}
     ${paymentCard(p)}${loadCard(p)}${deliveryCard(p)}
     ${kitIds.length ? `<div class="group">Kits (${kitIds.length})</div><div class="list">${kitsH}</div>` : ''}
     ${(looseR.length || looseB.length) ? `<div class="group" style="display:flex;align-items:center;gap:8px"><span style="flex:1">${kitIds.length ? 'Material suelto' : 'Material'} (${plu(loosePieces, 'pieza', 'piezas')})</span>${Object.keys(byModel).length > 1 ? `<button class="btn small" onclick="foldShow('${id}')">${Object.keys(byModel).some(mid => S.catOpen[`s:${id}:${mid}`] !== false) ? 'Plegar todo' : 'Desplegar todo'}</button>` : ''}</div>` : ''}
@@ -1621,7 +1582,7 @@ function techView(id){
     .sort((x,y) => new Date(x.p.starts_at) - new Date(y.p.starts_at));
   return bar(t.name, {back:true})
     + `<div class="info"><div>${esc(t.phone||'Sin teléfono')}</div><div class="sub">${esc(t.email||'Sin email')}</div></div>
-    <div class="actions"><button class="btn" onclick="openTechForm('${id}')">Editar</button>${moreBtn(`recordMenu('Más acciones del técnico','technicians','${id}','deleteTech')`)}</div>
+    <div class="actions"><button class="btn" onclick="openTechForm('${id}')">Editar</button>${extraBtn('x:tech:' + id)}</div>${extraRow('x:tech:' + id, recordExtra('technicians', id, 'deleteTech'))}
     <div class="group">${W.P} asignados (${as.length})</div>
     ${as.length?`<div class="list">${as.map(({a,p}) => `<div class="row tap" onclick="go('shows');openView('project','${p.id}')"><div class="grow"><b>${esc(p.name)}</b>
       <div class="sub">${esc(fmtDT(a.call_time||p.starts_at))}${a.role?' · '+esc(a.role):''}</div></div>
@@ -2957,7 +2918,7 @@ function clientView(id){
     <div class="actions">
       ${tel ? `<a class="btn" style="text-decoration:none" href="tel:${esc(tel)}">Llamar</a><a class="btn" style="text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/${phoneDigits(c.phone)}">WhatsApp</a>` : ''}
       ${c.email ? `<a class="btn" style="text-decoration:none" href="mailto:${esc(c.email)}">Email</a>` : ''}
-      <button class="btn" onclick="openClientForm('${id}')">Editar</button>${moreBtn(`recordMenu('Más acciones del cliente','clients','${id}','deleteClient')`)}</div>
+      <button class="btn" onclick="openClientForm('${id}')">Editar</button>${extraBtn('x:client:' + id)}</div>${extraRow('x:client:' + id, recordExtra('clients', id, 'deleteClient'))}
     <div class="info"><b>Cobros de este cliente</b>
       <div style="margin-top:6px">Pendiente de cobrar: <b>${eur(sum('invoiced'))}</b></div>
       <div class="sub">Aceptado sin facturar: ${eur(sum('accepted'))} · Presupuestado: ${eur(sum('quoted'))} · Cobrado: ${eur(sum('paid'))}</div></div>
@@ -5363,7 +5324,7 @@ function downloadAllIcs(){
   download(new Blob([icsDoc(ps.map(p => icsVevent(p, p.status === 'quoted' ? 'TENTATIVE' : 'CONFIRMED')))], {type:'text/calendar'}), 'calendario-' + (W.p || 'shows') + '.ics');
   toast(`Calendario con ${ps.length} ${ps.length === 1 ? W.s : W.p}: ábrelo con tu calendario`);
 }
-const icsBar = () => splitBtn() ? `<div class="actions" style="margin-top:6px">${splitBtn()}</div>` : '';
+const icsBar = () => (splitBtn() ? `<div class="actions" style="margin-top:6px">${splitBtn()}</div>` : '') + extraRow('x:shows', showsExtra());
 
 /* ============ V1.11: planificador de furgoneta, calendario arrastrable y dos columnas ============ */
 // ---- furgonetas (medidas en cm; sin tocar la base de datos) ----
